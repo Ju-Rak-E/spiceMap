@@ -6,6 +6,21 @@
 
 ---
 
+## 데이터셋 출처 한눈에 보기
+
+| 테이블 | 데이터셋 ID | 데이터셋 명 | 출처 |
+|--------|-----------|-----------|------|
+| `admin_boundary` | **OA-22160** | 서울시 상권분석서비스 (영역-행정동) | 서울 열린데이터광장 |
+| `commerce_boundary` | — | 서울시 상권분석서비스 (영역-상권) | 서울 열린데이터광장 |
+| `od_flows` | **OA-22300** | 수도권 광역 OD (생활이동) | 공공데이터포털 |
+| `living_population` | **OA-14991** | 서울 생활인구 (SPOP_LOCAL_RESD_DONG) | 공공데이터포털 |
+| `store_info` | **OA-15577** | 상권분석 점포정보 (VwsmSignguStorW) | 공공데이터포털 |
+| `commerce_sales` | **OA-15572** | 상권분석 추정매출 (VwsmTrdarSelngQq) | 공공데이터포털 |
+| `commerce_analysis` | — | Dev-C 분석 산출물 (GRI, 유형, 우선순위) | — |
+| `flow_barriers` | — | Dev-C 분석 산출물 (흐름 단절 구간) | — |
+
+---
+
 ## 테이블 관계 개요
 
 ```
@@ -24,7 +39,7 @@ commerce_boundary (상권 폴리곤)
 
 ---
 
-## 1. `admin_boundary` — 행정동 경계
+## 1. `admin_boundary` — 행정동 경계 `[서울시 상권분석서비스 영역-행정동]`
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -38,7 +53,7 @@ commerce_boundary (상권 폴리곤)
 
 ---
 
-## 2. `commerce_boundary` — 상권 경계
+## 2. `commerce_boundary` — 상권 경계 `[서울시 상권분석서비스 영역-상권]`
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -52,7 +67,7 @@ commerce_boundary (상권 폴리곤)
 
 ---
 
-## 3. `od_flows` — 행정동 간 OD 이동량
+## 3. `od_flows` — 행정동 간 OD 이동량 `[OA-22300]`
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -71,7 +86,7 @@ commerce_boundary (상권 폴리곤)
 
 ---
 
-## 4. `living_population` — 서울 생활인구
+## 4. `living_population` — 서울 생활인구 `[OA-14991]`
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -88,7 +103,7 @@ commerce_boundary (상권 폴리곤)
 
 ---
 
-## 5. `store_info` — 자치구별 점포 정보
+## 5. `store_info` — 자치구별 점포 정보 `[OA-15577]`
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -111,7 +126,7 @@ commerce_boundary (상권 폴리곤)
 
 ---
 
-## 6. `commerce_sales` — 상권별 추정 매출
+## 6. `commerce_sales` — 상권별 추정 매출 `[OA-15572]`
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
