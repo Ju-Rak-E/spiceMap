@@ -8,9 +8,11 @@ from sqlalchemy import (
     Column,
     Date,
     Float,
+    Index,
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase
 
@@ -123,6 +125,28 @@ class CommerceAnalysis(Base):
     flow_volume = Column(BigInteger, comment="유입 이동량 합산")
     dominant_origin = Column(String(10), comment="주 유입 출발 행정동 코드")
     analysis_note = Column(Text, comment="정책 제언 텍스트")
+
+
+class AdmCommMapping(Base):
+    """행정동-상권 공간 매핑 (면적 교차 비율)
+
+    행정동 데이터(OD 유동, 생활인구)를 상권 단위로 배분할 때 사용.
+    comm_area_ratio: 상권 면적 중 이 행정동과 겹치는 비율 (행정동→상권 배분용)
+    adm_area_ratio: 행정동 면적 중 이 상권과 겹치는 비율 (상권→행정동 역배분용)
+    """
+    __tablename__ = "adm_comm_mapping"
+    __table_args__ = (
+        UniqueConstraint("adm_cd", "comm_cd", name="uq_adm_comm"),
+        Index("ix_adm_comm_adm_cd", "adm_cd"),
+        Index("ix_adm_comm_comm_cd", "comm_cd"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    adm_cd = Column(String(10), nullable=False, comment="행정동 코드")
+    comm_cd = Column(String(20), nullable=False, comment="상권 코드")
+    overlap_area = Column(Float, comment="교차 면적 (m²)")
+    comm_area_ratio = Column(Float, comment="상권 기준 비율 (0~1)")
+    adm_area_ratio = Column(Float, comment="행정동 기준 비율 (0~1)")
 
 
 class FlowBarrier(Base):
