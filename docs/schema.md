@@ -185,16 +185,18 @@ commerce_boundary (상권 폴리곤)
 
 ## 데이터 적재 현황 요약
 
-| 테이블 | 행 수 | 상태 |
-|--------|-------|------|
-| `admin_boundary` | 0 | SHP 수집 대기 중 |
-| `commerce_boundary` | 1,650 | ✅ 완료 |
-| `od_flows` | ~4천만+ | 🔄 2025Q4 수집 중 (nohup) |
-| `living_population` | 94,944 | ✅ 2025Q4 완료 |
-| `store_info` | 5,599 | ✅ 완료 |
-| `commerce_sales` | 21,333 | ✅ 완료 |
-| `commerce_analysis` | 0 | Week 2 (Dev-C) |
-| `flow_barriers` | 0 | Week 2 (Dev-C) |
+| 테이블 | 행 수 | 데이터 범위 | 상태 |
+|--------|-------|-----------|------|
+| `admin_boundary` | 425 | 서울시 행정동 전체 | ✅ 완료 |
+| `commerce_boundary` | 1,650 | 서울시 상권 전체 | ✅ 완료 |
+| `od_flows` | 80,573,657 | 2025-10-01 ~ 2026-02-28 (강남·관악 MVP 필터) | ✅ 완료 |
+| `living_population` | 94,944 | 2025-10-01 ~ 2025-12-31 (강남·관악 MVP 필터) | ✅ 완료 |
+| `store_info` | 5,599 | 2019Q1 ~ 2025Q4 | ✅ 완료 |
+| `commerce_sales` | 21,333 | 2025Q4 | ✅ 완료 |
+| `commerce_analysis` | 0 | — | Week 2 (Dev-C 산출 대기) |
+| `flow_barriers` | 0 | — | Week 2 (Dev-C 산출 대기) |
+
+> 최종 갱신: 2026-04-16
 
 ---
 
