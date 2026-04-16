@@ -57,18 +57,30 @@ def run_od(start: str, end: str, dry_run: bool) -> None:
     print(f"[OD] 완료: {total:,}행")
 
 
-def run_living_pop(yyyymm: str, dry_run: bool) -> None:
-    """생활인구 CSV 수집 — data.seoul.go.kr 파일 다운로드 안내"""
-    print(f"[생활인구] {yyyymm} 수집")
+def run_living_pop(year: int, month: int, dry_run: bool) -> None:
+    """생활인구 API 수집 (OA-14991, SPOP_LOCAL_RESD_DONG)
+
+    배치는 전월 데이터를 수집하므로 항상 API 제공 범위(최근 2개월) 안에 있음.
+    """
+    start, end = month_date_range(year, month)
+    print(f"[생활인구] {start} ~ {end} API 수집")
     if dry_run:
         return
 
-    # 생활인구는 API가 아닌 파일 다운로드 방식.
-    # data.seoul.go.kr → OA-14991 → LOCAL_PEOPLE_DONG_{YYYYMM}.csv 수동 다운로드 후
-    # python -m backend.pipeline.load_living_pop_csv data/LOCAL_PEOPLE_DONG_{YYYYMM}.csv
-    print(f"  [안내] 생활인구는 파일 수동 다운로드 필요:")
-    print(f"  1. https://data.seoul.go.kr → OA-14991 → LOCAL_PEOPLE_DONG_{yyyymm}.csv 다운로드")
-    print(f"  2. python -m backend.pipeline.load_living_pop_csv data/LOCAL_PEOPLE_DONG_{yyyymm}.csv")
+    from backend.pipeline.collect_living_pop import collect
+    from datetime import date as _date, timedelta as _td
+
+    s = _date(int(start[:4]), int(start[4:6]), int(start[6:8]))
+    e = _date(int(end[:4]), int(end[4:6]), int(end[6:8]))
+    cur = s
+    total = 0
+    while cur <= e:
+        n = collect(cur.strftime("%Y%m%d"), all_districts=False)
+        total += n
+        cur += _td(days=1)
+        time.sleep(0.3)
+
+    print(f"[생활인구] 완료: {total:,}행")
 
 
 def main() -> None:
@@ -88,7 +100,7 @@ def main() -> None:
 
     print(f"=== 월간 배치 시작: {yyyymm} {'(dry-run)' if args.dry_run else ''} ===")
     run_od(start, end, args.dry_run)
-    run_living_pop(yyyymm, args.dry_run)
+    run_living_pop(year, month, args.dry_run)
     print(f"=== 완료 ===")
 
 
