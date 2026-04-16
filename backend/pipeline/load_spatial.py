@@ -25,7 +25,7 @@ TARGET_CRS = "EPSG:4326"
 
 def load_commerce(path: Path, engine) -> int:
     print(f"[상권 경계] {path.name} 읽는 중...")
-    gdf = gpd.read_file(path, encoding="cp949")
+    gdf = gpd.read_file(path)
     print(f"  원본 CRS: {gdf.crs}, 행 수: {len(gdf):,}")
 
     gdf = gdf.to_crs(TARGET_CRS)
@@ -65,7 +65,7 @@ def load_admin(path: Path, engine) -> int:
     if suffix == ".geojson":
         gdf = gpd.read_file(path)
     else:
-        gdf = gpd.read_file(path, encoding="cp949")
+        gdf = gpd.read_file(path)
     print(f"  원본 CRS: {gdf.crs}, 행 수: {len(gdf):,}, 컬럼: {list(gdf.columns)}")
 
     gdf = gdf.to_crs(TARGET_CRS)
