@@ -1,27 +1,43 @@
-import { ArcLayer } from '@deck.gl/layers'
+import { PathLayer } from '@deck.gl/layers'
 import type { ODFlow } from '../hooks/useFlowData'
+import { getControlPoint, quadBezier, PURPOSE_COLORS } from '../utils/flowBezier'
 
-const MIN_WIDTH = 1
+const SEGMENTS = 32
+const MIN_WIDTH = 1.5
 const MAX_WIDTH = 8
-const MAX_VOLUME = 5000
+const MAX_VOLUME = 10000
 
-function getWidth(volume: number): number {
-  const ratio = Math.min(volume / MAX_VOLUME, 1)
-  return MIN_WIDTH + ratio * (MAX_WIDTH - MIN_WIDTH)
+interface FlowPath {
+  path: [number, number][]
+  color: [number, number, number, number]
+  width: number
 }
 
-export function createODFlowLayer(flows: ODFlow[]): ArcLayer<ODFlow> {
-  return new ArcLayer<ODFlow>({
+function buildFlowPath(flow: ODFlow): FlowPath {
+  const ctrl = getControlPoint(flow.sourceCoord, flow.targetCoord)
+  const path = Array.from({ length: SEGMENTS + 1 }, (_, i) =>
+    quadBezier(flow.sourceCoord, ctrl, flow.targetCoord, i / SEGMENTS),
+  )
+  const ratio = Math.min(flow.volume / MAX_VOLUME, 1)
+  const width = MIN_WIDTH + ratio * (MAX_WIDTH - MIN_WIDTH)
+  const [r, g, b] = PURPOSE_COLORS[flow.purpose]
+  return { path, color: [r, g, b, 140], width }
+}
+
+export function createODFlowLayer(flows: ODFlow[]): PathLayer<FlowPath> {
+  const paths = flows.map(buildFlowPath)
+  return new PathLayer<FlowPath>({
     id: 'od-flows',
-    data: flows,
+    data: paths,
     pickable: false,
-    getSourcePosition: (flow) => flow.sourceCoord,
-    getTargetPosition: (flow) => flow.targetCoord,
-    getSourceColor: [0, 188, 212, 120],
-    getTargetColor: [0, 188, 212, 30],
-    getWidth: (flow) => getWidth(flow.volume),
+    getPath: (p) => p.path,
+    getColor: (p) => p.color,
+    getWidth: (p) => p.width,
     widthUnits: 'pixels',
+    capRounded: true,
+    jointRounded: true,
     updateTriggers: {
+      getColor: flows,
       getWidth: flows,
     },
   })

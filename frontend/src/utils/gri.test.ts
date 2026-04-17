@@ -36,7 +36,6 @@ describe('calculateGri', () => {
     it('극단적 저위험 입력도 0 미만이 되지 않아야 한다', () => {
       const extremeLow: GriInput = {
         netInflowGrowthZscore: -3,
-        rentalPriceGrowthRate: -1,
         franchiseShareGrowth: 0,
         salesSurgeRate: -1,
         independentShopRatio: 1,
@@ -47,7 +46,6 @@ describe('calculateGri', () => {
     it('극단적 고위험 입력도 100 초과가 되지 않아야 한다', () => {
       const extremeHigh: GriInput = {
         netInflowGrowthZscore: 3,
-        rentalPriceGrowthRate: 1,
         franchiseShareGrowth: 1,
         salesSurgeRate: 1,
         independentShopRatio: 0,
