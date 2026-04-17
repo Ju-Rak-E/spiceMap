@@ -19,7 +19,7 @@ export type MapTheme = 'light' | 'dark'
 export const MAP_THEME = {
   light: {
     boundaryLine: '#BDBDBD',
-    boundaryFill: 'transparent',
+    boundaryFill: '#9E9E9E',
     highlightLine: '#1565C0',
     background: '#F5F5F5',
     toggleBg: '#FFFFFF',
@@ -28,7 +28,7 @@ export const MAP_THEME = {
   },
   dark: {
     boundaryLine: '#546E7A',
-    boundaryFill: 'transparent',
+    boundaryFill: '#263238',
     highlightLine: '#42A5F5',
     background: '#1A2332',
     toggleBg: '#263238',

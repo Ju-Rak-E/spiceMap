@@ -4,7 +4,6 @@ import { calculateGri, type GriInput } from './gri'
 // 테스트 픽스처
 const HIGH_RISK: GriInput = {
   netInflowGrowthZscore: 2.5,   // 강한 순유입 증가
-  rentalPriceGrowthRate: 0.8,   // 임대료 급등
   franchiseShareGrowth: 0.7,    // 프랜차이즈 급증
   salesSurgeRate: 0.6,          // 매출 급증
   independentShopRatio: 0.1,    // 독립 소상공인 거의 없음
@@ -12,7 +11,6 @@ const HIGH_RISK: GriInput = {
 
 const LOW_RISK: GriInput = {
   netInflowGrowthZscore: -1.5,  // 순유입 감소
-  rentalPriceGrowthRate: -0.1,  // 임대료 안정
   franchiseShareGrowth: 0.05,   // 프랜차이즈 변화 없음
   salesSurgeRate: 0.0,          // 매출 변화 없음
   independentShopRatio: 0.8,    // 독립 소상공인 많음
@@ -20,7 +18,6 @@ const LOW_RISK: GriInput = {
 
 const NEUTRAL: GriInput = {
   netInflowGrowthZscore: 0,
-  rentalPriceGrowthRate: 0,
   franchiseShareGrowth: 0.3,
   salesSurgeRate: 0,
   independentShopRatio: 0.5,
@@ -79,7 +76,6 @@ describe('calculateGri', () => {
       // 70~84 구간에 딱 떨어지는 입력
       const midRisk: GriInput = {
         netInflowGrowthZscore: 1.5,
-        rentalPriceGrowthRate: 0.3,
         franchiseShareGrowth: 0.3,
         salesSurgeRate: 0.2,
         independentShopRatio: 0.3,
@@ -111,10 +107,10 @@ describe('calculateGri', () => {
       expect(calculateGri(moreIndependent).score).toBeLessThan(calculateGri(base).score)
     })
 
-    it('임대료 상승률이 높을수록 GRI가 높아야 한다', () => {
+    it('프랜차이즈 비중이 높을수록 GRI가 높아야 한다', () => {
       const base = { ...NEUTRAL }
-      const higherRental = { ...NEUTRAL, rentalPriceGrowthRate: 0.8 }
-      expect(calculateGri(higherRental).score).toBeGreaterThan(calculateGri(base).score)
+      const higherFranchise = { ...NEUTRAL, franchiseShareGrowth: 0.9 }
+      expect(calculateGri(higherFranchise).score).toBeGreaterThan(calculateGri(base).score)
     })
   })
 })
