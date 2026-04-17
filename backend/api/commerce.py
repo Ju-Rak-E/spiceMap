@@ -41,6 +41,8 @@ def type_map(
             cb.comm_nm,
             cb.comm_type,
             ST_AsGeoJSON(cb.geom)::json AS geometry,
+            ST_X(ST_Centroid(cb.geom)) AS centroid_lng,
+            ST_Y(ST_Centroid(cb.geom)) AS centroid_lat,
             ca.gri_score,
             ca.flow_volume,
             ca.dominant_origin,
@@ -65,6 +67,8 @@ def type_map(
                 "flow_volume": row.flow_volume,
                 "dominant_origin": row.dominant_origin,
                 "analysis_note": row.analysis_note,
+                "centroid_lng": row.centroid_lng,
+                "centroid_lat": row.centroid_lat,
             },
         }
         for row in rows
