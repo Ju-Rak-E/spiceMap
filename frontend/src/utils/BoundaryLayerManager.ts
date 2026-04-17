@@ -1,5 +1,5 @@
 import maplibregl from 'maplibre-gl'
-import { type MapTheme } from '../styles/tokens'
+import { MAP_THEME, type MapTheme } from '../styles/tokens'
 import { getBoundaryPaintConfig } from './boundaryLayerConfig'
 
 const SOURCE_ID = 'admin-boundary'
@@ -21,12 +21,19 @@ export class BoundaryLayerManager {
   private readonly map: maplibregl.Map
   private theme: MapTheme
   private districtFilter: string | null
+  private fillOpacity: number
   private readonly handleStyleData: () => void
 
-  constructor(map: maplibregl.Map, theme: MapTheme, districtFilter: string | null = null) {
+  constructor(
+    map: maplibregl.Map,
+    theme: MapTheme,
+    districtFilter: string | null = null,
+    fillOpacity = 0.3,
+  ) {
     this.map = map
     this.theme = theme
     this.districtFilter = districtFilter
+    this.fillOpacity = fillOpacity
     this.handleStyleData = () => {
       this.syncLayers()
     }
@@ -52,6 +59,13 @@ export class BoundaryLayerManager {
     this.syncLayers()
   }
 
+  setFillOpacity(opacity: number) {
+    this.fillOpacity = opacity
+    if (this.map.getLayer(FILL_LAYER_ID)) {
+      this.map.setPaintProperty(FILL_LAYER_ID, 'fill-opacity', opacity)
+    }
+  }
+
   private syncLayers() {
     if (!this.map.isStyleLoaded()) return
 
@@ -72,11 +86,12 @@ export class BoundaryLayerManager {
       data: '/data/seoul_admin_boundary.geojson',
     })
 
+    const fillColor = MAP_THEME[this.theme].boundaryFill
     this.map.addLayer({
       id: FILL_LAYER_ID,
       type: 'fill',
       source: SOURCE_ID,
-      paint: { 'fill-color': 'transparent', 'fill-opacity': 0 },
+      paint: { 'fill-color': fillColor, 'fill-opacity': this.fillOpacity },
     })
 
     this.map.addLayer({
@@ -97,6 +112,11 @@ export class BoundaryLayerManager {
 
   private updatePaint() {
     const paint = getBoundaryPaintConfig(this.theme)
+
+    if (this.map.getLayer(FILL_LAYER_ID)) {
+      this.map.setPaintProperty(FILL_LAYER_ID, 'fill-color', MAP_THEME[this.theme].boundaryFill)
+      this.map.setPaintProperty(FILL_LAYER_ID, 'fill-opacity', this.fillOpacity)
+    }
 
     if (this.map.getLayer(LINE_LAYER_ID)) {
       this.map.setPaintProperty(LINE_LAYER_ID, 'line-color', paint.line['line-color'])

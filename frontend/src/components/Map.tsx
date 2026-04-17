@@ -1,46 +1,84 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { MAP_THEME, type MapTheme } from '../styles/tokens'
+import { MapboxOverlay } from '@deck.gl/mapbox'
+import type { PickingInfo } from '@deck.gl/core'
+import { MAP_THEME, COMMERCE_COLORS, getInterventionBadge, type MapTheme, type CommerceType } from '../styles/tokens'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
+import CommerceDetailPanel from './CommerceDetailPanel'
+import CommerceLegend from './CommerceLegend'
+import { createCommerceNodeLayer } from '../layers/CommerceNodeLayer'
+import { createODFlowLayer } from '../layers/ODFlowLayer'
+import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
+import { useAnimationFrame } from '../hooks/useAnimationFrame'
+import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
+import type { CommerceNode } from '../types/commerce'
+import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
 
 const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
   version: 8,
   sources: {
     'vworld-base': {
       type: 'raster',
-      tiles: [
-        `https://api.vworld.kr/req/wmts/1.0.0/${apiKey}/Base/{z}/{y}/{x}.png`,
-      ],
+      tiles: [`https://api.vworld.kr/req/wmts/1.0.0/${apiKey}/Base/{z}/{y}/{x}.png`],
       tileSize: 256,
       attribution: '© 국토지리정보원',
     },
   },
-  layers: [
-    {
-      id: 'vworld-base',
-      type: 'raster',
-      source: 'vworld-base',
-    },
-  ],
-  // glyphs 제거: 래스터 전용 스타일에 텍스트 레이어가 없으므로 불필요.
-  // 명시하면 MapLibre가 폰트를 로드할 때까지 isStyleLoaded()=false를 유지하면서
-  // 완료 후 styledata를 재발화하지 않아 GeoJSON 레이어 등록이 영구 차단됨.
+  layers: [{ id: 'vworld-base', type: 'raster', source: 'vworld-base' }],
 })
 
 const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
+const ANIMATION_SPEED = 0.00025
+const BASE_VOLUME = 10000
+
 interface MapProps {
   theme?: MapTheme
-  districtFilter?: string | null
+  flows: ODFlow[]
+  nodes: CommerceNode[]
+  usingMockData: boolean
+  hour: number
+  purpose: FlowPurpose | null
+  topN: number
+  scopeLabel: string
+  dataStatusLabel: string
+  boundaryOpacity?: number
+  selectedTypes?: Set<CommerceType>
+  selectedNode?: CommerceNode | null
+  onSelectNode?: (node: CommerceNode | null) => void
+  onToggleType?: (type: CommerceType) => void
 }
 
-export default function Map({ theme = 'light', districtFilter = null }: MapProps) {
+interface HoveredNode {
+  node: CommerceNode
+  x: number
+  y: number
+}
+
+export default function Map({
+  theme = 'dark',
+  flows,
+  nodes,
+  usingMockData,
+  hour,
+  purpose,
+  topN,
+  scopeLabel,
+  dataStatusLabel,
+  boundaryOpacity = 0.2,
+  selectedTypes,
+  selectedNode,
+  onSelectNode,
+  onToggleType,
+}: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const overlayRef = useRef<MapboxOverlay | null>(null)
+  const progressRef = useRef(0)
   const [mapReady, setMapReady] = useState(false)
+  const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
 
-  // 지도 초기화 (마운트 시 1회)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
@@ -56,34 +94,66 @@ export default function Map({ theme = 'light', districtFilter = null }: MapProps
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right')
 
+    const overlay = new MapboxOverlay({ interleaved: false, layers: [] })
+    map.addControl(overlay)
+    overlayRef.current = overlay
+
     map.once('load', () => {
       mapRef.current = map
       setMapReady(true)
     })
 
     return () => {
+      overlayRef.current = null
       map.remove()
       mapRef.current = null
       setMapReady(false)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // useLayoutEffect: 모든 useEffect보다 먼저 동기적으로 실행 (paint 전)
-  // setStyle()을 여기서 호출해야 AdminBoundaryLayer의 useEffect가 실행될 때
-  // 이미 스타일이 변경된 상태이므로 isStyleLoaded() 체크가 정확하게 동작함.
-  // useEffect에서 setStyle()을 하면 자식 컴포넌트의 styledata 리스너 등록 이후에
-  // 발화하는 styledata를 놓치는 race condition이 발생함.
   useLayoutEffect(() => {
     const map = mapRef.current
     if (!map) return
-
     const apiKey = import.meta.env.VITE_VWORLD_API_KEY as string
-    const nextStyle = theme === 'dark' ? CARTO_DARK_STYLE : VWORLD_LIGHT_STYLE(apiKey)
-
-    map.setStyle(nextStyle)
+    map.setStyle(theme === 'dark' ? CARTO_DARK_STYLE : VWORLD_LIGHT_STYLE(apiKey))
   }, [theme])
 
+  const handleFrame = useCallback((delta: number) => {
+    const totalVolume = flows.reduce((sum, f) => sum + f.volume, 0)
+    const speedScale = Math.max(0.3, Math.min(2.0, Math.sqrt(totalVolume / BASE_VOLUME)))
+    progressRef.current = (progressRef.current + delta * ANIMATION_SPEED * speedScale) % 1
+
+    if (!overlayRef.current) return
+    overlayRef.current.setProps({
+      layers: [
+        createODFlowLayer(flows),
+        createFlowParticleLayer(flows, progressRef.current),
+        createCommerceNodeLayer(
+          nodes,
+          (info: PickingInfo<CommerceNode>) => {
+            if (info.object) {
+              setHoveredNode({ node: info.object, x: info.x, y: info.y })
+            } else {
+              setHoveredNode(null)
+            }
+          },
+          (info: PickingInfo<CommerceNode>) => {
+            onSelectNode?.(info.object ?? null)
+          },
+          selectedNode?.id ?? null,
+        ),
+      ],
+    })
+  }, [flows, nodes, onSelectNode, selectedNode?.id])
+
+  useAnimationFrame(handleFrame)
+
   const colors = MAP_THEME[theme]
+  const summaryText = selectedTypes
+    ? buildSummaryText(purpose, hour, topN, selectedTypes)
+    : null
+  const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
+  const legendBottom = selectedNode ? 298 : 40
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -91,12 +161,200 @@ export default function Map({ theme = 'light', districtFilter = null }: MapProps
         ref={containerRef}
         style={{ width: '100%', height: '100%', background: colors.background }}
       />
+
       {mapReady && mapRef.current && (
         <AdminBoundaryLayer
           map={mapRef.current}
           theme={theme}
-          districtFilter={districtFilter}
+          districtFilter={null}
+          fillOpacity={boundaryOpacity}
         />
+      )}
+
+      {/* 상단 종합 해설바 */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: 'rgba(16,22,29,0.92)',
+          borderBottom: `1px solid ${colors.panelBorder}`,
+          padding: '10px 16px',
+          zIndex: 6,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          pointerEvents: 'none',
+        }}
+      >
+        <div style={{ fontSize: 16, fontWeight: 700, color: colors.panelText, whiteSpace: 'nowrap' }}>
+          서울 상권 흐름 지도
+        </div>
+        <div style={{ width: 1, height: 18, background: colors.panelBorder, flexShrink: 0 }} />
+        {summaryText && (
+          <div style={{ fontSize: 12, color: colors.secondaryText, lineHeight: 1.5, flex: 1 }}>
+            {summaryText}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <span
+            style={{
+              background: 'rgba(21,29,38,0.95)',
+              border: `1px solid ${colors.panelBorder}`,
+              borderRadius: 999,
+              padding: '3px 8px',
+              fontSize: 10,
+              color: colors.secondaryText,
+            }}
+          >
+            {scopeLabel}
+          </span>
+          <span
+            style={{
+              background: 'rgba(21,29,38,0.95)',
+              border: `1px solid ${colors.panelBorder}`,
+              borderRadius: 999,
+              padding: '3px 8px',
+              fontSize: 10,
+              color: dataStatusTone,
+            }}
+          >
+            {dataStatusLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* 노드 미니 해설 카드 */}
+      {hoveredNode && (() => {
+        const { node, x, y } = hoveredNode
+        const token = COMMERCE_COLORS[node.type]
+        const badge = getInterventionBadge(node.griScore)
+        const netFlowColor = node.netFlow >= 0 ? '#A5D6A7' : '#EF9A9A'
+        const interpretation = getNodeInterpretation(node.type, node.griScore)
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: x + 14,
+              top: y - 12,
+              background: colors.panelBg,
+              color: colors.panelText,
+              border: `1px solid ${token.outline}`,
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 13,
+              pointerEvents: 'none',
+              zIndex: 10,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              whiteSpace: 'nowrap',
+              minWidth: 180,
+            }}
+          >
+            {/* 상권명 + 유형 배지 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{node.name}</span>
+              {badge && (
+                <span
+                  style={{
+                    background: badge.bg,
+                    color: badge.color,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    borderRadius: 4,
+                    padding: '2px 6px',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  {badge.label}
+                </span>
+              )}
+            </div>
+
+            {/* 유형 배지 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: token.fill,
+                  color: '#fff',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+                aria-label={token.label}
+              >
+                {token.symbol}
+              </span>
+              <span style={{ fontSize: 12, color: token.textColor }}>{token.label}</span>
+            </div>
+
+            {/* 지표 2열 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>GRI</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{node.griScore}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>순유입</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: netFlowColor }}>
+                  {node.netFlow >= 0 ? '+' : ''}{node.netFlow}
+                </div>
+              </div>
+            </div>
+
+            {/* 1줄 상태 해석 */}
+            <div
+              style={{
+                fontSize: 11,
+                color: colors.secondaryText,
+                borderTop: `1px solid ${colors.panelBorder}`,
+                paddingTop: 6,
+                lineHeight: 1.4,
+              }}
+            >
+              {interpretation}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* 상권 유형 범례 (필터 겸용) */}
+      {selectedTypes && onToggleType && (
+        <CommerceLegend
+          theme={theme}
+          bottom={legendBottom}
+          selectedTypes={selectedTypes}
+          onToggle={onToggleType}
+        />
+      )}
+
+      <CommerceDetailPanel node={selectedNode ?? null} onClose={() => onSelectNode?.(null)} />
+
+      {/* 목 데이터 배너 */}
+      {usingMockData && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.6)',
+            color: '#FFF',
+            borderRadius: 4,
+            padding: '4px 12px',
+            fontSize: 12,
+            pointerEvents: 'none',
+            zIndex: 10,
+          }}
+        >
+          캐시 데이터로 표시 중
+        </div>
       )}
     </div>
   )
