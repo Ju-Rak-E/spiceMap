@@ -1,39 +1,56 @@
 import { useState } from 'react'
 import Map from './components/Map'
-import { MAP_THEME, type MapTheme } from './styles/tokens'
+import FlowControlPanel from './components/FlowControlPanel'
+import { useCommerceData } from './hooks/useCommerceData'
+import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import './App.css'
 
+const STRENGTH_TO_TOP_N: Record<number, number> = {
+  1: 5, 2: 10, 3: 15, 4: 20, 5: 30,
+}
+
 export default function App() {
-  const [theme, setTheme] = useState<MapTheme>('light')
+  const [purpose, setPurpose] = useState<FlowPurpose | null>(null)
+  const [hour, setHour] = useState(14)
+  const [flowStrength, setFlowStrength] = useState(3)
+  const [boundaryOpacity, setBoundaryOpacity] = useState(0.3)
 
-  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light')
-
-  const colors = MAP_THEME[theme]
+  const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
+  const { nodes, usingMockData } = useCommerceData()
+  const flowData = useFlowData({ purpose: purpose ?? undefined, topN })
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-      <Map theme={theme} districtFilter={null} />
+    <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      {/* 지도 영역 */}
+      <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        <Map
+          theme="dark"
+          flows={flowData.flows}
+          nodes={nodes}
+          usingMockData={usingMockData}
+          hour={hour}
+          purpose={purpose}
+          boundaryOpacity={boundaryOpacity}
+        />
+      </div>
 
-      <button
-        onClick={toggleTheme}
-        style={{
-          position: 'absolute',
-          top: 12,
-          left: 12,
-          zIndex: 10,
-          padding: '6px 14px',
-          borderRadius: 6,
-          border: `1px solid ${colors.toggleBorder}`,
-          background: colors.toggleBg,
-          color: colors.toggleText,
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: 'pointer',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+      {/* 제어판 */}
+      <FlowControlPanel
+        purpose={purpose}
+        onPurposeChange={setPurpose}
+        hour={hour}
+        onHourChange={setHour}
+        flowStrength={flowStrength}
+        onStrengthChange={setFlowStrength}
+        boundaryOpacity={boundaryOpacity}
+        onBoundaryOpacityChange={setBoundaryOpacity}
+        stats={{
+          totalVolume: flowData.totalVolume,
+          activeCount: flowData.activeCount,
+          topInflow: flowData.topInflow,
+          topOutflow: flowData.topOutflow,
         }}
-      >
-        {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-      </button>
+      />
     </div>
   )
 }

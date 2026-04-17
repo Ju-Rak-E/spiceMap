@@ -7,24 +7,26 @@ interface AdminBoundaryLayerProps {
   map: maplibregl.Map
   theme?: MapTheme
   districtFilter?: string | null
+  fillOpacity?: number
 }
 
 export default function AdminBoundaryLayer({
   map,
   theme = 'light',
   districtFilter,
+  fillOpacity = 0.3,
 }: AdminBoundaryLayerProps) {
   const managerRef = useRef<BoundaryLayerManager | null>(null)
 
   useEffect(() => {
-    const manager = new BoundaryLayerManager(map, theme, districtFilter ?? null)
+    const manager = new BoundaryLayerManager(map, theme, districtFilter ?? null, fillOpacity)
     managerRef.current = manager
 
     return () => {
       managerRef.current = null
       manager.destroy()
     }
-  }, [map])
+  }, [map]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     managerRef.current?.setTheme(theme)
@@ -33,6 +35,10 @@ export default function AdminBoundaryLayer({
   useEffect(() => {
     managerRef.current?.setDistrictFilter(districtFilter ?? null)
   }, [districtFilter])
+
+  useEffect(() => {
+    managerRef.current?.setFillOpacity(fillOpacity)
+  }, [fillOpacity])
 
   return null
 }

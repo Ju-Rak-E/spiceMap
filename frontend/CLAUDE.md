@@ -11,15 +11,21 @@ Dev-B는 React 기반 인터랙티브 지도 앱 전담.
 
 ## 기술 스택
 - React + Vite
-- MapLibre GL (베이스 지도, 행정동·상권 레이어)
-- Deck.gl (OD 흐름 곡선, 상권 노드 레이어)
+- MapLibre GL (베이스 지도, 행정동 경계 레이어)
+- Deck.gl + @deck.gl/mapbox (OD 흐름 곡선, 상권 노드, 파티클 애니메이션)
 - D3.js (추세 그래프, 시계열 차트)
 
 ## 디렉토리 구조
-`frontend/src/components/` UI 컴포넌트
-`frontend/src/layers/` Deck.gl 레이어 정의
-`frontend/src/hooks/` 데이터 페칭 훅
+`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, FlowControlPanel)
+`frontend/src/layers/` Deck.gl 레이어 정의 (CommerceNodeLayer, ODFlowLayer, FlowParticleLayer)
+`frontend/src/hooks/` 데이터 페칭 훅 (useCommerceData, useFlowData, useAnimationFrame)
 `frontend/src/styles/` 디자인 토큰 (색상 팔레트)
+`frontend/src/types/` 공유 타입 정의 (CommerceNode 등)
+`frontend/src/utils/` 유틸리티 (GRI 계산, BoundaryLayerManager)
+
+## 환경 변수
+`VITE_VWORLD_API_KEY` V-World 지도 API 키 (필수)
+`VITE_API_BASE_URL` 백엔드 API 베이스 URL (선택 — 미설정 시 mock 데이터 자동 폴백)
 
 ## API 엔드포인트 (Dev-A 제공)
 `GET /api/od/flows` OD 흐름 데이터

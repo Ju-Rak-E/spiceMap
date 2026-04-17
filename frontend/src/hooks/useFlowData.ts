@@ -66,6 +66,24 @@ export function computeStats(flows: ODFlow[]): FlowStats {
   return { totalVolume, activeCount, topInflow, topOutflow }
 }
 
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
+
+async function fetchFlows(): Promise<ODFlow[]> {
+  if (BASE_URL) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/od/flows`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json() as Promise<ODFlow[]>
+    } catch {
+      // API 실패 시 mock 폴백
+    }
+  }
+
+  const mockRes = await fetch('/data/mock_flows.json')
+  if (!mockRes.ok) throw new Error(`HTTP ${mockRes.status}`)
+  return mockRes.json() as Promise<ODFlow[]>
+}
+
 export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
   const [allFlows, setAllFlows] = useState<ODFlow[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -73,11 +91,7 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
 
   useEffect(() => {
     setIsLoading(true)
-    fetch('/data/mock_flows.json')
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json() as Promise<ODFlow[]>
-      })
+    fetchFlows()
       .then(data => {
         setAllFlows(data)
         setIsLoading(false)
