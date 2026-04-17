@@ -1,48 +1,41 @@
 import { ScatterplotLayer } from '@deck.gl/layers'
 import type { ODFlow } from '../hooks/useFlowData'
+import { getControlPoint, quadBezier, PURPOSE_COLORS } from '../utils/flowBezier'
 
-const PARTICLES_PER_FLOW = 3
-const PARTICLE_RADIUS = 120  // meters
+const BASE_RADIUS = 200
+const MAX_EXTRA_RADIUS = 500
+const MAX_VOLUME = 10000
 
 interface Particle {
   position: [number, number]
-  alpha: number
+  color: [number, number, number, number]
+  radius: number
 }
 
-function getControlPoint(
-  src: [number, number],
-  tgt: [number, number],
-): [number, number] {
-  const dist = Math.sqrt((tgt[0] - src[0]) ** 2 + (tgt[1] - src[1]) ** 2)
-  return [
-    (src[0] + tgt[0]) / 2,
-    (src[1] + tgt[1]) / 2 + dist * 0.35,
-  ]
+function getParticleRadius(volume: number): number {
+  const ratio = Math.min(volume / MAX_VOLUME, 1) ** 0.6
+  return BASE_RADIUS + ratio * MAX_EXTRA_RADIUS
 }
 
-function quadBezier(
-  src: [number, number],
-  ctrl: [number, number],
-  tgt: [number, number],
-  t: number,
-): [number, number] {
-  const u = 1 - t
-  return [
-    u * u * src[0] + 2 * u * t * ctrl[0] + t * t * tgt[0],
-    u * u * src[1] + 2 * u * t * ctrl[1] + t * t * tgt[1],
-  ]
+// 이동량 비율에 따라 파티클 수 1~4개
+function getParticleCount(volume: number): number {
+  const ratio = Math.min(volume / MAX_VOLUME, 1)
+  return Math.max(1, Math.round(ratio * 3) + 1)
 }
 
 function generateParticles(flows: ODFlow[], progress: number): Particle[] {
   return flows.flatMap((flow) => {
     const ctrl = getControlPoint(flow.sourceCoord, flow.targetCoord)
-    return Array.from({ length: PARTICLES_PER_FLOW }, (_, i) => {
-      const t = (progress + i / PARTICLES_PER_FLOW) % 1
-      // 양 끝에서 페이드 인/아웃 (sin 곡선)
+    const radius = getParticleRadius(flow.volume)
+    const count = getParticleCount(flow.volume)
+    const [r, g, b] = PURPOSE_COLORS[flow.purpose]
+    return Array.from({ length: count }, (_, i) => {
+      const t = (progress + i / count) % 1
       const alpha = Math.round(Math.sin(t * Math.PI) * 200 + 55)
       return {
         position: quadBezier(flow.sourceCoord, ctrl, flow.targetCoord, t),
-        alpha,
+        color: [r, g, b, alpha] as [number, number, number, number],
+        radius,
       }
     })
   })
@@ -53,18 +46,20 @@ export function createFlowParticleLayer(
   progress: number,
 ): ScatterplotLayer<Particle> {
   const particles = generateParticles(flows, progress)
-
   return new ScatterplotLayer<Particle>({
     id: 'flow-particles',
     data: particles,
     pickable: false,
     getPosition: (p) => p.position,
-    getRadius: PARTICLE_RADIUS,
-    getFillColor: (p) => [0, 229, 255, p.alpha],
+    getRadius: (p) => p.radius,
+    getFillColor: (p) => p.color,
     radiusUnits: 'meters',
+    radiusMinPixels: 3,
+    radiusMaxPixels: 14,
     updateTriggers: {
       getFillColor: progress,
       getPosition: progress,
+      getRadius: progress,
     },
   })
 }

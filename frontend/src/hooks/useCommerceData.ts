@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { CommerceNode, CommerceTypeMapResponse } from '../types/commerce'
+import { featuresToNodes } from '../types/commerce'
 
 export interface UseCommerceDataReturn {
   nodes: CommerceNode[]
@@ -16,7 +17,7 @@ async function fetchCommerceNodes(): Promise<{ nodes: CommerceNode[]; isMock: bo
       const res = await fetch(`${BASE_URL}/api/commerce/type-map`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = (await res.json()) as CommerceTypeMapResponse
-      return { nodes: data.nodes, isMock: false }
+      return { nodes: featuresToNodes(data.features), isMock: false }
     } catch {
       // API 실패 시 mock 폴백
     }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-export type FlowPurpose = '출근' | '쇼핑' | '관광' | '귀가' | '등교'
+export type FlowPurpose = '출근' | '쇼핑' | '여가' | '귀가'
 
 export interface ODFlow {
   id: string
@@ -12,9 +12,26 @@ export interface ODFlow {
   purpose: FlowPurpose
 }
 
+// 목적별 피크 시간대 중심 (24시간제)
+const PEAK_HOUR: Record<FlowPurpose, number> = {
+  출근: 8,   // 07~09시
+  쇼핑: 14,  // 12~17시
+  여가: 20,  // 18~22시
+  귀가: 19,  // 18~20시
+}
+
+const SIGMA = 1.5
+
+export function getHourScale(purpose: FlowPurpose, hour: number): number {
+  const peak = PEAK_HOUR[purpose]
+  const exponent = -((hour - peak) ** 2) / (2 * SIGMA ** 2)
+  return Math.max(0.1, Math.exp(exponent))
+}
+
 export interface FlowFilters {
   purpose?: FlowPurpose | null
   topN?: number
+  hour?: number
 }
 
 export interface FlowStats {
@@ -35,6 +52,13 @@ export function filterFlows(flows: ODFlow[], filters: FlowFilters): ODFlow[] {
 
   if (filters.purpose) {
     result = result.filter(f => f.purpose === filters.purpose)
+  }
+
+  if (filters.hour !== undefined) {
+    result = result.map(f => ({
+      ...f,
+      volume: Math.round(f.volume * getHourScale(f.purpose, filters.hour!)),
+    }))
   }
 
   if (filters.topN !== undefined && filters.topN > 0) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { MAP_THEME, type MapTheme } from './tokens'
+import { MAP_THEME, COMMERCE_COLORS, type MapTheme } from './tokens'
 
 const HEX_OR_TRANSPARENT = /^(#[0-9A-Fa-f]{3,8}|transparent)$/
 
@@ -40,5 +40,50 @@ describe('MAP_THEME', () => {
 
   it('light와 dark의 배경 색상이 달라야 한다', () => {
     expect(MAP_THEME.dark.background).not.toBe(MAP_THEME.light.background)
+  })
+})
+
+describe('COMMERCE_COLORS', () => {
+  const TYPES = ['흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형'] as const
+  const HEX = /^#[0-9A-Fa-f]{6}$/
+
+  it('5개 상권 유형이 모두 정의되어 있어야 한다', () => {
+    expect(Object.keys(COMMERCE_COLORS)).toHaveLength(5)
+    for (const t of TYPES) {
+      expect(COMMERCE_COLORS).toHaveProperty(t)
+    }
+  })
+
+  it('각 유형에 fill, symbol, label이 존재해야 한다', () => {
+    for (const t of TYPES) {
+      const token = COMMERCE_COLORS[t]
+      expect(token).toHaveProperty('fill')
+      expect(token).toHaveProperty('symbol')
+      expect(token).toHaveProperty('label')
+    }
+  })
+
+  it('fill 색상이 유효한 hex 값이어야 한다', () => {
+    for (const t of TYPES) {
+      expect(COMMERCE_COLORS[t].fill, `${t} fill 색상 유효하지 않음`).toMatch(HEX)
+    }
+  })
+
+  it('symbol이 비어있지 않아야 한다 (색각 이상 대응 FR-11)', () => {
+    for (const t of TYPES) {
+      expect(COMMERCE_COLORS[t].symbol.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('label이 비어있지 않아야 한다', () => {
+    for (const t of TYPES) {
+      expect(COMMERCE_COLORS[t].label.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('유형별 fill 색상이 모두 달라야 한다', () => {
+    const fills = TYPES.map(t => COMMERCE_COLORS[t].fill)
+    const unique = new Set(fills)
+    expect(unique.size).toBe(TYPES.length)
   })
 })

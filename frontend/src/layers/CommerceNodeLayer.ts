@@ -33,6 +33,8 @@ function getTop10PercentThreshold(nodes: CommerceNode[]): number {
 export function createCommerceNodeLayer(
   nodes: CommerceNode[],
   onHover: (info: PickingInfo<CommerceNode>) => void,
+  onClick: (info: PickingInfo<CommerceNode>) => void,
+  selectedId: string | null,
 ): ScatterplotLayer<CommerceNode> {
   const threshold = getTop10PercentThreshold(nodes)
 
@@ -43,18 +45,24 @@ export function createCommerceNodeLayer(
     stroked: true,
     getPosition: (node) => node.coordinates,
     getRadius: (node) => getRadius(node.netFlow),
-    getFillColor: (node) => getColor(node, node.degreeCentrality >= threshold),
+    getFillColor: (node) =>
+      getColor(node, node.degreeCentrality >= threshold || node.id === selectedId),
     getLineColor: (node) =>
-      node.degreeCentrality >= threshold ? [255, 255, 255, 220] : [255, 255, 255, 80],
-    getLineWidth: (node) => (node.degreeCentrality >= threshold ? 60 : 20),
+      node.id === selectedId
+        ? [236, 239, 241, 255]
+        : node.degreeCentrality >= threshold
+          ? [236, 239, 241, 220]
+          : [236, 239, 241, 80],
+    getLineWidth: (node) => (node.id === selectedId ? 90 : node.degreeCentrality >= threshold ? 60 : 20),
     radiusUnits: 'meters',
     lineWidthUnits: 'meters',
     onHover,
+    onClick,
     updateTriggers: {
       getRadius: nodes,
-      getFillColor: nodes,
-      getLineColor: nodes,
-      getLineWidth: nodes,
+      getFillColor: [nodes, selectedId],
+      getLineColor: [nodes, selectedId],
+      getLineWidth: [nodes, selectedId],
     },
   })
 }
