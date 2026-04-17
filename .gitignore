@@ -1,5 +1,7 @@
 # 환경변수 (API 키, DB 비밀번호)
 .env
+.env.*
+!.env.example
 
 # 데이터 파일 (대용량 원본 CSV, SHP 등)
 data/
@@ -8,6 +10,7 @@ data/
 
 # 로그
 logs/
+*.log
 
 # Python
 __pycache__/
@@ -16,6 +19,12 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # macOS
 .DS_Store
@@ -23,3 +32,7 @@ venv/
 # IDE
 .vscode/
 .idea/
+
+# 로컬 작업 메모 / 에이전트 산출물
+.claude/
+frontend/prompt_plan.md
