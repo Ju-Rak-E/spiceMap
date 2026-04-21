@@ -4,6 +4,7 @@ import FlowControlPanel from './components/FlowControlPanel'
 import CommerceDetailPanel from './components/CommerceDetailPanel'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
+import { useTimelineControl } from './hooks/useTimelineControl'
 import type { CommerceNode } from './types/commerce'
 import './App.css'
 
@@ -18,15 +19,16 @@ export default function App() {
   const [boundaryOpacity, setBoundaryOpacity] = useState(0.3)
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
 
+  const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
+
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
   const { nodes, usingMockData } = useCommerceData()
-  const flowData = useFlowData({ purpose: purpose ?? undefined, topN })
+  const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour })
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       {/* 지도 영역 */}
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-        {/* 상세 패널 (지도 위 오버레이) */}
         {selectedNode && (
           <CommerceDetailPanel
             node={selectedNode}
@@ -62,6 +64,11 @@ export default function App() {
           topInflow: flowData.topInflow,
           topOutflow: flowData.topOutflow,
         }}
+        isPlaying={isPlaying}
+        speed={speed}
+        onPlay={play}
+        onPause={pause}
+        onToggleSpeed={toggleSpeed}
       />
     </div>
   )

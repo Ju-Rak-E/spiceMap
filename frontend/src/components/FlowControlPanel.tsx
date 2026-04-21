@@ -10,6 +10,11 @@ interface FlowControlPanelProps {
   boundaryOpacity: number
   onBoundaryOpacityChange: (v: number) => void
   stats: FlowStats
+  isPlaying: boolean
+  speed: 1 | 2 | 4
+  onPlay: () => void
+  onPause: () => void
+  onToggleSpeed: () => void
 }
 
 const PURPOSES: FlowPurpose[] = ['출근', '쇼핑', '관광', '귀가', '등교']
@@ -140,6 +145,11 @@ export default function FlowControlPanel({
   boundaryOpacity,
   onBoundaryOpacityChange,
   stats,
+  isPlaying,
+  speed,
+  onPlay,
+  onPause,
+  onToggleSpeed,
 }: FlowControlPanelProps) {
   const insight = purpose ? AI_INSIGHT[purpose] : null
 
@@ -183,6 +193,49 @@ export default function FlowControlPanel({
             style={S.slider}
           />
           <span style={S.sliderValue}>{hour}시</span>
+        </div>
+      </div>
+
+      {/* 타임라인 재생 */}
+      <div style={S.section}>
+        <div style={S.label}>타임라인 재생</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              borderRadius: 8,
+              border: 'none',
+              background: isPlaying ? '#37474F' : '#1B5E20',
+              color: isPlaying ? '#90A4AE' : '#A5D6A7',
+              fontSize: 20,
+              cursor: 'pointer',
+            }}
+            onClick={isPlaying ? onPause : onPlay}
+            aria-label={isPlaying ? '정지' : '재생'}
+          >
+            {isPlaying ? '⏸' : '▶'}
+          </button>
+          <button
+            style={{
+              padding: '8px 14px',
+              borderRadius: 8,
+              border: '1px solid #37474F',
+              background: '#263238',
+              color: '#90A4AE',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              minWidth: 52,
+            }}
+            onClick={onToggleSpeed}
+            aria-label={`재생 속도 ${speed}배속`}
+          >
+            {speed}×
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: '#546E7A' }}>
+          {isPlaying ? `${speed}시간/초 재생 중` : '슬라이더로 시간대 선택'}
         </div>
       </div>
 

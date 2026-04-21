@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterFlows, computeStats, type ODFlow, type FlowPurpose } from './useFlowData'
+import { filterFlows, computeStats, applyHourWeight, type ODFlow, type FlowPurpose } from './useFlowData'
 
 // 테스트 픽스처
 const SAMPLE_FLOWS: ODFlow[] = [
@@ -134,5 +134,49 @@ describe('computeStats', () => {
     expect(stats.activeCount).toBe(0)
     expect(stats.topInflow).toBeNull()
     expect(stats.topOutflow).toBeNull()
+  })
+})
+
+describe('applyHourWeight', () => {
+  const BASE_FLOWS: ODFlow[] = [
+    {
+      id: 'h1',
+      sourceId: 'A',
+      targetId: 'B',
+      sourceCoord: [126.9, 37.5],
+      targetCoord: [127.0, 37.5],
+      volume: 1000,
+      purpose: '출근',
+    },
+  ]
+
+  it('출근 피크(8시)에 원본 볼륨의 100%를 반환한다', () => {
+    const result = applyHourWeight(BASE_FLOWS, 8)
+    expect(result[0].volume).toBe(1000)
+  })
+
+  it('새벽(3시)에 볼륨이 줄어든다', () => {
+    const result = applyHourWeight(BASE_FLOWS, 3)
+    expect(result[0].volume).toBeLessThan(1000)
+  })
+
+  it('저녁 피크(18시)에 볼륨이 크다', () => {
+    const peak8 = applyHourWeight(BASE_FLOWS, 8)[0].volume
+    const peak18 = applyHourWeight(BASE_FLOWS, 18)[0].volume
+    expect(peak18).toBeGreaterThan(500)
+    expect(peak8).toBeGreaterThan(500)
+  })
+
+  it('원본 배열을 변경하지 않는다 (불변성)', () => {
+    const original = BASE_FLOWS[0].volume
+    applyHourWeight(BASE_FLOWS, 8)
+    expect(BASE_FLOWS[0].volume).toBe(original)
+  })
+
+  it('볼륨은 항상 양의 정수를 반환한다', () => {
+    for (let h = 0; h < 24; h++) {
+      const result = applyHourWeight(BASE_FLOWS, h)
+      expect(result[0].volume).toBeGreaterThan(0)
+    }
   })
 })

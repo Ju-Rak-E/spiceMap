@@ -15,6 +15,22 @@ export interface ODFlow {
 export interface FlowFilters {
   purpose?: FlowPurpose | null
   topN?: number
+  hour?: number
+}
+
+const HOUR_WEIGHTS: Record<number, number> = {
+  0: 0.10, 1: 0.08, 2: 0.05, 3: 0.05, 4: 0.10, 5: 0.20,
+  6: 0.50, 7: 0.85, 8: 1.00, 9: 0.80, 10: 0.60, 11: 0.60,
+  12: 0.70, 13: 0.60, 14: 0.55, 15: 0.55, 16: 0.70, 17: 0.90,
+  18: 1.00, 19: 0.80, 20: 0.65, 21: 0.50, 22: 0.30, 23: 0.20,
+}
+
+export function applyHourWeight(flows: ODFlow[], hour: number): ODFlow[] {
+  const weight = HOUR_WEIGHTS[hour] ?? 0.5
+  return flows.map(f => ({
+    ...f,
+    volume: Math.max(1, Math.round(f.volume * weight)),
+  }))
 }
 
 export interface FlowStats {
@@ -35,6 +51,10 @@ export function filterFlows(flows: ODFlow[], filters: FlowFilters): ODFlow[] {
 
   if (filters.purpose) {
     result = result.filter(f => f.purpose === filters.purpose)
+  }
+
+  if (filters.hour !== undefined) {
+    result = applyHourWeight(result, filters.hour)
   }
 
   if (filters.topN !== undefined && filters.topN > 0) {
