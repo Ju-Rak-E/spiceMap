@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { BADGE_COLORS } from '../styles/tokens'
+import { isDemoMode } from '../utils/demoMode'
 
 export type PolicyPriority = keyof typeof BADGE_COLORS
 
@@ -26,14 +27,10 @@ export function derivePriority(griScore: number): PolicyPriority {
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 async function fetchPolicyInsight(nodeId: string): Promise<PolicyInsight> {
-  if (BASE_URL) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/insights/policy?nodeId=${encodeURIComponent(nodeId)}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return res.json() as Promise<PolicyInsight>
-    } catch {
-      // API 실패 → mock 폴백
-    }
+  if (!isDemoMode()) {
+    const res = await fetch(`${BASE_URL}/api/insights/policy?nodeId=${encodeURIComponent(nodeId)}`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json() as Promise<PolicyInsight>
   }
 
   const mockRes = await fetch('/data/mock_policy_insights.json')

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { isDemoMode } from '../utils/demoMode'
 
 export interface GriPoint {
   ts: string   // "YYYY-MM"
@@ -18,14 +19,10 @@ export function buildGriSeries(raw: GriPoint[]): GriPoint[] {
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 async function fetchGriHistory(nodeId: string): Promise<GriPoint[]> {
-  if (BASE_URL) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/gri/history?nodeId=${encodeURIComponent(nodeId)}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return res.json() as Promise<GriPoint[]>
-    } catch {
-      // API 실패 → mock 폴백
-    }
+  if (!isDemoMode()) {
+    const res = await fetch(`${BASE_URL}/api/gri/history?nodeId=${encodeURIComponent(nodeId)}`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json() as Promise<GriPoint[]>
   }
 
   const mockRes = await fetch('/data/mock_gri_history.json')

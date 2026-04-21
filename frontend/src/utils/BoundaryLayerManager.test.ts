@@ -97,6 +97,22 @@ describe('BoundaryLayerManager', () => {
     )
   })
 
+  it('districtFilter가 null이면 하이라이트 필터를 빈 배열로 설정한다', () => {
+    const { map, emit } = createMockMap(false)
+
+    new BoundaryLayerManager(map as never, 'light', null)
+
+    map.isStyleLoaded.mockReturnValue(true)
+    emit('styledata')
+
+    const highlightCall = map.addLayer.mock.calls.find(([layer]) => layer.id === HIGHLIGHT_LAYER_ID)
+    expect(highlightCall?.[0].filter).toEqual([
+      'in',
+      ['get', 'gu_code'],
+      ['literal', []],
+    ])
+  })
+
   it('uses the latest district filter when layers are recreated', () => {
     const { map, emit } = createMockMap(false)
 
