@@ -5,7 +5,9 @@ import CommerceDetailPanel from './components/CommerceDetailPanel'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
+import { filterNodesByDistrict, filterNodesByType } from './utils/filters'
 import type { CommerceNode } from './types/commerce'
+import type { CommerceType } from './styles/tokens'
 import './App.css'
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
@@ -18,12 +20,35 @@ export default function App() {
   const [flowStrength, setFlowStrength] = useState(3)
   const [boundaryOpacity, setBoundaryOpacity] = useState(0.3)
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
+  const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(new Set())
+  const [selectedTypes, setSelectedTypes] = useState<Set<CommerceType>>(new Set())
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
-  const { nodes, usingMockData } = useCommerceData()
+  const { nodes: rawNodes, usingMockData } = useCommerceData()
   const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour })
+
+  const nodes = filterNodesByType(
+    filterNodesByDistrict(rawNodes, selectedDistricts),
+    selectedTypes,
+  )
+
+  function handleToggleDistrict(district: string) {
+    setSelectedDistricts(prev => {
+      const next = new Set(prev)
+      next.has(district) ? next.delete(district) : next.add(district)
+      return next
+    })
+  }
+
+  function handleToggleType(type: CommerceType) {
+    setSelectedTypes(prev => {
+      const next = new Set(prev)
+      next.has(type) ? next.delete(type) : next.add(type)
+      return next
+    })
+  }
 
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -69,6 +94,10 @@ export default function App() {
         onPlay={play}
         onPause={pause}
         onToggleSpeed={toggleSpeed}
+        selectedDistricts={selectedDistricts}
+        onToggleDistrict={handleToggleDistrict}
+        selectedTypes={selectedTypes}
+        onToggleType={handleToggleType}
       />
     </div>
   )
