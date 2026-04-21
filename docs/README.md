@@ -27,9 +27,11 @@
 | [module_a_design.md](module_a_design.md) | Module A — 상권 흐름 유향 그래프 |
 | [gri_formula.md](gri_formula.md) | Module B — GRI v1.0 공식 |
 | [module_d_design.md](module_d_design.md) | Module D — 규칙 기반 정책 추천 (8 규칙) |
+| [module_e_design.md](module_e_design.md) | Module E — 정책 우선순위 점수 (0.60 GRI + 0.25 size + 0.15 trend) |
 | [week2_implementation_plan.md](week2_implementation_plan.md) | Module A/B + H1 구현 계획 (완료) |
+| [week3_implementation_plan.md](week3_implementation_plan.md) | Module E 설계 + Module D R4~R7 구현 계획 |
 
-> Module C (흐름 단절 탐지), E (우선순위 점수) 설계 문서는 Week 3 이후 추가.
+> Module C (흐름 단절 탐지) 설계 문서는 `od_flows` 적재 후 추가.
 
 ## API / UI 설계
 
