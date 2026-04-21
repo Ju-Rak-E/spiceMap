@@ -1,0 +1,110 @@
+[
+  {
+    "id": "f1",
+    "sourceId": "관악구_봉천동",
+    "targetId": "강남구_역삼동",
+    "sourceCoord": [126.952, 37.477],
+    "targetCoord": [127.036, 37.500],
+    "volume": 8500,
+    "purpose": "출근"
+  },
+  {
+    "id": "f2",
+    "sourceId": "강남구_신사동",
+    "targetId": "강남구_역삼동",
+    "sourceCoord": [127.020, 37.526],
+    "targetCoord": [127.036, 37.500],
+    "volume": 5200,
+    "purpose": "쇼핑"
+  },
+  {
+    "id": "f3",
+    "sourceId": "관악구_신림동",
+    "targetId": "관악구_봉천동",
+    "sourceCoord": [126.929, 37.484],
+    "targetCoord": [126.952, 37.477],
+    "volume": 3100,
+    "purpose": "출근"
+  },
+  {
+    "id": "f4",
+    "sourceId": "강남구_역삼동",
+    "targetId": "관악구_신림동",
+    "sourceCoord": [127.036, 37.500],
+    "targetCoord": [126.929, 37.484],
+    "volume": 1200,
+    "purpose": "귀가"
+  },
+  {
+    "id": "f5",
+    "sourceId": "관악구_봉천동",
+    "targetId": "강남구_신사동",
+    "sourceCoord": [126.952, 37.477],
+    "targetCoord": [127.020, 37.526],
+    "volume": 900,
+    "purpose": "쇼핑"
+  },
+  {
+    "id": "f6",
+    "sourceId": "강남구_청담동",
+    "targetId": "강남구_신사동",
+    "sourceCoord": [127.047, 37.524],
+    "targetCoord": [127.020, 37.526],
+    "volume": 4100,
+    "purpose": "쇼핑"
+  },
+  {
+    "id": "f7",
+    "sourceId": "관악구_신림동",
+    "targetId": "강남구_역삼동",
+    "sourceCoord": [126.929, 37.484],
+    "targetCoord": [127.036, 37.500],
+    "volume": 6200,
+    "purpose": "출근"
+  },
+  {
+    "id": "f8",
+    "sourceId": "강남구_역삼동",
+    "targetId": "관악구_봉천동",
+    "sourceCoord": [127.036, 37.500],
+    "targetCoord": [126.952, 37.477],
+    "volume": 2300,
+    "purpose": "귀가"
+  },
+  {
+    "id": "f9",
+    "sourceId": "강남구_청담동",
+    "targetId": "강남구_신사동",
+    "sourceCoord": [127.047, 37.524],
+    "targetCoord": [127.020, 37.526],
+    "volume": 3200,
+    "purpose": "관광"
+  },
+  {
+    "id": "f10",
+    "sourceId": "관악구_봉천동",
+    "targetId": "관악구_신림동",
+    "sourceCoord": [126.952, 37.477],
+    "targetCoord": [126.929, 37.484],
+    "volume": 2400,
+    "purpose": "관광"
+  },
+  {
+    "id": "f11",
+    "sourceId": "관악구_신림동",
+    "targetId": "관악구_봉천동",
+    "sourceCoord": [126.929, 37.484],
+    "targetCoord": [126.952, 37.477],
+    "volume": 1800,
+    "purpose": "등교"
+  },
+  {
+    "id": "f12",
+    "sourceId": "관악구_봉천동",
+    "targetId": "강남구_역삼동",
+    "sourceCoord": [126.952, 37.477],
+    "targetCoord": [127.036, 37.500],
+    "volume": 1400,
+    "purpose": "등교"
+  }
+]
