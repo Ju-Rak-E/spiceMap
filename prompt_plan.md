@@ -61,7 +61,9 @@
 - [x] Module A NetworkX 스켈레톤 + 더미 데이터 TDD (`backend/analysis/module_a_graph.py`)
 - [x] Module B (GRI 산출) 구현 (`backend/analysis/module_b_gri.py`)
 - [ ] Module C (흐름 단절 탐지) 구현 (`backend/analysis/module_c_barriers.py`)
-- [ ] 분기 커버리지 실측 (`commerce_sales`, `store_info` 적재 범위)
+- [x] 분기 커버리지 실측 (`commerce_sales`, `store_info` 적재 범위) — `docs/quarter_coverage_report.md`
+- [x] Module D 선행 설계 (`docs/module_d_design.md`, Week 3 구현 대비)
+- [x] Dev-A 에스컬레이션 초안 작성 (`docs/dev_a_escalation_draft.md`, 미발송)
 
 **주차 완료 기준**: 강남·관악 상권 유형 분류 결과, GRI 초기값, 단절 구간 후보 추출.
 **블로커 대응**: od_flows 0건 → 더미 데이터로 Module A 선행 구현, 실제 적재 후 재검증.
