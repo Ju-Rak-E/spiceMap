@@ -1,7 +1,9 @@
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceNode } from '../types/commerce'
 import { useGriHistory } from '../hooks/useGriHistory'
+import { usePolicyInsights } from '../hooks/usePolicyInsights'
 import TrendChart from './TrendChart'
+import PolicyCard from './PolicyCard'
 
 interface CommerceDetailPanelProps {
   node: CommerceNode
@@ -104,6 +106,7 @@ function netFlowColor(v: number): string {
 
 export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPanelProps) {
   const { series, isLoading, error } = useGriHistory(node.id)
+  const { insight, isLoading: policyLoading } = usePolicyInsights(node.id)
   const colorToken = COMMERCE_COLORS[node.type]
   const icon = TYPE_ICON[node.type] ?? '●'
 
@@ -157,6 +160,13 @@ export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPan
         {isLoading && <div style={S.loadingText}>불러오는 중...</div>}
         {error && <div style={S.errorText}>{error}</div>}
         {!isLoading && !error && <TrendChart series={series} width={296} height={110} />}
+      </div>
+
+      {/* 정책 추천 카드 */}
+      <div>
+        <div style={S.sectionTitle}>정책 추천</div>
+        {policyLoading && <div style={S.loadingText}>불러오는 중...</div>}
+        {!policyLoading && insight && <PolicyCard insight={insight} />}
       </div>
     </div>
   )
