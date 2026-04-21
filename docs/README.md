@@ -26,8 +26,10 @@
 |------|------|
 | [module_a_design.md](module_a_design.md) | Module A — 상권 흐름 유향 그래프 |
 | [gri_formula.md](gri_formula.md) | Module B — GRI v1.0 공식 |
+| [module_d_design.md](module_d_design.md) | Module D — 규칙 기반 정책 추천 (8 규칙) |
+| [week2_implementation_plan.md](week2_implementation_plan.md) | Module A/B + H1 구현 계획 (완료) |
 
-> Module C (흐름 단절 탐지), D (정책 추천), E (우선순위 점수) 설계 문서는 Week 3 이후 추가.
+> Module C (흐름 단절 탐지), E (우선순위 점수) 설계 문서는 Week 3 이후 추가.
 
 ## API / UI 설계
 
@@ -46,7 +48,14 @@
 
 | 문서 | 설명 |
 |------|------|
-| [data_quality_report.md](data_quality_report.md) | 데이터 품질 검토 리포트 |
+| [data_quality_report.md](data_quality_report.md) | 데이터 품질 검토 리포트 (2026-04-15) |
+| [quarter_coverage_report.md](quarter_coverage_report.md) | 분기 커버리지 실측 (2026-04-22) |
+
+## 작업 이력 / 에스컬레이션
+
+| 문서 | 설명 |
+|------|------|
+| [dev_a_escalation_draft.md](dev_a_escalation_draft.md) | Dev-A 블로커 해제 요청 메시지 초안 |
 
 ## 브레인스토밍
 
