@@ -83,9 +83,11 @@
 - [ ] 자치구 필터 + 상권 유형 필터 UI
 
 ### Dev-C
-- [ ] Module D: 규칙 기반 정책 추천 생성
-- [ ] Module E: 정책 우선순위 점수 산출
+- [~] Module D: 규칙 기반 정책 추천 생성 — **R4~R7 구현 완료** (`module_d_policy.py`), R1~R3·R8은 od_flows 적재 후 활성화
+- [x] Module E: 정책 우선순위 점수 산출 — **설계 문서 완료** (`module_e_design.md`), 구현은 Week 3 후반
 - [x] H1 검증: 순유입-매출 Pearson 상관 (목표 p < 0.05) — 함수 구현 완료 (`verification_h1.py`), 실데이터 실행은 `od_flows` 적재 후
+- [x] 상권 유형 근사 분류기 구현 — **신규** (`commerce_type.py`, v1.0 — 임대료/프랜차이즈 미사용)
+- [x] PolicyCard Pydantic 스키마 — **신규** (`backend/schemas/insights.py`, FR-07 준수)
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
 
