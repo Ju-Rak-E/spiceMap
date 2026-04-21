@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { isDemoMode } from '../utils/demoMode'
 
 export type FlowPurpose = '출근' | '쇼핑' | '관광' | '귀가' | '등교'
 
@@ -89,14 +90,10 @@ export function computeStats(flows: ODFlow[]): FlowStats {
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 async function fetchFlows(): Promise<ODFlow[]> {
-  if (BASE_URL) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/od/flows`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return res.json() as Promise<ODFlow[]>
-    } catch {
-      // API 실패 시 mock 폴백
-    }
+  if (!isDemoMode()) {
+    const res = await fetch(`${BASE_URL}/api/od/flows`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json() as Promise<ODFlow[]>
   }
 
   const mockRes = await fetch('/data/mock_flows.json')

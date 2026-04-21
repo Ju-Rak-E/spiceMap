@@ -7,14 +7,12 @@ const FILL_LAYER_ID = 'admin-boundary-fill'
 const LINE_LAYER_ID = 'admin-boundary-line'
 const HIGHLIGHT_LAYER_ID = 'admin-boundary-highlight'
 
-const MVP_GU_CODES = ['1123', '1121']
-
 const buildHighlightFilter = (
   districtFilter: string | null,
 ): maplibregl.FilterSpecification => ([
   'in',
   ['get', 'gu_code'],
-  ['literal', districtFilter ? [districtFilter] : MVP_GU_CODES],
+  ['literal', districtFilter ? [districtFilter] : []],
 ])
 
 export class BoundaryLayerManager {
