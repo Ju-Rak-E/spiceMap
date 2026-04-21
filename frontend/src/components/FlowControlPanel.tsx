@@ -1,4 +1,14 @@
 import type { FlowPurpose, FlowStats } from '../hooks/useFlowData'
+import { COMMERCE_COLORS, type CommerceType } from '../styles/tokens'
+
+const MVP_DISTRICTS = ['강남구', '관악구'] as const
+const TYPE_ICON: Record<CommerceType, string> = {
+  흡수형_과열: '⚠',
+  흡수형_성장: '↑',
+  방출형_침체: '↓',
+  고립형_단절: '✕',
+  안정형:      '✓',
+}
 
 interface FlowControlPanelProps {
   purpose: FlowPurpose | null
@@ -15,6 +25,10 @@ interface FlowControlPanelProps {
   onPlay: () => void
   onPause: () => void
   onToggleSpeed: () => void
+  selectedDistricts: Set<string>
+  onToggleDistrict: (d: string) => void
+  selectedTypes: Set<CommerceType>
+  onToggleType: (t: CommerceType) => void
 }
 
 const PURPOSES: FlowPurpose[] = ['출근', '쇼핑', '관광', '귀가', '등교']
@@ -150,6 +164,10 @@ export default function FlowControlPanel({
   onPlay,
   onPause,
   onToggleSpeed,
+  selectedDistricts,
+  onToggleDistrict,
+  selectedTypes,
+  onToggleType,
 }: FlowControlPanelProps) {
   const insight = purpose ? AI_INSIGHT[purpose] : null
 
@@ -269,6 +287,78 @@ export default function FlowControlPanel({
             style={S.slider}
           />
           <span style={S.sliderValue}>{Math.round(boundaryOpacity * 100)}%</span>
+        </div>
+      </div>
+
+      {/* 자치구 필터 */}
+      <div style={S.section}>
+        <div style={S.label}>자치구 (전체 = 둘 다 해제)</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {MVP_DISTRICTS.map(d => {
+            const active = selectedDistricts.has(d)
+            return (
+              <button
+                key={d}
+                style={{
+                  flex: 1,
+                  padding: '7px 4px',
+                  borderRadius: 8,
+                  border: active ? '1.5px solid #42A5F5' : '1px solid #37474F',
+                  background: active ? '#0D47A1' : '#263238',
+                  color: active ? '#90CAF9' : '#90A4AE',
+                  fontSize: 13,
+                  fontWeight: active ? 700 : 400,
+                  cursor: 'pointer',
+                }}
+                onClick={() => onToggleDistrict(d)}
+              >
+                {d}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 상권 유형 필터 (범례 겸용) */}
+      <div style={S.section}>
+        <div style={S.label}>상권 유형 (전체 = 모두 해제)</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {(Object.entries(COMMERCE_COLORS) as [CommerceType, { fill: string }][]).map(([type, token]) => {
+            const active = selectedTypes.has(type)
+            return (
+              <button
+                key={type}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  border: active ? `1.5px solid ${token.fill}` : '1px solid #37474F',
+                  background: active ? token.fill + '22' : '#263238',
+                  color: active ? token.fill : '#546E7A',
+                  fontSize: 12,
+                  fontWeight: active ? 700 : 400,
+                  cursor: 'pointer',
+                  textAlign: 'left' as const,
+                }}
+                onClick={() => onToggleType(type)}
+              >
+                <span aria-hidden="true" style={{ minWidth: 14 }}>{TYPE_ICON[type]}</span>
+                <span style={{ flex: 1 }}>{type}</span>
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: token.fill,
+                    flexShrink: 0,
+                  }}
+                  aria-hidden="true"
+                />
+              </button>
+            )
+          })}
         </div>
       </div>
 
