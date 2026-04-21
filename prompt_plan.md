@@ -58,8 +58,8 @@
 - [x] Week 2 의사결정 기록 (`docs/week2_decisions.md`)
 - [x] GRI 공식 설계 (`docs/gri_formula.md`)
 - [x] Module A 설계 (`docs/module_a_design.md`)
-- [ ] Module A NetworkX 스켈레톤 + 더미 데이터 TDD (`backend/analysis/module_a_graph.py`)
-- [ ] Module B (GRI 산출) 구현 (`backend/analysis/module_b_gri.py`)
+- [x] Module A NetworkX 스켈레톤 + 더미 데이터 TDD (`backend/analysis/module_a_graph.py`)
+- [x] Module B (GRI 산출) 구현 (`backend/analysis/module_b_gri.py`)
 - [ ] Module C (흐름 단절 탐지) 구현 (`backend/analysis/module_c_barriers.py`)
 - [ ] 분기 커버리지 실측 (`commerce_sales`, `store_info` 적재 범위)
 
@@ -83,7 +83,7 @@
 ### Dev-C
 - [ ] Module D: 규칙 기반 정책 추천 생성
 - [ ] Module E: 정책 우선순위 점수 산출
-- [ ] H1 검증: 순유입-매출 Pearson 상관 (목표 p < 0.05)
+- [x] H1 검증: 순유입-매출 Pearson 상관 (목표 p < 0.05) — 함수 구현 완료 (`verification_h1.py`), 실데이터 실행은 `od_flows` 적재 후
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
 
