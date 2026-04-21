@@ -3,6 +3,8 @@
 
 # 데이터 파일 (대용량 원본 CSV, SHP 등)
 data/
+# 프론트엔드 mock JSON은 버전 관리 포함
+!frontend/public/data/
 
 # 로그
 logs/

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
+import CommerceDetailPanel from './components/CommerceDetailPanel'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
+import type { CommerceNode } from './types/commerce'
 import './App.css'
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
@@ -14,6 +16,7 @@ export default function App() {
   const [hour, setHour] = useState(14)
   const [flowStrength, setFlowStrength] = useState(3)
   const [boundaryOpacity, setBoundaryOpacity] = useState(0.3)
+  const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
 
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
   const { nodes, usingMockData } = useCommerceData()
@@ -23,6 +26,14 @@ export default function App() {
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       {/* 지도 영역 */}
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        {/* 상세 패널 (지도 위 오버레이) */}
+        {selectedNode && (
+          <CommerceDetailPanel
+            node={selectedNode}
+            onClose={() => setSelectedNode(null)}
+          />
+        )}
+
         <Map
           theme="dark"
           flows={flowData.flows}
@@ -31,10 +42,11 @@ export default function App() {
           hour={hour}
           purpose={purpose}
           boundaryOpacity={boundaryOpacity}
+          onNodeClick={setSelectedNode}
         />
       </div>
 
-      {/* 제어판 */}
+      {/* 우측 제어판 */}
       <FlowControlPanel
         purpose={purpose}
         onPurposeChange={setPurpose}

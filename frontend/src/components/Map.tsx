@@ -37,6 +37,7 @@ interface MapProps {
   hour: number
   purpose: FlowPurpose | null
   boundaryOpacity?: number
+  onNodeClick?: (node: CommerceNode) => void
 }
 
 interface HoveredNode {
@@ -53,6 +54,7 @@ export default function Map({
   hour,
   purpose,
   boundaryOpacity = 0.3,
+  onNodeClick,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -117,10 +119,14 @@ export default function Map({
           } else {
             setHoveredNode(null)
           }
+        }, (info: PickingInfo<CommerceNode>) => {
+          if (info.object) {
+            onNodeClick?.(info.object)
+          }
         }),
       ],
     })
-  }, [flows, nodes])
+  }, [flows, nodes, onNodeClick])
 
   useAnimationFrame(handleFrame)
 

@@ -33,6 +33,7 @@ function getTop10PercentThreshold(nodes: CommerceNode[]): number {
 export function createCommerceNodeLayer(
   nodes: CommerceNode[],
   onHover: (info: PickingInfo<CommerceNode>) => void,
+  onClick?: (info: PickingInfo<CommerceNode>) => void,
 ): ScatterplotLayer<CommerceNode> {
   const threshold = getTop10PercentThreshold(nodes)
 
@@ -50,6 +51,7 @@ export function createCommerceNodeLayer(
     radiusUnits: 'meters',
     lineWidthUnits: 'meters',
     onHover,
+    onClick,
     updateTriggers: {
       getRadius: nodes,
       getFillColor: nodes,
