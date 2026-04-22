@@ -1,64 +1,45 @@
 import { useState, useEffect } from 'react'
-import { type GriResult } from '../utils/gri'
+import { isDemoMode } from '../utils/demoMode'
 
-export interface GriHistoryPoint {
-  quarter: string
-  score: number
-  level: GriResult['level']
+export interface GriPoint {
+  ts: string   // "YYYY-MM"
+  gri: number
 }
 
 export interface UseGriHistoryReturn {
-  history: GriHistoryPoint[]
+  series: GriPoint[]
   isLoading: boolean
   error: string | null
-  isMock: boolean
 }
 
-const MOCK_HISTORY: GriHistoryPoint[] = [
-  { quarter: '2024Q3', score: 55, level: 'safe' },
-  { quarter: '2024Q4', score: 62, level: 'safe' },
-  { quarter: '2025Q1', score: 71, level: 'warning' },
-  { quarter: '2025Q2', score: 78, level: 'warning' },
-]
+export function buildGriSeries(raw: GriPoint[]): GriPoint[] {
+  return [...raw].sort((a, b) => a.ts.localeCompare(b.ts))
+}
 
-async function fetchGriHistory(
-  nodeId: string,
-): Promise<{ history: GriHistoryPoint[]; isMock: boolean }> {
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
-  if (baseUrl) {
-    try {
-      const res = await fetch(`${baseUrl}/api/gri/history?node_id=${nodeId}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = (await res.json()) as { nodeId: string; history: GriHistoryPoint[] }
-      return { history: data.history, isMock: false }
-    } catch {
-      // API 실패 → mock 폴백
-    }
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
+
+async function fetchGriHistory(nodeId: string): Promise<GriPoint[]> {
+  if (!isDemoMode()) {
+    const res = await fetch(`${BASE_URL}/api/gri/history?nodeId=${encodeURIComponent(nodeId)}`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json() as Promise<GriPoint[]>
   }
 
-  try {
-    const res = await fetch(`/data/mock_gri_history.json`)
-    if (res.ok) {
-      const data = (await res.json()) as GriHistoryPoint[]
-      return { history: data, isMock: true }
-    }
-  } catch {
-    // mock 파일 없음 → 인라인 폴백
-  }
-
-  return { history: MOCK_HISTORY, isMock: true }
+  const mockRes = await fetch('/data/mock_gri_history.json')
+  if (!mockRes.ok) throw new Error('mock GRI 데이터를 불러오지 못했습니다')
+  const all = (await mockRes.json()) as Record<string, GriPoint[]>
+  return all[nodeId] ?? all['__default__'] ?? []
 }
 
 export function useGriHistory(nodeId: string | null): UseGriHistoryReturn {
-  const [history, setHistory] = useState<GriHistoryPoint[]>([])
+  const [series, setSeries] = useState<GriPoint[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isMock, setIsMock] = useState(false)
 
   useEffect(() => {
     if (!nodeId) {
-      setHistory([])
-      setIsLoading(false)
+      setSeries([])
+      setError(null)
       return
     }
 
@@ -66,16 +47,15 @@ export function useGriHistory(nodeId: string | null): UseGriHistoryReturn {
     setError(null)
 
     fetchGriHistory(nodeId)
-      .then(({ history: fetched, isMock: mock }) => {
-        setHistory(fetched)
-        setIsMock(mock)
+      .then((raw) => {
+        setSeries(buildGriSeries(raw))
         setIsLoading(false)
       })
       .catch(() => {
-        setError('GRI 이력을 불러오지 못했습니다')
+        setError('GRI 데이터를 불러오지 못했습니다')
         setIsLoading(false)
       })
   }, [nodeId])
 
-  return { history, isLoading, error, isMock }
+  return { series, isLoading, error }
 }

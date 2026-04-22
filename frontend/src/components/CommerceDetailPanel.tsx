@@ -1,164 +1,169 @@
-import type { CSSProperties } from 'react'
+import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceNode } from '../types/commerce'
-import { COMMERCE_COLORS, getInterventionBadge } from '../styles/tokens'
 import { useGriHistory } from '../hooks/useGriHistory'
+import { usePolicyInsights } from '../hooks/usePolicyInsights'
+import TrendChart from './TrendChart'
+import PolicyCard from './PolicyCard'
 
-interface Props {
-  node: CommerceNode | null
+interface CommerceDetailPanelProps {
+  node: CommerceNode
   onClose: () => void
 }
 
-const LEVEL_COLOR: Record<string, string> = {
-  safe: '#43A047',
-  warning: '#FB8C00',
-  danger: '#E53935',
+const TYPE_ICON: Record<string, string> = {
+  흡수형_과열: '⚠',
+  흡수형_성장: '↑',
+  방출형_침체: '↓',
+  고립형_단절: '✕',
+  안정형:      '✓',
 }
 
-const GRI_MAX = 100
-const CHART_W = 220
-const CHART_H = 60
-const CHART_PAD = { left: 8, right: 8, top: 8, bottom: 4 }
-
-function GriSparkline({ scores }: { scores: { score: number; level: string }[] }) {
-  if (scores.length < 2) return null
-
-  const innerW = CHART_W - CHART_PAD.left - CHART_PAD.right
-  const innerH = CHART_H - CHART_PAD.top - CHART_PAD.bottom
-  const xStep = innerW / (scores.length - 1)
-
-  const points = scores.map((p, i) => ({
-    x: CHART_PAD.left + i * xStep,
-    y: CHART_PAD.top + innerH * (1 - p.score / GRI_MAX),
-    ...p,
-  }))
-
-  const polyline = points.map(p => `${p.x},${p.y}`).join(' ')
-
-  return (
-    <svg width={CHART_W} height={CHART_H} style={{ display: 'block' }}>
-      {/* 70 경보선 */}
-      <line
-        x1={CHART_PAD.left}
-        x2={CHART_W - CHART_PAD.right}
-        y1={CHART_PAD.top + innerH * (1 - 70 / GRI_MAX)}
-        y2={CHART_PAD.top + innerH * (1 - 70 / GRI_MAX)}
-        stroke="#FB8C00"
-        strokeWidth={0.8}
-        strokeDasharray="3 2"
-        opacity={0.6}
-      />
-      <polyline
-        points={polyline}
-        fill="none"
-        stroke="#90CAF9"
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-      />
-      {points.map((p, i) => (
-        <circle
-          key={i}
-          cx={p.x}
-          cy={p.y}
-          r={3}
-          fill={LEVEL_COLOR[p.level] ?? '#90CAF9'}
-        />
-      ))}
-    </svg>
-  )
-}
-
-const S: Record<string, CSSProperties> = {
-  panel: {
-    position: 'absolute',
-    top: 60,
-    right: 336,
-    width: 272,
-    background: '#10161D',
-    borderRadius: 10,
-    border: '1px solid #24323F',
-    padding: '14px 16px',
-    color: '#E7EEF5',
-    fontFamily: 'inherit',
-    zIndex: 10,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.45)',
+const S = {
+  overlay: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    width: 360,
+    height: '100%',
+    background: '#1A2332',
+    borderRight: '1px solid #263238',
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    zIndex: 20,
+    overflowY: 'auto' as const,
+    padding: '16px 16px',
+    boxSizing: 'border-box' as const,
+    color: '#ECEFF1',
+    fontFamily: 'system-ui, sans-serif',
+    gap: 14,
+    boxShadow: '4px 0 16px rgba(0,0,0,0.5)',
   },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  name: { fontSize: 14, fontWeight: 700, color: '#E7EEF5', lineHeight: 1.3 },
   closeBtn: {
-    background: 'none', border: 'none', color: '#6E8093', cursor: 'pointer',
-    fontSize: 16, lineHeight: 1, padding: 2,
+    position: 'absolute' as const,
+    top: 12,
+    right: 12,
+    background: 'transparent',
+    border: 'none',
+    color: '#546E7A',
+    fontSize: 20,
+    cursor: 'pointer',
+    lineHeight: 1,
+    padding: 4,
   },
-  typeBadge: { display: 'inline-block', fontSize: 11, borderRadius: 4, padding: '2px 7px', marginBottom: 10 },
-  row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 },
-  label: { fontSize: 11, color: '#A6B4C2' },
-  value: { fontSize: 13, fontWeight: 600, color: '#E7EEF5' },
-  griScore: { fontSize: 24, fontWeight: 800 },
-  divider: { border: 'none', borderTop: '1px solid #24323F', margin: '10px 0' },
-  sectionTitle: { fontSize: 11, color: '#6E8093', marginBottom: 6 },
+  typeBadge: (fill: string): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    background: fill + '33',
+    border: `1px solid ${fill}`,
+    borderRadius: 4,
+    padding: '2px 8px',
+    fontSize: 12,
+    color: fill,
+    fontWeight: 600,
+  }),
+  sectionTitle: {
+    fontSize: 11,
+    color: '#546E7A',
+    fontWeight: 600,
+    marginBottom: 6,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+  },
+  kpiGrid: {
+    display: 'grid' as const,
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8,
+  },
+  kpiCard: {
+    background: '#263238',
+    borderRadius: 8,
+    padding: '10px 12px',
+  },
+  kpiLabel: { fontSize: 11, color: '#546E7A', marginBottom: 3 },
+  kpiValue: (color?: string): React.CSSProperties => ({
+    fontSize: 20,
+    fontWeight: 700,
+    color: color ?? '#ECEFF1',
+  }),
+  sourceLabel: {
+    fontSize: 10,
+    color: '#37474F',
+    marginTop: 2,
+  },
+  chartBox: {
+    background: '#263238',
+    borderRadius: 8,
+    padding: '10px 12px',
+  },
+  errorText: { fontSize: 12, color: '#EF5350' },
+  loadingText: { fontSize: 12, color: '#546E7A' },
 }
 
-export default function CommerceDetailPanel({ node, onClose }: Props) {
-  const { history } = useGriHistory(node?.id ?? null)
+function netFlowColor(v: number): string {
+  return v >= 0 ? '#43A047' : '#EF5350'
+}
 
-  if (!node) return null
-
-  const typeToken = COMMERCE_COLORS[node.type]
-  const badge = getInterventionBadge(node.griScore)
+export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPanelProps) {
+  const { series, isLoading, error } = useGriHistory(node.id)
+  const { insight, isLoading: policyLoading } = usePolicyInsights(node.id)
+  const colorToken = COMMERCE_COLORS[node.type]
+  const icon = TYPE_ICON[node.type] ?? '●'
 
   return (
-    <div style={S.panel}>
-      <div style={S.header}>
-        <span style={S.name}>{node.name}</span>
-        <button style={S.closeBtn} onClick={onClose} aria-label="닫기">✕</button>
-      </div>
+    <div style={S.overlay}>
+      <button style={S.closeBtn} onClick={onClose} aria-label="패널 닫기">✕</button>
 
-      <span
-        style={{
-          ...S.typeBadge,
-          background: typeToken.badgeColor,
-          color: typeToken.textColor,
-        }}
-      >
-        {typeToken.symbol} {typeToken.label}
-      </span>
-
-      <div style={S.row}>
-        <span style={S.label}>GRI 위험지수</span>
-        <span style={{ ...S.griScore, color: LEVEL_COLOR[node.griScore >= 85 ? 'danger' : node.griScore >= 70 ? 'warning' : 'safe'] }}>
-          {node.griScore}
+      <div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, paddingRight: 28 }}>
+          {node.name}
+        </div>
+        <span style={S.typeBadge(colorToken.fill)}>
+          <span aria-hidden="true">{icon}</span>
+          {node.type}
         </span>
       </div>
 
-      {badge && (
-        <div style={S.row}>
-          <span style={S.label}>개입 등급</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: badge.color, background: badge.bg, borderRadius: 4, padding: '2px 8px' }}>
-            {badge.label}
-          </span>
-        </div>
-      )}
-
-      <div style={S.row}>
-        <span style={S.label}>순유입</span>
-        <span style={S.value}>{node.netFlow.toLocaleString()}</span>
-      </div>
-
-      <div style={S.row}>
-        <span style={S.label}>연결 중심성</span>
-        <span style={S.value}>{(node.degreeCentrality * 100).toFixed(0)}%</span>
-      </div>
-
-      {history.length > 0 && (
-        <>
-          <hr style={S.divider} />
-          <div style={S.sectionTitle}>GRI 추세 (분기별)</div>
-          <GriSparkline scores={history} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-            <span style={{ fontSize: 10, color: '#607D8B' }}>{history[0]?.quarter}</span>
-            <span style={{ fontSize: 10, color: '#607D8B' }}>{history[history.length - 1]?.quarter}</span>
+      <div>
+        <div style={S.sectionTitle}>주요 지표</div>
+        <div style={S.kpiGrid}>
+          <div style={S.kpiCard}>
+            <div style={S.kpiLabel}>GRI 점수</div>
+            <div style={S.kpiValue()}>{node.griScore}</div>
+            <div style={S.sourceLabel}>출처: 서울시 공공데이터포털</div>
           </div>
-        </>
-      )}
+          <div style={S.kpiCard}>
+            <div style={S.kpiLabel}>순유입</div>
+            <div style={S.kpiValue(netFlowColor(node.netFlow))}>
+              {node.netFlow >= 0 ? '+' : ''}{node.netFlow}
+            </div>
+            <div style={S.sourceLabel}>출처: 생활이동 데이터</div>
+          </div>
+          <div style={S.kpiCard}>
+            <div style={S.kpiLabel}>중심성</div>
+            <div style={S.kpiValue()}>{(node.degreeCentrality * 100).toFixed(0)}%</div>
+            <div style={S.sourceLabel}>출처: OD 흐름 분석</div>
+          </div>
+          <div style={S.kpiCard}>
+            <div style={S.kpiLabel}>상권 등급</div>
+            <div style={{ ...S.kpiValue(colorToken.fill), fontSize: 15 }}>{node.type.split('_')[0]}</div>
+            <div style={S.sourceLabel}>규칙 기반 | AI 미사용</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={S.chartBox}>
+        <div style={S.sectionTitle}>GRI 12개월 추세</div>
+        {isLoading && <div style={S.loadingText}>불러오는 중...</div>}
+        {error && <div style={S.errorText}>{error}</div>}
+        {!isLoading && !error && <TrendChart series={series} width={296} height={110} />}
+      </div>
+
+      <div>
+        <div style={S.sectionTitle}>정책 추천</div>
+        {policyLoading && <div style={S.loadingText}>불러오는 중...</div>}
+        {!policyLoading && insight && <PolicyCard insight={insight} />}
+      </div>
     </div>
   )
 }

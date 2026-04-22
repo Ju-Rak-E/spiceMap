@@ -1,33 +1,34 @@
 # FastAPI 엔드포인트 명세 (spiceMap)
 
-> 작성일: 2026-04-16  
-> 담당: Dev-A  
+> 기준일: 2026-04-22  
+> 기준: 실제 코드 구현 상태  
 > 서버: `http://localhost:8000`  
 > Swagger UI: `http://localhost:8000/docs`
 
+기획 명세가 아니라 현재 `backend/` 코드 기준으로 정리한 API 문서입니다.
+
 ---
 
-## 엔드포인트 목록
+## 구현 상태 요약
 
-| 엔드포인트 | 주차 | Dev-C 의존 | 설명 |
-|-----------|------|-----------|------|
-| `GET /health` | Week 2 | ✗ | 헬스체크 |
-| `GET /api/commerce/type-map` | Week 2 | ✓ | 상권 폴리곤 + 분석 결과 (지도 메인 뷰) |
-| `GET /api/gri/history` | Week 2 | ✓ | 상권 GRI 분기별 시계열 |
-| `GET /api/od/flows` | Week 3 | ✗ | OD 이동 흐름 데이터 |
-| `GET /api/barriers` | Week 3 | ✓ | 흐름 단절 구간 목록 |
-| `GET /api/insights/policy` | Week 3 | ✓ | 정책 추천 카드 + 우선순위 점수 |
-| `GET /api/export/csv` | Week 3 | ✓ | 위험 상권 CSV 다운로드 |
-
-> **Dev-C 의존**: `commerce_analysis`, `flow_barriers` 테이블이 채워져야 실제 데이터 반환. 그 전까지는 null 또는 빈 배열 반환이 정상 동작.
+| 엔드포인트 | 상태 | 설명 |
+|-----------|------|------|
+| `GET /health` | 구현 완료 | 헬스체크 |
+| `GET /api/commerce/type-map` | 구현 완료 | GeoJSON FeatureCollection 반환 |
+| `GET /api/gri/history` | 구현 완료 | 상권 GRI 시계열 반환 |
+| `GET /api/od/flows` | placeholder | `not_implemented` 반환 |
+| `GET /api/barriers` | placeholder | `not_implemented` 반환 |
+| `GET /api/insights/policy` | placeholder | `not_implemented` 반환 |
+| `GET /api/export/csv` | placeholder | `not_implemented` 반환 |
 
 ---
 
 ## `GET /health`
 
-헬스체크.
+헬스체크 엔드포인트입니다.
 
 **응답**
+
 ```json
 { "status": "ok" }
 ```
@@ -36,22 +37,22 @@
 
 ## `GET /api/commerce/type-map`
 
-지도 메인 뷰용. 상권 경계 폴리곤 + 분석 결과를 GeoJSON으로 반환.
+상권 경계와 분석 결과를 GeoJSON `FeatureCollection` 형태로 반환합니다.
 
-**Query Parameters**
+### Query Parameters
 
 | 파라미터 | 타입 | 필수 | 기본값 | 설명 |
 |---------|------|------|--------|------|
-| `gu` | string | ✗ | (전체) | 자치구 필터 (예: `강남구`) |
-| `quarter` | string | ✗ | `2025Q4` | 분기 (예: `2025Q4`) |
+| `gu` | string | 아니오 | `null` | 자치구명. 현재는 받아도 실제 필터링에는 반영되지 않음 |
+| `quarter` | string | 아니오 | `2025Q4` | 조회 분기 |
 
-**응답** `200 OK` — GeoJSON FeatureCollection
+### 응답 예시
 
 ```json
 {
   "type": "FeatureCollection",
   "quarter": "2025Q4",
-  "total": 1650,
+  "total": 1,
   "features": [
     {
       "type": "Feature",
@@ -73,177 +74,82 @@
 }
 ```
 
-**캐시**: Redis `type-map:{gu|all}:{quarter}` / TTL 1시간
+### 캐시
+
+- Redis key: `type-map:{gu|all}:{quarter}`
+- TTL: 1시간
+
+### 비고
+
+- 현재 `commerce_boundary`와 `commerce_analysis`를 조인해서 반환합니다.
+- `gu` 필터는 향후 상권-자치구 매핑 정리 후 반영 예정입니다.
 
 ---
 
 ## `GET /api/gri/history`
 
-상세 패널 GRI 추세 그래프용. 특정 상권의 분기별 GRI 시계열 반환.
+특정 상권의 분기별 GRI 시계열을 반환합니다.
 
-**Query Parameters**
+### Query Parameters
 
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
-| `comm_cd` | string | ✓ | 상권 코드 (예: `3110008`) |
+| `comm_cd` | string | 예 | 상권 코드 |
 
-**응답** `200 OK`
+### 응답 예시
 
 ```json
 {
   "comm_cd": "3110008",
   "comm_nm": "배화여자대학교",
   "history": [
-    { "quarter": "2025Q4", "gri_score": null, "flow_volume": null }
-  ]
-}
-```
-
-**캐시**: Redis `gri-history:{comm_cd}` / TTL 1시간
-
----
-
-## `GET /api/od/flows`
-
-OD 이동 흐름 데이터. 지도에서 상위 N개 흐름 곡선 렌더링용.
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
-|---------|------|------|--------|------|
-| `gu` | string | ✗ | (전체) | 자치구 필터 |
-| `quarter` | string | ✗ | `2025Q4` | 분기 |
-| `top_n` | integer | ✗ | `20` | 상위 N개 흐름만 반환 (성능 제한) |
-
-**응답** `200 OK`
-
-```json
-{
-  "quarter": "2025Q4",
-  "total_flows": 120,
-  "flows": [
     {
-      "origin_adm_cd": "11620530",
-      "origin_adm_nm": "신림동",
-      "dest_adm_cd": "11680500",
-      "dest_adm_nm": "역삼1동",
-      "trip_count": 4200.0,
-      "move_purpose": 1
+      "quarter": "2025Q3",
+      "gri_score": 61.2,
+      "flow_volume": 3800
+    },
+    {
+      "quarter": "2025Q4",
+      "gri_score": 64.5,
+      "flow_volume": 4200
     }
   ]
 }
 ```
 
-**캐시**: Redis `od-flows:{gu|all}:{quarter}:{top_n}` / TTL 1시간
+### 캐시
+
+- Redis key: `gri-history:{comm_cd}`
+- TTL: 1시간
 
 ---
 
-## `GET /api/barriers`
+## Placeholder 엔드포인트
 
-흐름 단절 구간 레이어 토글용.
+아래 엔드포인트는 라우터는 연결되어 있으나 실제 데이터 조회는 아직 구현되지 않았습니다.
 
-**Query Parameters**
+- `GET /api/od/flows`
+- `GET /api/barriers`
+- `GET /api/insights/policy`
+- `GET /api/export/csv`
 
-| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
-|---------|------|------|--------|------|
-| `gu` | string | ✗ | (전체) | 자치구 필터 |
-| `quarter` | string | ✗ | `2025Q4` | 분기 |
-
-**응답** `200 OK`
+현재 응답 형식은 공통적으로 아래와 같습니다.
 
 ```json
 {
-  "quarter": "2025Q4",
-  "barriers": [
-    {
-      "from_comm_cd": "3110008",
-      "from_comm_nm": "배화여자대학교",
-      "to_comm_cd": "3110009",
-      "to_comm_nm": "자하문터널",
-      "barrier_score": 0.87,
-      "barrier_type": "도로"
-    }
-  ]
+  "status": "not_implemented",
+  "week": 3
 }
 ```
 
-**캐시**: Redis `barriers:{gu|all}:{quarter}` / TTL 1시간
-
 ---
 
-## `GET /api/insights/policy`
+## 프론트 연동 메모
 
-정책 우선순위 TOP 목록 + 추천 카드.
+2026-04-22 기준 프론트와 백엔드의 계약이 아직 완전히 일치하지 않습니다.
 
-**Query Parameters**
+- 프론트 `useCommerceData`는 `{ nodes, updatedAt }` 구조를 기대하지만 현재 백엔드는 GeoJSON 반환
+- 프론트 `useGriHistory`는 `nodeId` 쿼리를 사용하지만 현재 백엔드는 `comm_cd`를 기대
+- 프론트 `useFlowData`와 `usePolicyInsights`는 mock/demo mode 기준 구조에 맞춰져 있음
 
-| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
-|---------|------|------|--------|------|
-| `gu` | string | ✗ | (전체) | 자치구 필터 |
-| `quarter` | string | ✗ | `2025Q4` | 분기 |
-| `min_score` | number | ✗ | `0` | 최소 우선순위 점수 |
-
-**응답** `200 OK`
-
-```json
-{
-  "quarter": "2025Q4",
-  "items": [
-    {
-      "comm_cd": "3110008",
-      "comm_nm": "배화여자대학교",
-      "comm_type": "골목상권",
-      "gri_score": 72.4,
-      "priority_score": 85.0,
-      "analysis_note": "주말 쇼핑 유입 부족으로 인한 단절 위험",
-      "policy_cards": [
-        "보행 유도 사인물 설치",
-        "야간 경관 개선 권고"
-      ]
-    }
-  ]
-}
-```
-
-**캐시**: Redis `insights:{gu|all}:{quarter}:{min_score}` / TTL 1시간
-
----
-
-## `GET /api/export/csv`
-
-우선순위 점수 기준 이상 상권 목록을 CSV로 다운로드.
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 기본값 | 설명 |
-|---------|------|------|--------|------|
-| `gu` | string | ✗ | (전체) | 자치구 필터 |
-| `quarter` | string | ✗ | `2025Q4` | 분기 |
-| `min_score` | number | ✗ | `80` | 최소 우선순위 점수 |
-
-**응답** `200 OK` — `Content-Type: text/csv`
-
-```
-상권코드,상권명,자치구,상권유형,GRI점수,우선순위점수,분석내용
-3110008,배화여자대학교,종로구,골목상권,72.4,85.0,주말 쇼핑 유입 부족...
-```
-
----
-
-## 공통 에러 응답
-
-| 상태 코드 | 설명 |
-|---------|------|
-| `422 Unprocessable Entity` | 쿼리 파라미터 형식 오류 |
-| `503 Service Unavailable` | DB 연결 실패 (캐시 데이터로 표시 중 안내 포함) |
-
----
-
-## 성능 목표 (NFR)
-
-| 조건 | 목표 |
-|------|------|
-| 지도 초기 로딩 (캐시 미스) | ≤ 5초 |
-| 지도 초기 로딩 (캐시 히트) | ≤ 3초 |
-| 상권 클릭 → 상세 패널 (캐시 미스) | ≤ 1초 |
-| 상권 클릭 → 상세 패널 (캐시 히트) | ≤ 500ms |
+즉, 현재 API 문서는 "백엔드 실제 상태"를 기록한 문서이고, 프론트에서 바로 안정적으로 소비 가능한 계약 문서는 아직 아닙니다.

@@ -1,11 +1,14 @@
 import { useState, useCallback, useEffect } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
+import CommerceDetailPanel from './components/CommerceDetailPanel'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
+import { useTimelineControl } from './hooks/useTimelineControl'
+import { filterNodesByDistrict, filterNodesByType } from './utils/filters'
+import type { CommerceNode } from './types/commerce'
 import type { CommerceType } from './styles/tokens'
 import { COMMERCE_COLORS } from './styles/tokens'
-import type { CommerceNode } from './types/commerce'
 import './App.css'
 
 const ALL_TYPES = new Set(Object.keys(COMMERCE_COLORS) as CommerceType[])
@@ -21,25 +24,20 @@ export default function App() {
   const [purpose, setPurpose] = useState<FlowPurpose | null>(null)
   const [hour, setHour] = useState(14)
   const [flowStrength, setFlowStrength] = useState(3)
-  const [selectedTypes, setSelectedTypes] = useState<Set<CommerceType>>(new Set(ALL_TYPES))
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
+  const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(new Set())
+  const [selectedTypes, setSelectedTypes] = useState<Set<CommerceType>>(new Set(ALL_TYPES))
 
-  const handleToggleType = useCallback((type: CommerceType) => {
-    setSelectedTypes(prev => {
-      const next = new Set(prev)
-      if (next.has(type)) {
-        next.delete(type)
-      } else {
-        next.add(type)
-      }
-      return next
-    })
-  }, [])
+  const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
-  const { nodes: allNodes, usingMockData } = useCommerceData()
-  const nodes = allNodes.filter(n => selectedTypes.has(n.type))
+  const { nodes: rawNodes, usingMockData } = useCommerceData()
   const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour })
+
+  const nodes = filterNodesByType(
+    filterNodesByDistrict(rawNodes, selectedDistricts),
+    selectedTypes,
+  )
 
   useEffect(() => {
     if (!selectedNode) return
@@ -48,9 +46,32 @@ export default function App() {
     }
   }, [nodes, selectedNode])
 
+  const handleToggleDistrict = useCallback((district: string) => {
+    setSelectedDistricts(prev => {
+      const next = new Set(prev)
+      next.has(district) ? next.delete(district) : next.add(district)
+      return next
+    })
+  }, [])
+
+  const handleToggleType = useCallback((type: CommerceType) => {
+    setSelectedTypes(prev => {
+      const next = new Set(prev)
+      next.has(type) ? next.delete(type) : next.add(type)
+      return next
+    })
+  }, [])
+
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        {selectedNode && (
+          <CommerceDetailPanel
+            node={selectedNode}
+            onClose={() => setSelectedNode(null)}
+          />
+        )}
+
         <Map
           theme="dark"
           flows={flowData.flows}
@@ -87,6 +108,14 @@ export default function App() {
           topInflow: flowData.topInflow,
           topOutflow: flowData.topOutflow,
         }}
+        isPlaying={isPlaying}
+        speed={speed}
+        onPlay={play}
+        onPause={pause}
+        onToggleSpeed={toggleSpeed}
+        selectedDistricts={selectedDistricts}
+        onToggleDistrict={handleToggleDistrict}
+        onToggleType={handleToggleType}
       />
     </div>
   )

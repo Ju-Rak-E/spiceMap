@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { CommerceNode, CommerceTypeMapResponse } from '../types/commerce'
 import { featuresToNodes } from '../types/commerce'
+import { isDemoMode } from '../utils/demoMode'
 
 export interface UseCommerceDataReturn {
   nodes: CommerceNode[]
@@ -12,15 +13,11 @@ export interface UseCommerceDataReturn {
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 async function fetchCommerceNodes(): Promise<{ nodes: CommerceNode[]; isMock: boolean }> {
-  if (BASE_URL) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/commerce/type-map`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = (await res.json()) as CommerceTypeMapResponse
-      return { nodes: featuresToNodes(data.features), isMock: false }
-    } catch {
-      // API 실패 시 mock 폴백
-    }
+  if (!isDemoMode()) {
+    const res = await fetch(`${BASE_URL}/api/commerce/type-map`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = (await res.json()) as CommerceTypeMapResponse
+    return { nodes: featuresToNodes(data.features), isMock: false }
   }
 
   const mockRes = await fetch('/data/mock_commerce.json')

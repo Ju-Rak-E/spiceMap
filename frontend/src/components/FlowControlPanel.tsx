@@ -3,6 +3,15 @@ import type { FlowPurpose, FlowStats } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { COMMERCE_COLORS, MAP_THEME, type CommerceType } from '../styles/tokens'
 
+const MVP_DISTRICTS = ['강남구', '관악구'] as const
+const TYPE_ICON: Record<CommerceType, string> = {
+  흡수형_과열: '⚠',
+  흡수형_성장: '↑',
+  방출형_침체: '↓',
+  고립형_단절: '✕',
+  안정형:      '✓',
+}
+
 interface FlowControlPanelProps {
   purpose: FlowPurpose | null
   onPurposeChange: (p: FlowPurpose | null) => void
@@ -16,6 +25,14 @@ interface FlowControlPanelProps {
   selectedTypes: Set<CommerceType>
   selectedNode: CommerceNode | null
   stats: FlowStats
+  isPlaying: boolean
+  speed: 1 | 2 | 4
+  onPlay: () => void
+  onPause: () => void
+  onToggleSpeed: () => void
+  selectedDistricts: Set<string>
+  onToggleDistrict: (d: string) => void
+  onToggleType: (t: CommerceType) => void
 }
 
 const PURPOSES: FlowPurpose[] = ['출근', '쇼핑', '여가', '귀가']
@@ -301,6 +318,15 @@ export default function FlowControlPanel({
   selectedTypes,
   selectedNode,
   stats,
+  isPlaying,
+  speed,
+  onPlay,
+  onPause,
+  onToggleSpeed,
+  selectedDistricts,
+  onToggleDistrict,
+  selectedTypes,
+  onToggleType,
 }: FlowControlPanelProps) {
   const densityLabel = DENSITY_LABELS[flowStrength] ?? '보통'
   const selectedTypeEntries = getSelectedTypeEntries(selectedTypes)
@@ -414,44 +440,193 @@ export default function FlowControlPanel({
         </div>
       </section>
 
-      <section style={S.section}>
-        <div style={S.sectionTitle}>선택 상권</div>
-        {selectedNode ? (
-          <div style={S.detailCard}>
-            <div style={S.detailName}>{selectedNode.name}</div>
-            <div style={{ ...S.detailType, color: COMMERCE_COLORS[selectedNode.type].textColor }}>
-              {COMMERCE_COLORS[selectedNode.type].symbol} {COMMERCE_COLORS[selectedNode.type].label}
-            </div>
-            <div style={S.detailGrid}>
-              <div style={S.detailMetric}>
-                <div style={S.detailMetricLabel}>GRI</div>
-                <div style={S.detailMetricValue}>{selectedNode.griScore}</div>
-              </div>
-              <div style={S.detailMetric}>
-                <div style={S.detailMetricLabel}>순유입</div>
-                <div style={S.detailMetricValue}>
-                  {selectedNode.netFlow >= 0 ? '+' : ''}{selectedNode.netFlow.toLocaleString()}
-                </div>
-              </div>
-              <div style={S.detailMetric}>
-                <div style={S.detailMetricLabel}>중심성</div>
-                <div style={S.detailMetricValue}>{(selectedNode.degreeCentrality * 100).toFixed(0)}%</div>
-              </div>
-              <div style={S.detailMetric}>
-                <div style={S.detailMetricLabel}>상세 분석</div>
-                <div style={S.detailMetricValue}>지도 카드 확인</div>
-              </div>
-            </div>
+      {/* 시간대 슬라이더 */}
+      <div style={S.section}>
+        <div style={S.label}>시간대</div>
+        <div style={S.sliderRow}>
+          <input
+            type="range"
+            min={0}
+            max={23}
+            value={hour}
+            onChange={(e) => onHourChange(Number(e.target.value))}
+            style={S.slider}
+          />
+          <span style={S.sliderValue}>{hour}시</span>
+        </div>
+      </div>
+
+      {/* 타임라인 재생 */}
+      <div style={S.section}>
+        <div style={S.label}>타임라인 재생</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              borderRadius: 8,
+              border: 'none',
+              background: isPlaying ? '#37474F' : '#1B5E20',
+              color: isPlaying ? '#90A4AE' : '#A5D6A7',
+              fontSize: 20,
+              cursor: 'pointer',
+            }}
+            onClick={isPlaying ? onPause : onPlay}
+            aria-label={isPlaying ? '정지' : '재생'}
+          >
+            {isPlaying ? '⏸' : '▶'}
+          </button>
+          <button
+            style={{
+              padding: '8px 14px',
+              borderRadius: 8,
+              border: '1px solid #37474F',
+              background: '#263238',
+              color: '#90A4AE',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              minWidth: 52,
+            }}
+            onClick={onToggleSpeed}
+            aria-label={`재생 속도 ${speed}배속`}
+          >
+            {speed}×
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: '#546E7A' }}>
+          {isPlaying ? `${speed}시간/초 재생 중` : '슬라이더로 시간대 선택'}
+        </div>
+      </div>
+
+      {/* 흐름 강도 슬라이더 */}
+      <div style={S.section}>
+        <div style={S.label}>흐름 강도</div>
+        <div style={S.sliderRow}>
+          <input
+            type="range"
+            min={1}
+            max={5}
+            value={flowStrength}
+            onChange={(e) => onStrengthChange(Number(e.target.value))}
+            style={S.slider}
+          />
+          <span style={S.sliderValue}>{flowStrength}단계</span>
+        </div>
+      </div>
+
+      {/* 상권 영역 투명도 슬라이더 */}
+      <div style={S.section}>
+        <div style={S.label}>상권 영역 투명도</div>
+        <div style={S.sliderRow}>
+          <input
+            type="range"
+            min={0}
+            max={80}
+            step={5}
+            value={Math.round(boundaryOpacity * 100)}
+            onChange={(e) => onBoundaryOpacityChange(Number(e.target.value) / 100)}
+            style={S.slider}
+          />
+          <span style={S.sliderValue}>{Math.round(boundaryOpacity * 100)}%</span>
+        </div>
+      </div>
+
+      {/* 자치구 필터 */}
+      <div style={S.section}>
+        <div style={S.label}>자치구 (전체 = 둘 다 해제)</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {MVP_DISTRICTS.map(d => {
+            const active = selectedDistricts.has(d)
+            return (
+              <button
+                key={d}
+                style={{
+                  flex: 1,
+                  padding: '7px 4px',
+                  borderRadius: 8,
+                  border: active ? '1.5px solid #42A5F5' : '1px solid #37474F',
+                  background: active ? '#0D47A1' : '#263238',
+                  color: active ? '#90CAF9' : '#90A4AE',
+                  fontSize: 13,
+                  fontWeight: active ? 700 : 400,
+                  cursor: 'pointer',
+                }}
+                onClick={() => onToggleDistrict(d)}
+              >
+                {d}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 상권 유형 필터 (범례 겸용) */}
+      <div style={S.section}>
+        <div style={S.label}>상권 유형 (전체 = 모두 해제)</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {(Object.entries(COMMERCE_COLORS) as [CommerceType, { fill: string }][]).map(([type, token]) => {
+            const active = selectedTypes.has(type)
+            return (
+              <button
+                key={type}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  border: active ? `1.5px solid ${token.fill}` : '1px solid #37474F',
+                  background: active ? token.fill + '22' : '#263238',
+                  color: active ? token.fill : '#546E7A',
+                  fontSize: 12,
+                  fontWeight: active ? 700 : 400,
+                  cursor: 'pointer',
+                  textAlign: 'left' as const,
+                }}
+                onClick={() => onToggleType(type)}
+              >
+                <span aria-hidden="true" style={{ minWidth: 14 }}>{TYPE_ICON[type]}</span>
+                <span style={{ flex: 1 }}>{type}</span>
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: token.fill,
+                    flexShrink: 0,
+                  }}
+                  aria-hidden="true"
+                />
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 통계 */}
+      <div style={S.statsGrid}>
+        <div style={S.statCard}>
+          <div style={S.statLabel}>총 이동량</div>
+          <div style={S.statValue}>{formatVolume(stats.totalVolume)}</div>
+        </div>
+        <div style={S.statCard}>
+          <div style={S.statLabel}>활성 흐름</div>
+          <div style={S.statValue}>{stats.activeCount}</div>
+        </div>
+        <div style={S.statCard}>
+          <div style={S.statLabel}>최대 유입</div>
+          <div style={{ ...S.statValue, fontSize: 14, color: '#43A047' }}>
+            {formatLocation(stats.topInflow)}
           </div>
-        ) : (
-          <div style={S.placeholderCard}>
-            <div style={S.placeholderTitle}>상권을 선택하면 상세 분석이 표시됩니다</div>
-            <div style={S.placeholderText}>
-              지도에서 상권 노드를 클릭하면 GRI 추세, 개입 등급, 연결 중심성을 바로 확인할 수 있습니다.
-            </div>
+        </div>
+        <div style={S.statCard}>
+          <div style={S.statLabel}>최대 유출</div>
+          <div style={{ ...S.statValue, fontSize: 14, color: '#EF5350' }}>
+            {formatLocation(stats.topOutflow)}
           </div>
-        )}
-      </section>
+        </div>
+      </div>
     </aside>
   )
 }

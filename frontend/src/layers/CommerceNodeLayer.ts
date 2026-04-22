@@ -3,11 +3,10 @@ import type { PickingInfo } from '@deck.gl/core'
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceNode } from '../types/commerce'
 
-const MIN_RADIUS = 300   // 최소 반경(m)
-const MAX_RADIUS = 1500  // 최대 반경(m)
+const MIN_RADIUS = 300
+const MAX_RADIUS = 1500
 const MAX_ABS_FLOW = 1200
 
-/** hex '#RRGGBB' → [R, G, B] */
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]

@@ -16,12 +16,21 @@ Dev-B는 React 기반 인터랙티브 지도 앱 전담.
 - D3.js (추세 그래프, 시계열 차트)
 
 ## 디렉토리 구조
-`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, FlowControlPanel, CommerceLegend)
+`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, FlowControlPanel, CommerceLegend, CommerceDetailPanel, TrendChart, PolicyCard)
 `frontend/src/layers/` Deck.gl 레이어 정의 (CommerceNodeLayer, ODFlowLayer, FlowParticleLayer)
-`frontend/src/hooks/` 데이터 페칭 훅 (useCommerceData, useFlowData, useAnimationFrame)
+`frontend/src/hooks/` 데이터 페칭 훅 (useCommerceData, useFlowData, useGriHistory, usePolicyInsights, useTimelineControl, useAnimationFrame)
 `frontend/src/styles/` 디자인 토큰 (색상 팔레트 — COMMERCE_COLORS에 description 필드 포함)
 `frontend/src/types/` 공유 타입 정의 (CommerceNode 등)
-`frontend/src/utils/` 유틸리티 (GRI 계산, BoundaryLayerManager, flowBezier, summaryFormatter)
+`frontend/src/utils/` 유틸리티 (gri, BoundaryLayerManager, boundaryLayerConfig, flowBezier, summaryFormatter, demoMode, filters)
+
+## 정적 데이터 (public/data/)
+`seoul_admin_boundary.geojson` 서울 행정동 경계 (BoundaryLayerManager 런타임 의존, 230KB)
+`mock_commerce.json` 상권 노드 mock (강남구 7 + 관악구 5, `district` 필드 포함)
+`mock_flows.json` OD 흐름 mock (12개)
+`mock_gri_history.json` GRI 시계열 mock (nodeId gc_001~gc_007, gw_001~gw_005 + __default__)
+`mock_policy_insights.json` 정책 추천 mock (12개 + __default__)
+
+> demo mode: `VITE_API_BASE_URL` 미설정 시 `isDemoMode()` → mock 파일 사용. 부분 폴백 없음.
 
 ## 환경 변수
 `VITE_VWORLD_API_KEY` V-World 지도 API 키 (필수)
@@ -76,9 +85,9 @@ Week 5 (5/6~5/12):  발표 시나리오 애니메이션, 태블릿 반응형 최
 OD 렌더링: 자치구 top-N 흐름만 표시 (전체 아님)
 
 ## 완료 기준 체크리스트
-- [ ] 상권 노드 색상·크기 인코딩 정확
-- [ ] 상세 패널 API 연동 동작
-- [ ] 타임라인 슬라이더 → 지도·패널 실시간 갱신
+- [x] 상권 노드 색상·크기 인코딩 정확
+- [x] 상세 패널 API 연동 동작 (demo mode 포함)
+- [x] 타임라인 슬라이더 → 지도·패널 실시간 갱신
 - [ ] 흐름 단절 레이어 토글 (기본 OFF)
 - [ ] 색각 이상 시뮬레이션 통과
 - [ ] 태블릿 반응형 확인 (패널 접기/펼치기)

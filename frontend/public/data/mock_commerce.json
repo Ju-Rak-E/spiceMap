@@ -1,0 +1,122 @@
+[
+  {
+    "id": "gc_001",
+    "name": "강남역 상권",
+    "coordinates": [127.0276, 37.4979],
+    "type": "흡수형_과열",
+    "district": "강남구",
+    "netFlow": 1200,
+    "degreeCentrality": 0.95,
+    "griScore": 88
+  },
+  {
+    "id": "gc_002",
+    "name": "역삼동 상권",
+    "coordinates": [127.0358, 37.5007],
+    "type": "흡수형_성장",
+    "district": "강남구",
+    "netFlow": 780,
+    "degreeCentrality": 0.82,
+    "griScore": 74
+  },
+  {
+    "id": "gc_003",
+    "name": "선릉역 상권",
+    "coordinates": [127.0494, 37.5045],
+    "type": "흡수형_성장",
+    "district": "강남구",
+    "netFlow": 620,
+    "degreeCentrality": 0.71,
+    "griScore": 71
+  },
+  {
+    "id": "gc_004",
+    "name": "삼성역 상권",
+    "coordinates": [127.0632, 37.5090],
+    "type": "안정형",
+    "district": "강남구",
+    "netFlow": 310,
+    "degreeCentrality": 0.58,
+    "griScore": 55
+  },
+  {
+    "id": "gc_005",
+    "name": "압구정 상권",
+    "coordinates": [127.0289, 37.5271],
+    "type": "흡수형_과열",
+    "district": "강남구",
+    "netFlow": 950,
+    "degreeCentrality": 0.88,
+    "griScore": 85
+  },
+  {
+    "id": "gc_006",
+    "name": "청담동 상권",
+    "coordinates": [127.0506, 37.5254],
+    "type": "흡수형_성장",
+    "district": "강남구",
+    "netFlow": 540,
+    "degreeCentrality": 0.67,
+    "griScore": 72
+  },
+  {
+    "id": "gc_007",
+    "name": "논현동 상권",
+    "coordinates": [127.0266, 37.5148],
+    "type": "안정형",
+    "district": "강남구",
+    "netFlow": 210,
+    "degreeCentrality": 0.45,
+    "griScore": 48
+  },
+  {
+    "id": "gw_001",
+    "name": "신림역 상권",
+    "coordinates": [126.9291, 37.4844],
+    "type": "방출형_침체",
+    "district": "관악구",
+    "netFlow": -380,
+    "degreeCentrality": 0.42,
+    "griScore": 62
+  },
+  {
+    "id": "gw_002",
+    "name": "봉천동 상권",
+    "coordinates": [126.9378, 37.4876],
+    "type": "방출형_침체",
+    "district": "관악구",
+    "netFlow": -220,
+    "degreeCentrality": 0.31,
+    "griScore": 58
+  },
+  {
+    "id": "gw_003",
+    "name": "낙성대 상권",
+    "coordinates": [126.9634, 37.4791],
+    "type": "고립형_단절",
+    "district": "관악구",
+    "netFlow": -500,
+    "degreeCentrality": 0.08,
+    "griScore": 41
+  },
+  {
+    "id": "gw_004",
+    "name": "서울대입구 상권",
+    "coordinates": [126.9527, 37.4812],
+    "type": "안정형",
+    "district": "관악구",
+    "netFlow": 180,
+    "degreeCentrality": 0.52,
+    "griScore": 44
+  },
+  {
+    "id": "gw_005",
+    "name": "사당역 상권",
+    "coordinates": [126.9806, 37.4763],
+    "type": "방출형_침체",
+    "district": "관악구",
+    "netFlow": -150,
+    "degreeCentrality": 0.38,
+    "griScore": 56
+  }
+]

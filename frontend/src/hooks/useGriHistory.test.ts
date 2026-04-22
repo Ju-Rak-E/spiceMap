@@ -1,73 +1,43 @@
-// @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
-import { useGriHistory, type GriHistoryPoint } from './useGriHistory'
+import { describe, it, expect } from 'vitest'
+import { buildGriSeries, type GriPoint } from './useGriHistory'
 
-const MOCK_HISTORY: GriHistoryPoint[] = [
-  { quarter: '2024Q3', score: 55, level: 'safe' },
-  { quarter: '2024Q4', score: 62, level: 'safe' },
-  { quarter: '2025Q1', score: 71, level: 'warning' },
-  { quarter: '2025Q2', score: 78, level: 'warning' },
+const MOCK_SERIES: GriPoint[] = [
+  { ts: '2025-01', gri: 60 },
+  { ts: '2025-02', gri: 65 },
+  { ts: '2025-03', gri: 70 },
 ]
 
-describe('useGriHistory', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
+describe('buildGriSeries', () => {
+  it('정렬된 시계열을 그대로 반환한다', () => {
+    const result = buildGriSeries(MOCK_SERIES)
+    expect(result).toHaveLength(3)
+    expect(result[0].ts).toBe('2025-01')
+    expect(result[2].gri).toBe(70)
   })
 
-  it('nodeId 없으면 빈 배열 즉시 반환', () => {
-    const { result } = renderHook(() => useGriHistory(null))
-    expect(result.current.history).toEqual([])
-    expect(result.current.isLoading).toBe(false)
+  it('ts 오름차순으로 정렬한다', () => {
+    const unsorted: GriPoint[] = [
+      { ts: '2025-03', gri: 70 },
+      { ts: '2025-01', gri: 60 },
+      { ts: '2025-02', gri: 65 },
+    ]
+    const result = buildGriSeries(unsorted)
+    expect(result[0].ts).toBe('2025-01')
+    expect(result[1].ts).toBe('2025-02')
+    expect(result[2].ts).toBe('2025-03')
   })
 
-  it('API 성공 시 history 반환, isMock=false', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'http://test-api')
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ nodeId: 'node_01', history: MOCK_HISTORY }),
-    } as Response)
-
-    const { result } = renderHook(() => useGriHistory('node_01'))
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.history).toHaveLength(4)
-    expect(result.current.isMock).toBe(false)
-    vi.unstubAllEnvs()
+  it('빈 배열이면 빈 배열을 반환한다', () => {
+    expect(buildGriSeries([])).toHaveLength(0)
   })
 
-  it('API 실패 시 mock 폴백, isMock=true', async () => {
-    globalThis.fetch = vi.fn()
-      .mockRejectedValueOnce(new Error('network error'))
-      .mockResolvedValue({
-        ok: true,
-        json: async () => MOCK_HISTORY,
-      } as Response)
-
-    const { result } = renderHook(() => useGriHistory('node_01'))
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.isMock).toBe(true)
-    expect(result.current.history.length).toBeGreaterThan(0)
-  })
-
-  it('nodeId 변경 시 새로 페칭', async () => {
-    let callCount = 0
-    globalThis.fetch = vi.fn().mockImplementation(() => {
-      callCount++
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ nodeId: 'node', history: MOCK_HISTORY }),
-      } as Response)
-    })
-
-    const { rerender } = renderHook(
-      ({ id }: { id: string }) => useGriHistory(id),
-      { initialProps: { id: 'node_01' } },
-    )
-
-    await waitFor(() => expect(callCount).toBe(1))
-    rerender({ id: 'node_02' })
-    await waitFor(() => expect(callCount).toBe(2))
+  it('원본 배열을 변경하지 않는다 (불변성)', () => {
+    const original: GriPoint[] = [
+      { ts: '2025-03', gri: 70 },
+      { ts: '2025-01', gri: 60 },
+    ]
+    const copy = [...original]
+    buildGriSeries(original)
+    expect(original).toEqual(copy)
   })
 })
