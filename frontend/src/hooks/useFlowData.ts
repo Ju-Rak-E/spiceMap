@@ -47,8 +47,10 @@ export interface UseFlowDataReturn extends FlowStats {
   error: string | null
 }
 
+const VALID_PURPOSES = new Set<string>(['출근', '쇼핑', '여가', '귀가'])
+
 export function filterFlows(flows: ODFlow[], filters: FlowFilters): ODFlow[] {
-  let result = flows
+  let result = flows.filter(f => VALID_PURPOSES.has(f.purpose))
 
   if (filters.purpose) {
     result = result.filter(f => f.purpose === filters.purpose)

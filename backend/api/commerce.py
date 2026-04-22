@@ -39,6 +39,7 @@ def type_map(
         SELECT
             cb.comm_cd,
             cb.comm_nm,
+            ab.gu_nm,
             cb.comm_type,
             ST_AsGeoJSON(cb.geom)::json AS geometry,
             ST_X(ST_Centroid(cb.geom)) AS centroid_lng,
@@ -48,12 +49,19 @@ def type_map(
             ca.dominant_origin,
             ca.analysis_note
         FROM commerce_boundary cb
+        LEFT JOIN LATERAL (
+            SELECT gu_nm
+            FROM admin_boundary
+            WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
+            LIMIT 1
+        ) ab ON TRUE
         LEFT JOIN commerce_analysis ca
             ON cb.comm_cd = ca.comm_cd
             AND ca.year_quarter = :quarter
+        WHERE (:gu IS NULL OR ab.gu_nm = :gu)
         ORDER BY cb.comm_cd
     """)
-    rows = db.execute(sql, {"quarter": quarter}).fetchall()
+    rows = db.execute(sql, {"quarter": quarter, "gu": gu}).fetchall()
 
     features = [
         {
@@ -62,6 +70,7 @@ def type_map(
             "properties": {
                 "comm_cd": row.comm_cd,
                 "comm_nm": row.comm_nm,
+                "gu_nm": row.gu_nm,
                 "comm_type": row.comm_type,
                 "gri_score": row.gri_score,
                 "flow_volume": row.flow_volume,

@@ -6,7 +6,7 @@ import TrendChart from './TrendChart'
 import PolicyCard from './PolicyCard'
 
 interface CommerceDetailPanelProps {
-  node: CommerceNode
+  node: CommerceNode | null
   onClose: () => void
 }
 
@@ -105,8 +105,10 @@ function netFlowColor(v: number): string {
 }
 
 export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPanelProps) {
-  const { series, isLoading, error } = useGriHistory(node.id)
-  const { insight, isLoading: policyLoading } = usePolicyInsights(node.id)
+  const nodeId = node?.id ?? null
+  const { series, isLoading, error } = useGriHistory(nodeId)
+  const { insight, isLoading: policyLoading } = usePolicyInsights(nodeId)
+  if (!node) return null
   const colorToken = COMMERCE_COLORS[node.type]
   const icon = TYPE_ICON[node.type] ?? '●'
 

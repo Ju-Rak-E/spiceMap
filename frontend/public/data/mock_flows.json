@@ -78,7 +78,7 @@
     "sourceCoord": [127.047, 37.524],
     "targetCoord": [127.020, 37.526],
     "volume": 3200,
-    "purpose": "관광"
+    "purpose": "여가"
   },
   {
     "id": "f10",
@@ -87,7 +87,7 @@
     "sourceCoord": [126.952, 37.477],
     "targetCoord": [126.929, 37.484],
     "volume": 2400,
-    "purpose": "관광"
+    "purpose": "여가"
   },
   {
     "id": "f11",
@@ -96,7 +96,7 @@
     "sourceCoord": [126.929, 37.484],
     "targetCoord": [126.952, 37.477],
     "volume": 1800,
-    "purpose": "등교"
+    "purpose": "출근"
   },
   {
     "id": "f12",
@@ -105,6 +105,6 @@
     "sourceCoord": [126.952, 37.477],
     "targetCoord": [127.036, 37.500],
     "volume": 1400,
-    "purpose": "등교"
+    "purpose": "출근"
   }
 ]
