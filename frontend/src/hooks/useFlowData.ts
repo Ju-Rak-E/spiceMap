@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { isDemoMode } from '../utils/demoMode'
 
-export type FlowPurpose = '출근' | '쇼핑' | '관광' | '귀가' | '등교'
+export type FlowPurpose = '출근' | '쇼핑' | '여가' | '귀가'
 
 export interface ODFlow {
   id: string
@@ -13,10 +13,19 @@ export interface ODFlow {
   purpose: FlowPurpose
 }
 
-export interface FlowFilters {
-  purpose?: FlowPurpose | null
-  topN?: number
-  hour?: number
+const PEAK_HOUR: Record<FlowPurpose, number> = {
+  출근: 8,
+  쇼핑: 14,
+  여가: 20,
+  귀가: 19,
+}
+
+const SIGMA = 1.5
+
+export function getHourScale(purpose: FlowPurpose, hour: number): number {
+  const peak = PEAK_HOUR[purpose]
+  const exponent = -((hour - peak) ** 2) / (2 * SIGMA ** 2)
+  return Math.max(0.1, Math.exp(exponent))
 }
 
 const HOUR_WEIGHTS: Record<number, number> = {
@@ -32,6 +41,12 @@ export function applyHourWeight(flows: ODFlow[], hour: number): ODFlow[] {
     ...f,
     volume: Math.max(1, Math.round(f.volume * weight)),
   }))
+}
+
+export interface FlowFilters {
+  purpose?: FlowPurpose | null
+  topN?: number
+  hour?: number
 }
 
 export interface FlowStats {
@@ -55,7 +70,10 @@ export function filterFlows(flows: ODFlow[], filters: FlowFilters): ODFlow[] {
   }
 
   if (filters.hour !== undefined) {
-    result = applyHourWeight(result, filters.hour)
+    result = result.map(f => ({
+      ...f,
+      volume: Math.round(f.volume * getHourScale(f.purpose, filters.hour!)),
+    }))
   }
 
   if (filters.topN !== undefined && filters.topN > 0) {

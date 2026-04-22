@@ -16,17 +16,17 @@ Dev-B는 React 기반 인터랙티브 지도 앱 전담.
 - D3.js (추세 그래프, 시계열 차트)
 
 ## 디렉토리 구조
-`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, FlowControlPanel, CommerceDetailPanel, TrendChart, PolicyCard)
+`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, FlowControlPanel, CommerceLegend, CommerceDetailPanel, TrendChart, PolicyCard)
 `frontend/src/layers/` Deck.gl 레이어 정의 (CommerceNodeLayer, ODFlowLayer, FlowParticleLayer)
 `frontend/src/hooks/` 데이터 페칭 훅 (useCommerceData, useFlowData, useGriHistory, usePolicyInsights, useTimelineControl, useAnimationFrame)
-`frontend/src/styles/` 디자인 토큰 (색상 팔레트)
+`frontend/src/styles/` 디자인 토큰 (색상 팔레트 — COMMERCE_COLORS에 description 필드 포함)
 `frontend/src/types/` 공유 타입 정의 (CommerceNode 등)
-`frontend/src/utils/` 유틸리티 (gri, BoundaryLayerManager, boundaryLayerConfig, demoMode, filters)
+`frontend/src/utils/` 유틸리티 (gri, BoundaryLayerManager, boundaryLayerConfig, flowBezier, summaryFormatter, demoMode, filters)
 
 ## 정적 데이터 (public/data/)
 `seoul_admin_boundary.geojson` 서울 행정동 경계 (BoundaryLayerManager 런타임 의존, 230KB)
 `mock_commerce.json` 상권 노드 mock (강남구 7 + 관악구 5, `district` 필드 포함)
-`mock_flows.json` OD 흐름 mock (12개, FlowPurpose 5종 모두 포함)
+`mock_flows.json` OD 흐름 mock (12개)
 `mock_gri_history.json` GRI 시계열 mock (nodeId gc_001~gc_007, gw_001~gw_005 + __default__)
 `mock_policy_insights.json` 정책 추천 mock (12개 + __default__)
 
@@ -44,10 +44,34 @@ Dev-B는 React 기반 인터랙티브 지도 앱 전담.
 `GET /api/insights/policy` 정책 추천 카드
 `GET /api/export/csv` CSV 다운로드
 
+## 이동 목적 (FlowPurpose)
+
+`'출근' | '쇼핑' | '여가' | '귀가'` — 4종 고정 (관광·등교 제외)
+
+목적별 피크 시간대 (mock 단계에서 hour 슬라이더가 volume을 Gaussian 감쇠로 스케일링):
+- 출근: 08시 피크 / 쇼핑: 14시 피크 / 여가: 20시 피크 / 귀가: 19시 피크
+- `getHourScale(purpose, hour)` → 0.1~1.0 배율 (`useFlowData.ts` 내 유틸)
+- Week 3 API 연동 후: 프론트 스케일링 제거 → 백엔드 파라미터(`?purpose=출근`)로 교체
+
+## 애니메이션 동작 규칙
+
+- **속도**: `Map.tsx` RAF 루프에서 `flows` 총 이동량으로 속도 스케일 계산 (`sqrt(totalVolume / 10000)`, 범위 0.3×~2.0×)
+- **파티클 수**: 흐름별 volume 비율(0~1)에 따라 1~4개 동적 조정 (`FlowParticleLayer.ts`)
+- **파티클 크기**: volume 비례 200~700m, `radiusMinPixels:3` / `radiusMaxPixels:14` 보장
+- **경로 공유**: OD 선(PathLayer)·파티클 모두 `flowBezier.ts`의 동일 베지어 함수 사용 → 파티클이 선 위를 달림
+- Week 3 API 연동 후 속도·크기 스케일링 제거 예정 (백엔드에서 실제 volume 제공)
+
 ## 상권 유형 색상 토큰
 흡수형_과열 `#E53935` · 흡수형_성장 `#FB8C00` · 방출형_침체 `#9E9E9E`
 고립형_단절 `#424242` · 안정형 `#43A047`
 색각 이상 대응: 색상 단독 금지, 아이콘/패턴 병행 필수 (FR-11)
+`COMMERCE_COLORS` 각 항목에 `description` 필드 포함 — CommerceLegend에서 유형 설명 표시에 사용
+
+## UI 설계 원칙 (디자인 정제 3단계)
+- **상단 해설바**: Map 상단 고정 영역에 현재 선택값(시간·목적·밀도·유형)을 1문장으로 해설 (summaryFormatter.ts)
+- **가시화 밀도**: FlowControlPanel에서 "흐름 강도" 대신 사용하는 용어. 슬라이더 아래에 "상위 N개 흐름 표시" 보조 문구 병기 필수
+- **상권 영역 투명도**: 사용자 UI에서 제거. `App.tsx`의 `BOUNDARY_OPACITY = 0.2` 상수로 고정 (개발자 전용)
+- **툴팁**: 상권명·유형·GRI·순유입·1줄 상태 해석 5요소 구성 (getNodeInterpretation)
 
 ## 주차별 목표
 Week 1 (4/8~4/14):  React+Vite+MapLibre 스캐폴딩, 서울 행정동 경계 렌더링, 색상 토큰 정의

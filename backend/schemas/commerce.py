@@ -14,6 +14,8 @@ class CommerceProperties(BaseModel):
     flow_volume: int | None
     dominant_origin: str | None
     analysis_note: str | None
+    centroid_lng: float | None = None
+    centroid_lat: float | None = None
 
 
 class Feature(BaseModel):
