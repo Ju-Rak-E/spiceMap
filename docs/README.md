@@ -30,6 +30,7 @@
 | [module_e_design.md](module_e_design.md) | Module E — 정책 우선순위 점수 (0.60 GRI + 0.25 size + 0.15 trend) |
 | [week2_implementation_plan.md](week2_implementation_plan.md) | Module A/B + H1 구현 계획 (완료) |
 | [week3_implementation_plan.md](week3_implementation_plan.md) | Module E 설계 + Module D R4~R7 구현 계획 |
+| [od_flows_aggregation.md](od_flows_aggregation.md) | od_flows 분기 집계본 스키마·집계 SQL·Module A 어댑터 |
 
 > Module C (흐름 단절 탐지) 설계 문서는 `od_flows` 적재 후 추가.
 

@@ -42,10 +42,14 @@ class CommerceBoundary(Base):
 
 
 class OdFlow(Base):
-    """행정동 간 OD 이동량 (OA-22300)
+    """행정동 간 OD 이동량 원본 (OA-22300)
 
     원본 파일: seoul_purpose_admdong3_final_YYYYMMDD.csv
-    일별 파일이며 st_time_cd=0 (전일 합산)
+    일별 파일이며 st_time_cd=0 (전일 합산).
+
+    팀 공유 대상 아님 — Dev-A 로컬 전용. 원본 80M 행 규모로 팀 간 배포가
+    비현실적이라 `od_flows_aggregated` (분기 × 출 × 도 × 목적 집계본)을
+    canonical 입력으로 사용한다. 본 테이블은 원본 보존용.
     """
     __tablename__ = "od_flows"
 
@@ -56,6 +60,34 @@ class OdFlow(Base):
     move_purpose = Column(Integer, comment="이동 목적 코드 (1=출근 2=하원 3=귀가 6=? 7=?)")
     in_forn_div = Column(String(10), comment="내외국인 구분 (내국인/단기외국인/장기외국인)")
     trip_count = Column(Float, nullable=False, comment="이동 건수 추정값 (cnt)")
+
+
+class OdFlowAggregated(Base):
+    """행정동 OD 분기 집계본 (팀 공유 원장).
+
+    원본 `od_flows` 8천만 행 → 일자·내외국인 차원 합산으로 수십만 행으로 축소.
+    Module A/B/C/D/E의 canonical 입력. Supabase 공유 DB에 적재.
+
+    집계 키: (year_quarter, origin_adm_cd, dest_adm_cd, move_purpose)
+    집계 SQL: `backend/pipeline/aggregate_od_flows.py`
+    """
+    __tablename__ = "od_flows_aggregated"
+    __table_args__ = (
+        UniqueConstraint(
+            "year_quarter", "origin_adm_cd", "dest_adm_cd", "move_purpose",
+            name="uq_od_agg",
+        ),
+        Index("ix_od_agg_origin", "origin_adm_cd"),
+        Index("ix_od_agg_dest", "dest_adm_cd"),
+        Index("ix_od_agg_quarter", "year_quarter"),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    year_quarter = Column(String(6), nullable=False, comment="YYYYQ# (예: 2026Q1)")
+    origin_adm_cd = Column(String(10), nullable=False, comment="출발 행정동 코드")
+    dest_adm_cd = Column(String(10), nullable=False, comment="도착 행정동 코드")
+    move_purpose = Column(Integer, nullable=True, comment="이동 목적 코드 (NULL 허용)")
+    trip_count_sum = Column(Float, nullable=False, comment="일자·내외국인 합산 이동량")
 
 
 class LivingPopulation(Base):
