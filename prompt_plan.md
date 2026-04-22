@@ -88,6 +88,8 @@
 - [x] H1 검증: 순유입-매출 Pearson 상관 (목표 p < 0.05) — 함수 구현 완료 (`verification_h1.py`), 실데이터 실행은 `od_flows` 적재 후
 - [x] 상권 유형 근사 분류기 구현 — **신규** (`commerce_type.py`, v1.0 — 임대료/프랜차이즈 미사용)
 - [x] PolicyCard Pydantic 스키마 — **신규** (`backend/schemas/insights.py`, FR-07 준수)
+- [x] od_flows 집계본 스키마 + 집계 스크립트 — **신규** (`OdFlowAggregated` 모델, `aggregate_od_flows.py`, `load_quarterly_od_flows` 어댑터) — 80M 원본을 ~300K로 축소, Supabase 수용 가능
+- [ ] PR 2: Supabase 이전 + `.env.example` 갱신 + 에스컬레이션 메시지 수정 (집계본 공유로 변경)
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
 

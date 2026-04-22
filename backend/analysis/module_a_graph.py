@@ -7,10 +7,73 @@ OD 행정동 이동량을 상권 단위로 집계하여 NetworkX DiGraph로 구�
 """
 from __future__ import annotations
 
+import re
+from typing import Iterable
+
 import networkx as nx
 import pandas as pd
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
 
 DEGREE_COLUMNS = ["commerce_code", "in_degree", "out_degree", "net_flow", "degree_centrality"]
+
+MODULE_A_INPUT_COLUMNS = ["origin_adm_cd", "dest_adm_cd", "trip_count"]
+
+_YEAR_QUARTER_RE = re.compile(r"^\d{4}Q[1-4]$")
+
+
+def _validate_year_quarter(value: str) -> None:
+    if not _YEAR_QUARTER_RE.fullmatch(value):
+        raise ValueError(f"잘못된 year_quarter 포맷: {value!r} (예: '2026Q1')")
+
+
+def load_quarterly_od_flows(
+    engine: Engine,
+    year_quarter: str,
+    move_purposes: Iterable[int] | None = None,
+) -> pd.DataFrame:
+    """od_flows_aggregated에서 한 분기를 Module A 입력 스키마로 로드한다.
+
+    Module A는 `[origin_adm_cd, dest_adm_cd, trip_count]` 3컬럼만 사용하므로
+    move_purpose는 합산 후 trip_count로 리네임한다.
+
+    Args:
+        engine: SQLAlchemy Engine (PostgreSQL/SQLite 모두 가능).
+        year_quarter: 대상 분기 (예: "2026Q1").
+        move_purposes: 필터할 목적 코드 목록. None이면 전부.
+
+    Returns:
+        MODULE_A_INPUT_COLUMNS 스키마 DataFrame. 결과 없으면 빈 DF.
+
+    Raises:
+        ValueError: year_quarter 포맷이 YYYYQ# 패턴과 불일치할 때.
+    """
+    _validate_year_quarter(year_quarter)
+    params: dict = {"yq": year_quarter}
+    where = ["year_quarter = :yq"]
+
+    if move_purposes is not None:
+        purpose_list = list(move_purposes)
+        if not purpose_list:
+            return pd.DataFrame(columns=MODULE_A_INPUT_COLUMNS)
+        placeholders = ", ".join(f":p{i}" for i in range(len(purpose_list)))
+        where.append(f"move_purpose IN ({placeholders})")
+        for i, p in enumerate(purpose_list):
+            params[f"p{i}"] = p
+
+    sql = text(
+        f"""
+        SELECT origin_adm_cd, dest_adm_cd, SUM(trip_count_sum) AS trip_count
+        FROM od_flows_aggregated
+        WHERE {' AND '.join(where)}
+        GROUP BY origin_adm_cd, dest_adm_cd
+        """
+    )
+
+    df = pd.read_sql(sql, engine, params=params)
+    if df.empty:
+        return pd.DataFrame(columns=MODULE_A_INPUT_COLUMNS)
+    return df[MODULE_A_INPUT_COLUMNS]
 
 
 def build_commerce_flow_graph(
