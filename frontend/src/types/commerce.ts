@@ -15,6 +15,7 @@ export interface CommerceNode {
 export interface CommerceFeatureProperties {
   comm_cd: string
   comm_nm: string
+  gu_nm?: string | null
   comm_type: string | null
   gri_score: number | null
   flow_volume: number | null
@@ -84,6 +85,7 @@ export function featuresToNodes(features: CommerceFeature[]): CommerceNode[] {
       name: f.properties.comm_nm,
       coordinates: coords,
       type: resolveType(f.properties.comm_type),
+      district: f.properties.gu_nm ?? '',
       netFlow: f.properties.flow_volume ?? 0,
       degreeCentrality: 0,  // Dev-C Module A 완성 전 폴백
       griScore: f.properties.gri_score ?? 0,

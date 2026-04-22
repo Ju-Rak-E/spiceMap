@@ -9,6 +9,7 @@ from pydantic import BaseModel
 class CommerceProperties(BaseModel):
     comm_cd: str
     comm_nm: str
+    gu_nm: str | None = None
     comm_type: str | None
     gri_score: float | None
     flow_volume: int | None
