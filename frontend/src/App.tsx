@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
-import CommerceDetailPanel from './components/CommerceDetailPanel'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
@@ -65,13 +64,6 @@ export default function App() {
   return (
     <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-        {selectedNode && (
-          <CommerceDetailPanel
-            node={selectedNode}
-            onClose={() => setSelectedNode(null)}
-          />
-        )}
-
         <Map
           theme="dark"
           flows={flowData.flows}
