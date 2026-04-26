@@ -4,11 +4,11 @@ from pydantic import BaseModel
 
 class BarrierItem(BaseModel):
     from_comm_cd: str
-    from_comm_nm: str | None
+    from_comm_nm: str | None = None
     to_comm_cd: str
-    to_comm_nm: str | None
+    to_comm_nm: str | None = None
     barrier_score: float
-    barrier_type: str | None
+    barrier_type: str | None = None
 
 
 class BarriersResponse(BaseModel):
