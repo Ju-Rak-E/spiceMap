@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { filterFlows, computeStats, applyHourWeight, type ODFlow, type FlowPurpose } from './useFlowData'
+import { filterFlows, computeStats, applyHourWeight, getHourScale, type ODFlow } from './useFlowData'
 
-// 테스트 픽스처
 const SAMPLE_FLOWS: ODFlow[] = [
   {
     id: 'f1',
@@ -69,7 +68,7 @@ describe('filterFlows', () => {
     })
 
     it('해당하는 흐름이 없으면 빈 배열을 반환해야 한다', () => {
-      const result = filterFlows(SAMPLE_FLOWS, { purpose: '등교' as FlowPurpose })
+      const result = filterFlows(SAMPLE_FLOWS, { purpose: '여가' })
       expect(result).toHaveLength(0)
     })
   })
@@ -105,6 +104,59 @@ describe('filterFlows', () => {
   })
 })
 
+describe('getHourScale', () => {
+  it('피크 시간에 가장 높은 배율(≈1.0)을 반환해야 한다', () => {
+    expect(getHourScale('출근', 8)).toBeCloseTo(1.0, 1)
+    expect(getHourScale('쇼핑', 14)).toBeCloseTo(1.0, 1)
+    expect(getHourScale('여가', 20)).toBeCloseTo(1.0, 1)
+    expect(getHourScale('귀가', 19)).toBeCloseTo(1.0, 1)
+  })
+
+  it('피크에서 멀어질수록 배율이 낮아야 한다', () => {
+    const peak = getHourScale('출근', 8)
+    const off = getHourScale('출근', 14)
+    expect(peak).toBeGreaterThan(off)
+  })
+
+  it('최솟값은 0.1 이상이어야 한다', () => {
+    expect(getHourScale('출근', 0)).toBeGreaterThanOrEqual(0.1)
+    expect(getHourScale('쇼핑', 3)).toBeGreaterThanOrEqual(0.1)
+  })
+})
+
+describe('filterFlows — hour 스케일링', () => {
+  it('출근 흐름은 8시가 14시보다 volume이 커야 한다', () => {
+    const flows: ODFlow[] = [{
+      id: 'x', sourceId: 'a', targetId: 'b',
+      sourceCoord: [0, 0], targetCoord: [1, 1],
+      volume: 10000, purpose: '출근',
+    }]
+    const at8 = filterFlows(flows, { hour: 8 })[0].volume
+    const at14 = filterFlows(flows, { hour: 14 })[0].volume
+    expect(at8).toBeGreaterThan(at14)
+  })
+
+  it('hour 없으면 volume이 변하지 않아야 한다', () => {
+    const flows: ODFlow[] = [{
+      id: 'x', sourceId: 'a', targetId: 'b',
+      sourceCoord: [0, 0], targetCoord: [1, 1],
+      volume: 5000, purpose: '쇼핑',
+    }]
+    const result = filterFlows(flows, {})[0].volume
+    expect(result).toBe(5000)
+  })
+
+  it('원본 flows 배열을 변경하지 않아야 한다 (불변성)', () => {
+    const flows: ODFlow[] = [{
+      id: 'x', sourceId: 'a', targetId: 'b',
+      sourceCoord: [0, 0], targetCoord: [1, 1],
+      volume: 5000, purpose: '쇼핑',
+    }]
+    filterFlows(flows, { hour: 3 })
+    expect(flows[0].volume).toBe(5000)
+  })
+})
+
 describe('computeStats', () => {
   it('총 이동량을 올바르게 합산해야 한다', () => {
     const stats = computeStats(SAMPLE_FLOWS)
@@ -117,13 +169,11 @@ describe('computeStats', () => {
   })
 
   it('최대 유입 상권을 올바르게 찾아야 한다', () => {
-    // 역삼동: 8500 + 5200 = 13700으로 최대 유입
     const stats = computeStats(SAMPLE_FLOWS)
     expect(stats.topInflow).toBe('강남구_역삼동')
   })
 
   it('최대 유출 상권을 올바르게 찾아야 한다', () => {
-    // 봉천동: 8500 + 900 = 9400으로 최대 유출
     const stats = computeStats(SAMPLE_FLOWS)
     expect(stats.topOutflow).toBe('관악구_봉천동')
   })

@@ -116,7 +116,6 @@ export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPan
     <div style={S.overlay}>
       <button style={S.closeBtn} onClick={onClose} aria-label="패널 닫기">✕</button>
 
-      {/* 헤더 */}
       <div>
         <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, paddingRight: 28 }}>
           {node.name}
@@ -127,7 +126,6 @@ export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPan
         </span>
       </div>
 
-      {/* KPI 카드 */}
       <div>
         <div style={S.sectionTitle}>주요 지표</div>
         <div style={S.kpiGrid}>
@@ -156,7 +154,6 @@ export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPan
         </div>
       </div>
 
-      {/* GRI 추세 그래프 */}
       <div style={S.chartBox}>
         <div style={S.sectionTitle}>GRI 12개월 추세</div>
         {isLoading && <div style={S.loadingText}>불러오는 중...</div>}
@@ -164,7 +161,6 @@ export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPan
         {!isLoading && !error && <TrendChart series={series} width={296} height={110} />}
       </div>
 
-      {/* 정책 추천 카드 */}
       <div>
         <div style={S.sectionTitle}>정책 추천</div>
         {policyLoading && <div style={S.loadingText}>불러오는 중...</div>}

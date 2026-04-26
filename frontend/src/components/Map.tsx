@@ -3,14 +3,17 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
-import { MAP_THEME, type MapTheme } from '../styles/tokens'
+import { MAP_THEME, COMMERCE_COLORS, getInterventionBadge, type MapTheme, type CommerceType } from '../styles/tokens'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
+import CommerceDetailPanel from './CommerceDetailPanel'
+import CommerceLegend from './CommerceLegend'
 import { createCommerceNodeLayer } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
-import type { CommerceNode } from '../types/commerce'
+import type { CommerceNode } from '../types/commerce
+import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
 
 const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
   version: 8,
@@ -27,7 +30,8 @@ const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
 
 const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
-const ANIMATION_SPEED = 0.00025  // progress per ms (1사이클 ≈ 4초)
+const ANIMATION_SPEED = 0.00025
+const BASE_VOLUME = 10000
 
 interface MapProps {
   theme?: MapTheme
@@ -36,8 +40,14 @@ interface MapProps {
   usingMockData: boolean
   hour: number
   purpose: FlowPurpose | null
+  topN: number
+  scopeLabel: string
+  dataStatusLabel: string
   boundaryOpacity?: number
-  onNodeClick?: (node: CommerceNode) => void
+  selectedTypes?: Set<CommerceType>
+  selectedNode?: CommerceNode | null
+  onSelectNode?: (node: CommerceNode | null) => void
+  onToggleType?: (type: CommerceType) => void
 }
 
 interface HoveredNode {
@@ -53,8 +63,14 @@ export default function Map({
   usingMockData,
   hour,
   purpose,
-  boundaryOpacity = 0.3,
-  onNodeClick,
+  topN,
+  scopeLabel,
+  dataStatusLabel,
+  boundaryOpacity = 0.2,
+  selectedTypes,
+  selectedNode,
+  onSelectNode,
+  onToggleType,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -63,7 +79,6 @@ export default function Map({
   const [mapReady, setMapReady] = useState(false)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
 
-  // 지도 초기화 (마운트 시 1회)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
@@ -96,7 +111,6 @@ export default function Map({
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 테마 전환
   useLayoutEffect(() => {
     const map = mapRef.current
     if (!map) return
@@ -104,33 +118,42 @@ export default function Map({
     map.setStyle(theme === 'dark' ? CARTO_DARK_STYLE : VWORLD_LIGHT_STYLE(apiKey))
   }, [theme])
 
-  // RAF 애니메이션 루프 — progress를 매 프레임 증가시켜 파티클 이동
   const handleFrame = useCallback((delta: number) => {
-    progressRef.current = (progressRef.current + delta * ANIMATION_SPEED) % 1
+    const totalVolume = flows.reduce((sum, f) => sum + f.volume, 0)
+    const speedScale = Math.max(0.3, Math.min(2.0, Math.sqrt(totalVolume / BASE_VOLUME)))
+    progressRef.current = (progressRef.current + delta * ANIMATION_SPEED * speedScale) % 1
 
     if (!overlayRef.current) return
     overlayRef.current.setProps({
       layers: [
         createODFlowLayer(flows),
         createFlowParticleLayer(flows, progressRef.current),
-        createCommerceNodeLayer(nodes, (info: PickingInfo<CommerceNode>) => {
-          if (info.object) {
-            setHoveredNode({ node: info.object, x: info.x, y: info.y })
-          } else {
-            setHoveredNode(null)
-          }
-        }, (info: PickingInfo<CommerceNode>) => {
-          if (info.object) {
-            onNodeClick?.(info.object)
-          }
-        }),
+        createCommerceNodeLayer(
+          nodes,
+          (info: PickingInfo<CommerceNode>) => {
+            if (info.object) {
+              setHoveredNode({ node: info.object, x: info.x, y: info.y })
+            } else {
+              setHoveredNode(null)
+            }
+          },
+          (info: PickingInfo<CommerceNode>) => {
+            onSelectNode?.(info.object ?? null)
+          },
+          selectedNode?.id ?? null,
+        ),
       ],
     })
-  }, [flows, nodes, onNodeClick])
+  }, [flows, nodes, onSelectNode, selectedNode?.id])
 
   useAnimationFrame(handleFrame)
 
   const colors = MAP_THEME[theme]
+  const summaryText = selectedTypes
+    ? buildSummaryText(purpose, hour, topN, selectedTypes)
+    : null
+  const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
+  const legendBottom = selectedNode ? 298 : 40
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -148,65 +171,170 @@ export default function Map({
         />
       )}
 
-      {/* 지도 타이틀 */}
+      {/* 상단 종합 해설바 */}
       <div
         style={{
           position: 'absolute',
-          top: 16,
-          left: 16,
+          top: 0,
+          left: 0,
+          right: 0,
+          background: 'rgba(16,22,29,0.92)',
+          borderBottom: `1px solid ${colors.panelBorder}`,
+          padding: '10px 16px',
+          zIndex: 6,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
           pointerEvents: 'none',
-          zIndex: 5,
         }}
       >
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#ECEFF1', lineHeight: 1.2 }}>
-          서울 스파이스 흐름 지도
+        <div style={{ fontSize: 16, fontWeight: 700, color: colors.panelText, whiteSpace: 'nowrap' }}>
+          서울 상권 흐름 지도
         </div>
-        <div style={{ fontSize: 11, color: '#546E7A', marginTop: 3 }}>
-          수도권 생활이동 × 상권 데이터 × AI 분석
-        </div>
-      </div>
-
-      {/* 하단 상태 표시줄 */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 16,
-          left: 16,
-          fontSize: 12,
-          color: '#90A4AE',
-          pointerEvents: 'none',
-          zIndex: 5,
-        }}
-      >
-        평일 {hour}시 · {purpose ?? '전체'} 흐름
-      </div>
-
-      {/* 노드 툴팁 */}
-      {hoveredNode && (
-        <div
-          style={{
-            position: 'absolute',
-            left: hoveredNode.x + 12,
-            top: hoveredNode.y - 8,
-            background: '#1A2332',
-            color: '#ECEFF1',
-            border: '1px solid #455A64',
-            borderRadius: 6,
-            padding: '6px 10px',
-            fontSize: 13,
-            pointerEvents: 'none',
-            zIndex: 10,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: 2 }}>{hoveredNode.node.name}</div>
-          <div>GRI {hoveredNode.node.griScore}</div>
-          <div style={{ color: hoveredNode.node.netFlow >= 0 ? '#43A047' : '#EF5350', fontSize: 12 }}>
-            순유입 {hoveredNode.node.netFlow >= 0 ? '+' : ''}{hoveredNode.node.netFlow}
+        <div style={{ width: 1, height: 18, background: colors.panelBorder, flexShrink: 0 }} />
+        {summaryText && (
+          <div style={{ fontSize: 12, color: colors.secondaryText, lineHeight: 1.5, flex: 1 }}>
+            {summaryText}
           </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <span
+            style={{
+              background: 'rgba(21,29,38,0.95)',
+              border: `1px solid ${colors.panelBorder}`,
+              borderRadius: 999,
+              padding: '3px 8px',
+              fontSize: 10,
+              color: colors.secondaryText,
+            }}
+          >
+            {scopeLabel}
+          </span>
+          <span
+            style={{
+              background: 'rgba(21,29,38,0.95)',
+              border: `1px solid ${colors.panelBorder}`,
+              borderRadius: 999,
+              padding: '3px 8px',
+              fontSize: 10,
+              color: dataStatusTone,
+            }}
+          >
+            {dataStatusLabel}
+          </span>
         </div>
+      </div>
+
+      {/* 노드 미니 해설 카드 */}
+      {hoveredNode && (() => {
+        const { node, x, y } = hoveredNode
+        const token = COMMERCE_COLORS[node.type]
+        const badge = getInterventionBadge(node.griScore)
+        const netFlowColor = node.netFlow >= 0 ? '#A5D6A7' : '#EF9A9A'
+        const interpretation = getNodeInterpretation(node.type, node.griScore)
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: x + 14,
+              top: y - 12,
+              background: colors.panelBg,
+              color: colors.panelText,
+              border: `1px solid ${token.outline}`,
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 13,
+              pointerEvents: 'none',
+              zIndex: 10,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              whiteSpace: 'nowrap',
+              minWidth: 180,
+            }}
+          >
+            {/* 상권명 + 유형 배지 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{node.name}</span>
+              {badge && (
+                <span
+                  style={{
+                    background: badge.bg,
+                    color: badge.color,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    borderRadius: 4,
+                    padding: '2px 6px',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  {badge.label}
+                </span>
+              )}
+            </div>
+
+            {/* 유형 배지 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: token.fill,
+                  color: '#fff',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+                aria-label={token.label}
+              >
+                {token.symbol}
+              </span>
+              <span style={{ fontSize: 12, color: token.textColor }}>{token.label}</span>
+            </div>
+
+            {/* 지표 2열 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>GRI</div>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>{node.griScore}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>순유입</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: netFlowColor }}>
+                  {node.netFlow >= 0 ? '+' : ''}{node.netFlow}
+                </div>
+              </div>
+            </div>
+
+            {/* 1줄 상태 해석 */}
+            <div
+              style={{
+                fontSize: 11,
+                color: colors.secondaryText,
+                borderTop: `1px solid ${colors.panelBorder}`,
+                paddingTop: 6,
+                lineHeight: 1.4,
+              }}
+            >
+              {interpretation}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* 상권 유형 범례 (필터 겸용) */}
+      {selectedTypes && onToggleType && (
+        <CommerceLegend
+          theme={theme}
+          bottom={legendBottom}
+          selectedTypes={selectedTypes}
+          onToggle={onToggleType}
+        />
       )}
+
+      <CommerceDetailPanel node={selectedNode ?? null} onClose={() => onSelectNode?.(null)} />
 
       {/* 목 데이터 배너 */}
       {usingMockData && (
