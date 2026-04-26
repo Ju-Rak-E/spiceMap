@@ -190,3 +190,72 @@ class TestAggregateDataFrame:
         )
         result = aggregate_dataframe(three_rows)
         assert result.iloc[0]["trip_count_sum"] == pytest.approx(60.0)  # SUM=60, MEAN=20
+
+
+class TestAggregateToDbDualEngine:
+    """source/target engine 분리 동작 검증 (SQLite in-memory)."""
+
+    def test_source_target_different_engines(self, tmp_path):
+        """source engine에서 읽어 target engine에 쓴다."""
+        from unittest.mock import patch
+
+        from sqlalchemy import create_engine as ce, text
+        from backend.pipeline.aggregate_od_flows import aggregate_to_db
+
+        source = ce("sqlite:///:memory:")
+        target = ce("sqlite:///:memory:")
+
+        # source에 od_flows 테이블 + 더미 데이터 생성
+        with source.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE od_flows (
+                    id INTEGER PRIMARY KEY,
+                    base_date TEXT NOT NULL,
+                    origin_adm_cd TEXT NOT NULL,
+                    dest_adm_cd TEXT NOT NULL,
+                    move_purpose INTEGER,
+                    in_forn_div TEXT,
+                    trip_count REAL NOT NULL
+                )
+            """))
+            conn.execute(text("""
+                INSERT INTO od_flows VALUES
+                (1,'2025-10-05','1168010100','1162010200',NULL,'내국인',500.0),
+                (2,'2025-10-06','1168010100','1162010200',NULL,'내국인',300.0),
+                (3,'2025-11-01','1168010200','1162010100',NULL,'내국인',200.0)
+            """))
+            conn.commit()
+
+        # target에 od_flows_aggregated 테이블 생성
+        with target.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE od_flows_aggregated (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    year_quarter TEXT NOT NULL,
+                    origin_adm_cd TEXT NOT NULL,
+                    dest_adm_cd TEXT NOT NULL,
+                    move_purpose INTEGER,
+                    trip_count_sum REAL NOT NULL,
+                    UNIQUE(year_quarter, origin_adm_cd, dest_adm_cd, move_purpose)
+                )
+            """))
+            conn.commit()
+
+        # _upsert_batch_postgres는 PostgreSQL 전용이므로 SQLite target에서는 pandas to_sql로 패치
+        def _sqlite_upsert(engine, batch):
+            batch.to_sql("od_flows_aggregated", engine, if_exists="append", index=False)
+
+        with patch(
+            "backend.pipeline.aggregate_od_flows._upsert_batch_postgres",
+            side_effect=_sqlite_upsert,
+        ):
+            total = aggregate_to_db(source, target, quarter="2025Q4")
+
+        with target.connect() as conn:
+            rows = conn.execute(text("SELECT * FROM od_flows_aggregated")).fetchall()
+
+        assert total == 2  # 2개 OD 쌍
+        assert len(rows) == 2
+        # 1168010100→1162010200 합산 = 800
+        row_800 = next(r for r in rows if r[2] == "1168010100" and r[3] == "1162010200")
+        assert row_800[5] == 800.0
