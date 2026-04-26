@@ -201,7 +201,7 @@ class FlowBarrier(Base):
     barrier_type = Column(String(50), comment="단절 유형 (도로/경계 등)")
 
 
-class PolicyCard(Base):
+class PolicyCardOrm(Base):
     """정책 추천 카드 (Module D 결과, 1상권당 0~N건)"""
     __tablename__ = "policy_cards"
     __table_args__ = (
