@@ -2,7 +2,7 @@
 
 > PostgreSQL + PostGIS  
 > ORM: SQLAlchemy (`backend/models.py`)  
-> 최종 수정: 2026-04-12
+> 최종 수정: 2026-04-17
 
 ---
 

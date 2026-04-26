@@ -12,7 +12,7 @@ import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
-import type { CommerceNode } from '../types/commerce'
+import type { CommerceNode } from '../types/commerce
 import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
 
 const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
