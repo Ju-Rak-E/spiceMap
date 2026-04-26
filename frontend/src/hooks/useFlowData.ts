@@ -112,8 +112,11 @@ const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 async function fetchFlows(): Promise<ODFlow[]> {
   if (!isDemoMode()) {
     const res = await fetch(`${BASE_URL}/api/od/flows`)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    return res.json() as Promise<ODFlow[]>
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data)) return data as ODFlow[]
+    }
+    // API 미구현 또는 비배열 응답 → mock 폴백
   }
 
   const mockRes = await fetch('/data/mock_flows.json')
