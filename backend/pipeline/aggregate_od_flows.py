@@ -46,8 +46,13 @@ def _parse_year_quarter(value: str) -> tuple[int, int]:
     return int(m.group(1)), int(m.group(2))
 
 
-def derive_year_quarter(d: date) -> str:
-    """날짜를 YYYYQ# 포맷으로 변환. 예: 2026-02-15 → '2026Q1'."""
+def derive_year_quarter(d: date | str) -> str:
+    """날짜를 YYYYQ# 포맷으로 변환. 예: 2026-02-15 → '2026Q1'.
+
+    SQLite에서 읽으면 문자열로 오므로 자동 파싱.
+    """
+    if isinstance(d, str):
+        d = date.fromisoformat(d[:10])
     quarter = math.ceil(d.month / 3)
     return f"{d.year}Q{quarter}"
 
@@ -132,18 +137,18 @@ def _fetch_raw_chunks(engine: Engine, quarter: str | None):
 
 
 def aggregate_to_db(
-    engine: Engine,
+    source_engine: Engine,
+    target_engine: Engine,
     quarter: str | None = None,
     dry_run: bool = False,
 ) -> int:
-    """원본 → 집계본 적재. 적재된 행 수 반환.
+    """원본(source_engine) → 집계본(target_engine) 적재. 적재된 행 수 반환.
 
-    PostgreSQL에서만 UPSERT 동작. SQLite(테스트)는 본 함수 호출 불필요.
+    source_engine: od_flows 원본이 있는 DB (로컬 또는 동일 DB)
+    target_engine: od_flows_aggregated가 있는 DB (Supabase 또는 동일 DB)
     """
     total = 0
-    for chunk_idx, chunk in enumerate(_fetch_raw_chunks(engine, quarter), start=1):
-        # SQL WHERE가 이미 분기 범위를 필터했으므로 파이썬 재필터 불필요 (quarter=None).
-        # 단, 청크에 여러 분기가 섞일 수 있는 전체 집계(quarter=None) 케이스는 그룹화만 수행.
+    for chunk_idx, chunk in enumerate(_fetch_raw_chunks(source_engine, quarter), start=1):
         agg = aggregate_dataframe(chunk, quarter=None)
         if agg.empty:
             continue
@@ -151,7 +156,7 @@ def aggregate_to_db(
         if dry_run:
             print(f"  chunk#{chunk_idx}: {len(agg):,} 집계 행 (dry-run)")
         else:
-            _upsert_batch_postgres(engine, agg)
+            _upsert_batch_postgres(target_engine, agg)
             print(f"  chunk#{chunk_idx}: {len(agg):,} 집계 행 upsert 완료")
         total += len(agg)
 
@@ -164,6 +169,12 @@ def parse_args() -> argparse.Namespace:
     grp.add_argument("--quarter", help="특정 분기만 집계 (예: 2026Q1)")
     grp.add_argument("--all", action="store_true", help="전체 분기 집계")
     p.add_argument("--dry-run", action="store_true", help="DB 변경 없이 행 수만 보고")
+    p.add_argument(
+        "--source-url",
+        default=None,
+        help="od_flows 원본 DB URL (기본값: settings.database_url). "
+             "로컬→Supabase 적재 시 로컬 URL을 지정한다.",
+    )
     return p.parse_args()
 
 
@@ -171,11 +182,17 @@ def main() -> int:
     args = parse_args()
     quarter = args.quarter if not args.all else None
 
-    engine = create_engine(settings.database_url)
+    target_engine = create_engine(settings.database_url)
+    if args.source_url:
+        source_engine = create_engine(args.source_url)
+        print(f"[aggregate_od_flows] source: {args.source_url}")
+    else:
+        source_engine = target_engine
+
     target = quarter or "전체"
     print(f"[aggregate_od_flows] 대상: {target} (dry_run={args.dry_run})")
 
-    total = aggregate_to_db(engine, quarter=quarter, dry_run=args.dry_run)
+    total = aggregate_to_db(source_engine, target_engine, quarter=quarter, dry_run=args.dry_run)
     print(f"[aggregate_od_flows] 완료: {total:,} 집계 행")
     return 0
 
