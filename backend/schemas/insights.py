@@ -34,3 +34,10 @@ class PolicyCard(BaseModel):
         default_factory=dict, description="규칙 발동에 기여한 지표 값"
     )
     generation_mode: Literal["rule_based"] = "rule_based"
+
+
+class PolicyCardsResponse(BaseModel):
+    quarter: str
+    total_cards: int
+    generation_mode: str = "rule_based"
+    cards: list[PolicyCard]
