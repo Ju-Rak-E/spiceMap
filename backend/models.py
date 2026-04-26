@@ -1,5 +1,5 @@
 """
-SQLAlchemy ORM 모델 — 7개 핵심 테이블 정의
+SQLAlchemy ORM 모델 — 9개 핵심 테이블 정의
 공간 데이터는 GeoAlchemy2의 Geometry 타입 사용 (PostGIS 필요)
 """
 from geoalchemy2 import Geometry
@@ -148,6 +148,9 @@ class CommerceSales(Base):
 class CommerceAnalysis(Base):
     """분석 결과 Pre-computed 테이블 (FastAPI가 직접 서빙)"""
     __tablename__ = "commerce_analysis"
+    __table_args__ = (
+        Index("ix_commerce_analysis_quarter_cd", "year_quarter", "comm_cd"),
+    )
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     year_quarter = Column(String(7), nullable=False, comment="분기")
@@ -198,7 +201,7 @@ class FlowBarrier(Base):
     barrier_type = Column(String(50), comment="단절 유형 (도로/경계 등)")
 
 
-class PolicyCardOrm(Base):
+class PolicyCard(Base):
     """정책 추천 카드 (Module D 결과, 1상권당 0~N건)"""
     __tablename__ = "policy_cards"
     __table_args__ = (
