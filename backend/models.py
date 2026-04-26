@@ -156,7 +156,12 @@ class CommerceAnalysis(Base):
     gri_score = Column(Float, comment="상권 위험 지수 (0~100)")
     flow_volume = Column(BigInteger, comment="유입 이동량 합산")
     dominant_origin = Column(String(10), comment="주 유입 출발 행정동 코드")
-    analysis_note = Column(Text, comment="정책 제언 텍스트")
+    analysis_note     = Column(Text,        comment="정책 제언 텍스트")
+    commerce_type     = Column(String(20),  comment="상권 유형 (Module D 5유형)")
+    priority_score    = Column(Float,       comment="정책 우선순위 점수 0~100 (Module E)")
+    net_flow          = Column(Float,       comment="순유입(+)/순유출(-) 이동량 (Module A)")
+    degree_centrality = Column(Float,       comment="네트워크 연결 중심성 (Module A)")
+    closure_rate      = Column(Float,       comment="분기 폐업률 % (store_info 집계)")
 
 
 class AdmCommMapping(Base):
@@ -191,3 +196,22 @@ class FlowBarrier(Base):
     to_comm_cd = Column(String(20), comment="도착 상권 코드")
     barrier_score = Column(Float, comment="단절 강도 (높을수록 단절)")
     barrier_type = Column(String(50), comment="단절 유형 (도로/경계 등)")
+
+
+class PolicyCardOrm(Base):
+    """정책 추천 카드 (Module D 결과, 1상권당 0~N건)"""
+    __tablename__ = "policy_cards"
+    __table_args__ = (
+        Index("ix_policy_cards_quarter", "year_quarter"),
+        Index("ix_policy_cards_comm_cd", "comm_cd"),
+    )
+
+    id                 = Column(BigInteger, primary_key=True, autoincrement=True)
+    year_quarter       = Column(String(7),  nullable=False, comment="분기 (예: 2025Q4)")
+    comm_cd            = Column(String(20), nullable=False, comment="상권 코드")
+    rule_id            = Column(String(5),  nullable=False, comment="규칙 ID (R4~R7)")
+    severity           = Column(String(10), nullable=False, comment="Critical/High/Medium/Low")
+    policy_text        = Column(Text,       nullable=False, comment="정책 추천 텍스트")
+    rationale          = Column(Text,       comment="근거 1문장")
+    triggering_metrics = Column(Text,       comment="발동 지표 JSON 문자열")
+    generation_mode    = Column(String(20), nullable=False, default="rule_based")

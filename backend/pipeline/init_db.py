@@ -27,6 +27,18 @@ def init_db() -> None:
     for table in Base.metadata.sorted_tables:
         print(f"  - {table.name}")
 
+    with engine.connect() as conn:
+        conn.execute(text("""
+            ALTER TABLE commerce_analysis
+              ADD COLUMN IF NOT EXISTS commerce_type      VARCHAR(20),
+              ADD COLUMN IF NOT EXISTS priority_score     FLOAT8,
+              ADD COLUMN IF NOT EXISTS net_flow           FLOAT8,
+              ADD COLUMN IF NOT EXISTS degree_centrality  FLOAT8,
+              ADD COLUMN IF NOT EXISTS closure_rate       FLOAT8
+        """))
+        conn.commit()
+        print("commerce_analysis 컬럼 추가 완료")
+
 
 if __name__ == "__main__":
     try:
