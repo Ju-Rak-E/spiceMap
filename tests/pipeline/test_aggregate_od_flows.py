@@ -195,7 +195,7 @@ class TestAggregateDataFrame:
 class TestAggregateToDbDualEngine:
     """source/target engine 분리 동작 검증 (SQLite in-memory)."""
 
-    def test_source_target_different_engines(self, tmp_path):
+    def test_source_target_different_engines(self):
         """source engine에서 읽어 target engine에 쓴다."""
         from unittest.mock import patch
 
@@ -243,6 +243,7 @@ class TestAggregateToDbDualEngine:
 
         # _upsert_batch_postgres는 PostgreSQL 전용이므로 SQLite target에서는 pandas to_sql로 패치
         def _sqlite_upsert(engine, batch):
+            assert engine is target, f"쓰기 대상이 target이어야 함, 실제: {engine}"
             batch.to_sql("od_flows_aggregated", engine, if_exists="append", index=False)
 
         with patch(
@@ -258,4 +259,4 @@ class TestAggregateToDbDualEngine:
         assert len(rows) == 2
         # 1168010100→1162010200 합산 = 800
         row_800 = next(r for r in rows if r[2] == "1168010100" and r[3] == "1162010200")
-        assert row_800[5] == 800.0
+        assert row_800._mapping["trip_count_sum"] == 800.0
