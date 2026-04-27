@@ -4,8 +4,10 @@ GET /api/gri/history        — 상권 GRI 분기별 시계열
 """
 import json
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from redis.exceptions import RedisError
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.api.deps import get_session, get_cache
@@ -26,9 +28,12 @@ def type_map(
     cache=Depends(get_cache),
 ):
     cache_key = f"type-map:{gu or 'all'}:{quarter}"
-    cached = cache.get(cache_key)
-    if cached:
-        return json.loads(cached)
+    try:
+        cached = cache.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except RedisError:
+        pass
 
     # gu 필터: admin_boundary.gu_nm 대신 comm_type 기반 자치구 필터는
     # commerce_boundary에 직접 자치구 정보가 없어 od_flows 경유 어려움.
@@ -61,7 +66,10 @@ def type_map(
         WHERE (:gu IS NULL OR ab.gu_nm = :gu)
         ORDER BY cb.comm_cd
     """)
-    rows = db.execute(sql, {"quarter": quarter, "gu": gu}).fetchall()
+    try:
+        rows = db.execute(sql, {"quarter": quarter, "gu": gu}).fetchall()
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable for /api/commerce/type-map") from exc
 
     features = [
         {
@@ -89,7 +97,10 @@ def type_map(
         "total": len(features),
         "features": features,
     }
-    cache.setex(cache_key, CACHE_TTL, json.dumps(result, ensure_ascii=False))
+    try:
+        cache.setex(cache_key, CACHE_TTL, json.dumps(result, ensure_ascii=False))
+    except RedisError:
+        pass
     return result
 
 
@@ -103,26 +114,32 @@ def gri_history(
     cache=Depends(get_cache),
 ):
     cache_key = f"gri-history:{comm_cd}"
-    cached = cache.get(cache_key)
-    if cached:
-        return json.loads(cached)
+    try:
+        cached = cache.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except RedisError:
+        pass
 
     # 상권 기본 정보
-    name_row = db.execute(
-        text("SELECT comm_nm FROM commerce_boundary WHERE comm_cd = :cd"),
-        {"cd": comm_cd},
-    ).fetchone()
+    try:
+        name_row = db.execute(
+            text("SELECT comm_nm FROM commerce_boundary WHERE comm_cd = :cd"),
+            {"cd": comm_cd},
+        ).fetchone()
 
     # GRI 시계열
-    rows = db.execute(
-        text("""
-            SELECT year_quarter, gri_score, flow_volume
-            FROM commerce_analysis
-            WHERE comm_cd = :cd
-            ORDER BY year_quarter
-        """),
-        {"cd": comm_cd},
-    ).fetchall()
+        rows = db.execute(
+            text("""
+                SELECT year_quarter, gri_score, flow_volume
+                FROM commerce_analysis
+                WHERE comm_cd = :cd
+                ORDER BY year_quarter
+            """),
+            {"cd": comm_cd},
+        ).fetchall()
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable for /api/gri/history") from exc
 
     result = {
         "comm_cd": comm_cd,
@@ -136,5 +153,8 @@ def gri_history(
             for row in rows
         ],
     }
-    cache.setex(cache_key, CACHE_TTL, json.dumps(result, ensure_ascii=False))
+    try:
+        cache.setex(cache_key, CACHE_TTL, json.dumps(result, ensure_ascii=False))
+    except RedisError:
+        pass
     return result

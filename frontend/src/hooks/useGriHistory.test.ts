@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildGriSeries, type GriPoint } from './useGriHistory'
+import { buildGriSeries, getPeriodRank, normalizeGriHistoryResponse, type GriPoint } from './useGriHistory'
 
 const MOCK_SERIES: GriPoint[] = [
   { ts: '2025-01', gri: 60 },
@@ -39,5 +39,54 @@ describe('buildGriSeries', () => {
     const copy = [...original]
     buildGriSeries(original)
     expect(original).toEqual(copy)
+  })
+})
+
+describe('normalizeGriHistoryResponse', () => {
+  it('백엔드 래핑 응답을 차트 시계열로 변환한다', () => {
+    const result = normalizeGriHistoryResponse({
+      comm_cd: '3110001',
+      comm_nm: '테스트 상권',
+      history: [
+        { quarter: '2025Q2', gri_score: 72, flow_volume: 1500 },
+        { quarter: '2025Q1', gri_score: 64, flow_volume: 1200 },
+      ],
+    })
+
+    expect(result).toEqual([
+      { ts: '2025Q1', gri: 64, flowVolume: 1200 },
+      { ts: '2025Q2', gri: 72, flowVolume: 1500 },
+    ])
+  })
+
+  it('빈 history면 빈 배열을 반환한다', () => {
+    const result = normalizeGriHistoryResponse({
+      comm_cd: '3110001',
+      comm_nm: null,
+      history: [],
+    })
+
+    expect(result).toEqual([])
+  })
+
+  it('gri_score가 null인 행은 제외한다', () => {
+    const result = normalizeGriHistoryResponse({
+      comm_cd: '3110001',
+      comm_nm: null,
+      history: [
+        { quarter: '2025Q1', gri_score: null, flow_volume: 100 },
+        { quarter: '2025Q2', gri_score: 55, flow_volume: null },
+      ],
+    })
+
+    expect(result).toEqual([{ ts: '2025Q2', gri: 55, flowVolume: null }])
+  })
+})
+
+describe('getPeriodRank', () => {
+  it('분기와 월 단위를 같은 축으로 비교할 수 있게 변환한다', () => {
+    expect(getPeriodRank('2025Q1')).toBe(getPeriodRank('2025-03'))
+    expect(getPeriodRank('2025-04')).toBeGreaterThan(getPeriodRank('2025Q1'))
+    expect(getPeriodRank('2024Q4')).toBeLessThan(getPeriodRank('2025Q1'))
   })
 })

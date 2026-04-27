@@ -113,7 +113,7 @@ describe('featuresToNodes', () => {
 
   describe('comm_type 검증', () => {
     it('유효한 comm_type은 그대로 사용한다', () => {
-      const types = ['흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형'] as const
+      const types = ['흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형', '미분류'] as const
       for (const t of types) {
         const feature = makeFeature({
           properties: { ...makeFeature().properties, comm_type: t },
@@ -123,20 +123,49 @@ describe('featuresToNodes', () => {
       }
     })
 
-    it('알 수 없는 comm_type은 "안정형"으로 폴백한다', () => {
+    it('알 수 없는 comm_type은 "미분류"로 폴백한다', () => {
       const feature = makeFeature({
         properties: { ...makeFeature().properties, comm_type: 'UNKNOWN_TYPE' },
       })
       const [node] = featuresToNodes([feature])
-      expect(node.type).toBe('안정형')
+      expect(node.type).toBe('미분류')
     })
 
-    it('comm_type이 null이면 "안정형"으로 폴백한다', () => {
+    it('comm_type이 null이면 "미분류"로 폴백한다', () => {
       const feature = makeFeature({
         properties: { ...makeFeature().properties, comm_type: null },
       })
       const [node] = featuresToNodes([feature])
-      expect(node.type).toBe('안정형')
+      expect(node.type).toBe('미분류')
+    })
+
+    it('unclassified comm_type은 "미분류"로 매핑한다', () => {
+      const feature = makeFeature({
+        properties: { ...makeFeature().properties, comm_type: 'unclassified' },
+      })
+      const [node] = featuresToNodes([feature])
+      expect(node.type).toBe('미분류')
+    })
+
+    it('commerce_type이 있으면 comm_type보다 우선한다', () => {
+      const feature = makeFeature({
+        geometry: { type: 'Point', coordinates: [127, 37] },
+        properties: {
+          ...makeFeature().properties,
+          comm_cd: 'gc_001',
+          comm_nm: '테스트',
+          commerce_type: '흡수형_과열',
+          comm_type: '골목상권',
+          gri_score: null,
+          flow_volume: null,
+          dominant_origin: null,
+          analysis_note: null,
+          centroid_lng: 127,
+          centroid_lat: 37,
+        },
+      })
+      const [node] = featuresToNodes([feature])
+      expect(node.type).toBe('흡수형_과열')
     })
   })
 

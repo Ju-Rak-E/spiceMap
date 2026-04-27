@@ -18,6 +18,7 @@ const STRENGTH_TO_TOP_N: Record<number, number> = {
 
 const BOUNDARY_OPACITY = 0.2
 const SCOPE_LABEL = '강남구·관악구 시범'
+const DEFAULT_QUARTER = '2025Q4'
 
 export default function App() {
   const [purpose, setPurpose] = useState<FlowPurpose | null>(null)
@@ -26,12 +27,13 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(new Set())
   const [selectedTypes, setSelectedTypes] = useState<Set<CommerceType>>(new Set(ALL_TYPES))
+  const [selectedQuarter, setSelectedQuarter] = useState(DEFAULT_QUARTER)
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
-  const { nodes: rawNodes, usingMockData } = useCommerceData()
-  const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour })
+  const { nodes: rawNodes, usingMockData } = useCommerceData(selectedQuarter)
+  const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour, quarter: selectedQuarter })
 
   const nodes = filterNodesByType(
     filterNodesByDistrict(rawNodes, selectedDistricts),
@@ -74,6 +76,7 @@ export default function App() {
           topN={topN}
           scopeLabel={SCOPE_LABEL}
           dataStatusLabel={usingMockData ? '캐시 데이터' : 'API 연결'}
+          selectedQuarter={selectedQuarter}
           boundaryOpacity={BOUNDARY_OPACITY}
           selectedTypes={selectedTypes}
           selectedNode={selectedNode}
@@ -89,6 +92,8 @@ export default function App() {
         onHourChange={setHour}
         flowStrength={flowStrength}
         onStrengthChange={setFlowStrength}
+        selectedQuarter={selectedQuarter}
+        onQuarterChange={setSelectedQuarter}
         topN={topN}
         scopeLabel={SCOPE_LABEL}
         usingMockData={usingMockData}

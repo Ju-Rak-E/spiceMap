@@ -25,6 +25,14 @@ const NODES: CommerceNode[] = [
   },
 ]
 
+const NODES_WITH_UNCLASSIFIED: CommerceNode[] = [
+  ...NODES,
+  {
+    id: 'uc_001', name: '분석 대기 상권', coordinates: [127.001, 37.501],
+    type: '미분류', district: '강남구', netFlow: 0, degreeCentrality: 0, griScore: 0,
+  },
+]
+
 describe('filterNodesByDistrict', () => {
   it('빈 Set이면 전체를 반환한다', () => {
     expect(filterNodesByDistrict(NODES, new Set())).toHaveLength(5)
@@ -74,5 +82,11 @@ describe('filterNodesByType', () => {
     const original = [...NODES]
     filterNodesByType(NODES, new Set(['안정형']))
     expect(NODES).toEqual(original)
+  })
+
+  it('미분류만 선택 시 미분류 노드만 남는다', () => {
+    const result = filterNodesByType(NODES_WITH_UNCLASSIFIED, new Set(['미분류']))
+    expect(result).toHaveLength(1)
+    expect(result.every(n => n.type === '미분류')).toBe(true)
   })
 })

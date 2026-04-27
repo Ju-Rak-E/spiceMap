@@ -13,6 +13,25 @@ export interface ODFlow {
   purpose: FlowPurpose
 }
 
+export interface BackendFlowItem {
+  origin_adm_cd: string
+  origin_adm_nm: string | null
+  dest_adm_cd: string
+  dest_adm_nm: string | null
+  trip_count: number
+  move_purpose: number | string | null
+  sourceCoord?: [number, number]
+  targetCoord?: [number, number]
+  source_coord?: [number, number] | null
+  target_coord?: [number, number] | null
+}
+
+export interface BackendOdFlowsResponse {
+  quarter: string
+  total_flows: number
+  flows: BackendFlowItem[]
+}
+
 const PEAK_HOUR: Record<FlowPurpose, number> = {
   출근: 8,
   쇼핑: 14,
@@ -47,6 +66,7 @@ export interface FlowFilters {
   purpose?: FlowPurpose | null
   topN?: number
   hour?: number
+  quarter?: string
 }
 
 export interface FlowStats {
@@ -63,6 +83,39 @@ export interface UseFlowDataReturn extends FlowStats {
 }
 
 const VALID_PURPOSES = new Set<string>(['출근', '쇼핑', '여가', '귀가'])
+const PURPOSE_BY_CODE: Record<number, FlowPurpose> = {
+  1: '출근',
+  2: '귀가',
+  3: '쇼핑',
+  4: '여가',
+}
+
+function normalizePurpose(value: BackendFlowItem['move_purpose']): FlowPurpose {
+  if (typeof value === 'string' && VALID_PURPOSES.has(value)) return value as FlowPurpose
+  if (typeof value === 'number') return PURPOSE_BY_CODE[value] ?? '출근'
+  return '출근'
+}
+
+export function normalizeBackendFlows(response: BackendOdFlowsResponse): ODFlow[] | null {
+  const flows: ODFlow[] = []
+
+  for (const flow of response.flows) {
+    const sourceCoord = flow.sourceCoord ?? flow.source_coord
+    const targetCoord = flow.targetCoord ?? flow.target_coord
+    if (!sourceCoord || !targetCoord) return null
+    flows.push({
+      id: `${flow.origin_adm_cd}-${flow.dest_adm_cd}`,
+      sourceId: flow.origin_adm_nm ?? flow.origin_adm_cd,
+      targetId: flow.dest_adm_nm ?? flow.dest_adm_cd,
+      sourceCoord,
+      targetCoord,
+      volume: Math.round(flow.trip_count),
+      purpose: normalizePurpose(flow.move_purpose),
+    })
+  }
+
+  return flows
+}
 
 export function filterFlows(flows: ODFlow[], filters: FlowFilters): ODFlow[] {
   let result = flows.filter(f => VALID_PURPOSES.has(f.purpose))
@@ -109,38 +162,48 @@ export function computeStats(flows: ODFlow[]): FlowStats {
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
-async function fetchFlows(): Promise<ODFlow[]> {
-  if (!isDemoMode()) {
-    const res = await fetch(`${BASE_URL}/api/od/flows`)
-    if (res.ok) {
-      const data = await res.json()
-      if (Array.isArray(data)) return data as ODFlow[]
-    }
-    // API 미구현 또는 비배열 응답 → mock 폴백
-  }
-
+async function fetchMockFlows(): Promise<ODFlow[]> {
   const mockRes = await fetch('/data/mock_flows.json')
   if (!mockRes.ok) throw new Error(`HTTP ${mockRes.status}`)
   return mockRes.json() as Promise<ODFlow[]>
+}
+
+async function fetchFlows(quarter: string): Promise<ODFlow[]> {
+  if (isDemoMode()) {
+    return fetchMockFlows()
+  }
+
+  const params = new URLSearchParams({ quarter })
+  const res = await fetch(`${BASE_URL}/api/od/flows?${params.toString()}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  if (Array.isArray(data)) return data as ODFlow[]
+
+  const normalized = normalizeBackendFlows(data as BackendOdFlowsResponse)
+  if (!normalized) throw new Error('OD 흐름 응답에 좌표가 없습니다')
+  return normalized
 }
 
 export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
   const [allFlows, setAllFlows] = useState<ODFlow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const quarter = filters.quarter ?? '2025Q4'
 
   useEffect(() => {
     setIsLoading(true)
-    fetchFlows()
+    setError(null)
+    fetchFlows(quarter)
       .then(data => {
         setAllFlows(data)
         setIsLoading(false)
       })
       .catch(() => {
+        setAllFlows([])
         setError('흐름 데이터를 불러오지 못했습니다')
         setIsLoading(false)
       })
-  }, [])
+  }, [quarter])
 
   const flows = filterFlows(allFlows, filters)
   const stats = computeStats(flows)

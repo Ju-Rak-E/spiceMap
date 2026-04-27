@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import CommerceDetailPanel from './CommerceDetailPanel'
 import type { CommerceNode } from '../types/commerce'
@@ -30,42 +30,56 @@ vi.mock('../hooks/useGriHistory', () => ({
 
 vi.mock('../hooks/usePolicyInsights', () => ({
   usePolicyInsights: () => ({
+    insights: [],
     insight: null,
     isLoading: false,
     error: null,
   }),
 }))
 
+afterEach(() => {
+  cleanup()
+})
+
+function renderPanel(onClose = () => {}) {
+  return render(<CommerceDetailPanel node={SAMPLE_NODE} quarter="2025Q4" onClose={onClose} />)
+}
+
 describe('CommerceDetailPanel', () => {
   it('상권명이 표시된다', () => {
-    render(<CommerceDetailPanel node={SAMPLE_NODE} onClose={() => {}} />)
+    renderPanel()
     expect(screen.getByText('역삼 먹자골목')).toBeTruthy()
   })
 
   it('GRI 점수가 표시된다', () => {
-    render(<CommerceDetailPanel node={SAMPLE_NODE} onClose={() => {}} />)
-    expect(screen.getByText('82')).toBeTruthy()
+    renderPanel()
+    expect(screen.getAllByText('82').length).toBeGreaterThan(0)
   })
 
   it('상권 유형 라벨이 표시된다', () => {
-    render(<CommerceDetailPanel node={SAMPLE_NODE} onClose={() => {}} />)
-    expect(screen.getByText('흡수형_과열')).toBeTruthy()
+    renderPanel()
+    expect(screen.getAllByText('흡수형_과열').length).toBeGreaterThan(0)
   })
 
   it('순유입 값이 표시된다', () => {
-    render(<CommerceDetailPanel node={SAMPLE_NODE} onClose={() => {}} />)
-    expect(screen.getByText('+1200')).toBeTruthy()
+    renderPanel()
+    expect(screen.getAllByText('+1200').length).toBeGreaterThan(0)
   })
 
   it('닫기 버튼 클릭 시 onClose가 호출된다', async () => {
     const onClose = vi.fn()
-    render(<CommerceDetailPanel node={SAMPLE_NODE} onClose={onClose} />)
+    renderPanel(onClose)
     await userEvent.click(screen.getByRole('button', { name: /패널 닫기/i }))
     expect(onClose).toHaveBeenCalledOnce()
   })
 
   it('GRI 추세 그래프 SVG가 렌더된다', () => {
-    render(<CommerceDetailPanel node={SAMPLE_NODE} onClose={() => {}} />)
+    renderPanel()
     expect(document.querySelector('svg')).toBeTruthy()
+  })
+
+  it('정책 카드가 없으면 빈 상태를 표시한다', () => {
+    renderPanel()
+    expect(screen.getAllByText('발동된 정책 없음').length).toBeGreaterThan(0)
   })
 })

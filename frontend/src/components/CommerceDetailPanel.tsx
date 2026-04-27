@@ -7,6 +7,8 @@ import PolicyCard from './PolicyCard'
 
 interface CommerceDetailPanelProps {
   node: CommerceNode | null
+  quarter: string
+  usingMockData?: boolean
   onClose: () => void
 }
 
@@ -98,16 +100,22 @@ const S = {
   },
   errorText: { fontSize: 12, color: '#EF5350' },
   loadingText: { fontSize: 12, color: '#546E7A' },
+  emptyText: { fontSize: 12, color: '#90A4AE', lineHeight: 1.5 },
 }
 
 function netFlowColor(v: number): string {
   return v >= 0 ? '#43A047' : '#EF5350'
 }
 
-export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPanelProps) {
+export default function CommerceDetailPanel({
+  node,
+  quarter,
+  usingMockData = false,
+  onClose,
+}: CommerceDetailPanelProps) {
   const nodeId = node?.id ?? null
-  const { series, isLoading, error } = useGriHistory(nodeId)
-  const { insight, isLoading: policyLoading } = usePolicyInsights(nodeId)
+  const { series, isLoading, error } = useGriHistory(nodeId, quarter)
+  const { insights, isLoading: policyLoading, error: policyError } = usePolicyInsights(nodeId, quarter, node?.type)
   if (!node) return null
   const colorToken = COMMERCE_COLORS[node.type]
   const icon = TYPE_ICON[node.type] ?? '●'
@@ -124,6 +132,9 @@ export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPan
           <span aria-hidden="true">{icon}</span>
           {node.type}
         </span>
+        <div style={{ marginTop: 8, fontSize: 11, color: '#90A4AE' }}>
+          {quarter} · {usingMockData ? '캐시 데이터' : 'API 연결'}
+        </div>
       </div>
 
       <div>
@@ -164,7 +175,15 @@ export default function CommerceDetailPanel({ node, onClose }: CommerceDetailPan
       <div>
         <div style={S.sectionTitle}>정책 추천</div>
         {policyLoading && <div style={S.loadingText}>불러오는 중...</div>}
-        {!policyLoading && insight && <PolicyCard insight={insight} />}
+        {policyError && <div style={S.errorText}>{policyError}</div>}
+        {!policyLoading && !policyError && insights.length === 0 && (
+          <div style={S.emptyText}>발동된 정책 없음</div>
+        )}
+        {!policyLoading && !policyError && insights.map(insight => (
+          <div key={`${insight.nodeId}-${insight.ruleId ?? insight.title}`} style={{ marginBottom: 8 }}>
+            <PolicyCard insight={insight} />
+          </div>
+        ))}
       </div>
     </div>
   )

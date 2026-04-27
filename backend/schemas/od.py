@@ -11,6 +11,8 @@ class FlowItem(BaseModel):
     dest_adm_nm: str | None
     trip_count: float
     move_purpose: int | None
+    sourceCoord: tuple[float, float] | None = None
+    targetCoord: tuple[float, float] | None = None
 
 
 class OdFlowsResponse(BaseModel):

@@ -16,6 +16,8 @@ export interface CommerceFeatureProperties {
   comm_cd: string
   comm_nm: string
   gu_nm?: string | null
+  commerce_type?: string | null
+  source_comm_type?: string | null
   comm_type: string | null
   gri_score: number | null
   flow_volume: number | null
@@ -39,12 +41,14 @@ export interface CommerceTypeMapResponse {
 }
 
 const VALID_TYPES = new Set([
-  '흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형',
+  '흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형', '미분류',
 ])
 
 function resolveType(raw: string | null): CommerceType {
+  if (!raw) return '미분류'
+  if (raw === 'unclassified') return '미분류'
   if (raw && VALID_TYPES.has(raw)) return raw as CommerceType
-  return '안정형'
+  return '미분류'
 }
 
 function resolveCentroid(
@@ -84,7 +88,7 @@ export function featuresToNodes(features: CommerceFeature[]): CommerceNode[] {
       id: f.properties.comm_cd,
       name: f.properties.comm_nm,
       coordinates: coords,
-      type: resolveType(f.properties.comm_type),
+      type: resolveType(f.properties.commerce_type ?? f.properties.comm_type ?? null),
       district: f.properties.gu_nm ?? '',
       netFlow: f.properties.flow_volume ?? 0,
       degreeCentrality: 0,  // Dev-C Module A 완성 전 폴백

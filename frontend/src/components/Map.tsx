@@ -43,6 +43,7 @@ interface MapProps {
   topN: number
   scopeLabel: string
   dataStatusLabel: string
+  selectedQuarter: string
   boundaryOpacity?: number
   selectedTypes?: Set<CommerceType>
   selectedNode?: CommerceNode | null
@@ -66,6 +67,7 @@ export default function Map({
   topN,
   scopeLabel,
   dataStatusLabel,
+  selectedQuarter,
   boundaryOpacity = 0.2,
   selectedTypes,
   selectedNode,
@@ -334,7 +336,12 @@ export default function Map({
         />
       )}
 
-      <CommerceDetailPanel node={selectedNode ?? null} onClose={() => onSelectNode?.(null)} />
+      <CommerceDetailPanel
+        node={selectedNode ?? null}
+        quarter={selectedQuarter}
+        usingMockData={usingMockData}
+        onClose={() => onSelectNode?.(null)}
+      />
 
       {/* 목 데이터 배너 */}
       {usingMockData && (

@@ -19,6 +19,7 @@ const DENSITY_LABELS: Record<number, string> = {
 }
 
 const DISTRICTS = ['강남구', '관악구'] as const
+const QUARTER_SUGGESTIONS = ['2024Q1', '2024Q2', '2024Q3', '2024Q4', '2025Q1', '2025Q4'] as const
 const COLORS = MAP_THEME.dark
 
 interface FlowControlPanelProps {
@@ -28,6 +29,8 @@ interface FlowControlPanelProps {
   onHourChange: (h: number) => void
   flowStrength: number
   onStrengthChange: (s: number) => void
+  selectedQuarter: string
+  onQuarterChange: (q: string) => void
   topN: number
   scopeLabel: string
   usingMockData: boolean
@@ -60,6 +63,17 @@ function formatHourLabel(hour: number): string {
   if (hour < 12) return `오전 ${hour}시`
   if (hour === 12) return '오후 12시'
   return `오후 ${hour - 12}시`
+}
+
+function shiftQuarter(quarter: string, delta: number): string {
+  const match = quarter.match(/^(\d{4})Q([1-4])$/)
+  if (!match) return quarter
+  const year = Number(match[1])
+  const q = Number(match[2])
+  const zeroBased = year * 4 + (q - 1) + delta
+  const nextYear = Math.floor(zeroBased / 4)
+  const nextQuarter = (zeroBased % 4) + 1
+  return `${nextYear}Q${nextQuarter}`
 }
 
 function getSelectedTypeEntries(selectedTypes: Set<CommerceType>) {
@@ -294,6 +308,34 @@ const S = {
     gridTemplateColumns: '1fr 1fr',
     gap: 8,
   } satisfies CSSProperties,
+  quarterRow: {
+    display: 'grid',
+    gridTemplateColumns: '36px 1fr 36px',
+    gap: 8,
+  } satisfies CSSProperties,
+  quarterInput: {
+    width: '100%',
+    boxSizing: 'border-box',
+    borderRadius: 8,
+    border: `1px solid ${COLORS.panelBorder}`,
+    background: COLORS.panelSurface,
+    color: COLORS.panelText,
+    padding: '8px 10px',
+    fontSize: 13,
+    fontWeight: 700,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  } satisfies CSSProperties,
+  quarterNavButton: {
+    borderRadius: 8,
+    border: `1px solid ${COLORS.panelBorder}`,
+    background: COLORS.panelSurface,
+    color: '#7BD08D',
+    fontSize: 18,
+    fontWeight: 700,
+    cursor: 'pointer',
+    lineHeight: 1,
+  } satisfies CSSProperties,
   actionsRow: {
     display: 'flex',
     gap: 8,
@@ -330,6 +372,8 @@ export default function FlowControlPanel({
   onHourChange,
   flowStrength,
   onStrengthChange,
+  selectedQuarter,
+  onQuarterChange,
   topN,
   scopeLabel,
   usingMockData,
@@ -414,6 +458,41 @@ export default function FlowControlPanel({
             <span style={S.sliderValue}>{densityLabel}</span>
           </div>
           <div style={S.subLabel}>현재 상위 {topN}개 흐름을 중심으로 보여줍니다.</div>
+        </div>
+
+        <div>
+          <div style={S.label}>분기</div>
+          <div style={S.quarterRow}>
+            <button
+              type="button"
+              style={S.quarterNavButton}
+              onClick={() => onQuarterChange(shiftQuarter(selectedQuarter, -1))}
+              aria-label="이전 분기"
+            >
+              <span>‹</span>
+            </button>
+            <input
+              list="quarter-suggestions"
+              value={selectedQuarter}
+              onChange={(e) => onQuarterChange(e.target.value.toUpperCase())}
+              style={S.quarterInput}
+              aria-label="분기"
+            />
+            <datalist id="quarter-suggestions">
+              {QUARTER_SUGGESTIONS.map(quarter => (
+                <option key={quarter} value={quarter} />
+              ))}
+            </datalist>
+            <button
+              type="button"
+              style={S.quarterNavButton}
+              onClick={() => onQuarterChange(shiftQuarter(selectedQuarter, 1))}
+              aria-label="다음 분기"
+            >
+              <span>›</span>
+            </button>
+          </div>
+          <div style={S.subLabel}>선택 분기를 기준으로 상권·정책·흐름 데이터를 다시 불러옵니다.</div>
         </div>
       </section>
 

@@ -20,6 +20,7 @@ function getTypesSummary(selectedTypes: Set<CommerceType>): string {
 
   const selected = [...selectedTypes]
   const 침체계열: CommerceType[] = ['방출형_침체', '고립형_단절']
+  if (selected.length === 1 && selected[0] === '미분류') return '미분석 상권만'
   if (selected.every(t => 침체계열.includes(t))) return '침체/단절 계열 상권만'
 
   const labels = selected.map(t => COMMERCE_COLORS[t].label)
@@ -52,5 +53,7 @@ export function getNodeInterpretation(type: CommerceType, griScore: number): str
       return '연결이 약해 흐름이 고립된 상권입니다'
     case '안정형':
       return '유입·유출 변동이 비교적 안정적입니다'
+    case '미분류':
+      return 'Dev-C 분석 결과가 아직 산출되지 않았습니다'
   }
 }

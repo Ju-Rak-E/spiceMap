@@ -2,6 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceType } from '../styles/tokens'
 
+const CLASSIFIED_TYPES = [
+  '흡수형_과열',
+  '흡수형_성장',
+  '방출형_침체',
+  '고립형_단절',
+  '안정형',
+] as const
+
+const UNCLASSIFIED_TYPES = ['미분류'] as const
+
 interface CommerceLegendProps {
   theme?: 'dark' | 'light'
   bottom?: number
@@ -113,8 +123,9 @@ export default function CommerceLegend({
             </button>
           </div>
 
-          {(Object.entries(COMMERCE_COLORS) as [CommerceType, typeof COMMERCE_COLORS[CommerceType]][]).map(
-            ([key, token]) => {
+          {[...CLASSIFIED_TYPES, ...UNCLASSIFIED_TYPES].map(
+            (key) => {
+              const token = COMMERCE_COLORS[key]
               const active = selectedTypes.has(key)
               return (
                 <button
@@ -129,8 +140,9 @@ export default function CommerceLegend({
                     width: '100%',
                     background: 'none',
                     border: 'none',
+                    borderTop: key === '미분류' ? `1px solid ${border}` : 'none',
                     cursor: 'pointer',
-                    padding: '4px 0',
+                    padding: key === '미분류' ? '10px 0 4px' : '4px 0',
                     borderRadius: 4,
                     opacity: active ? 1 : 0.38,
                     transition: 'opacity 0.15s',

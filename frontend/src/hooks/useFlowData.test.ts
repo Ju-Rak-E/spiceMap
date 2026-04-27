@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { filterFlows, computeStats, applyHourWeight, getHourScale, type ODFlow } from './useFlowData'
+import {
+  filterFlows,
+  computeStats,
+  applyHourWeight,
+  getHourScale,
+  normalizeBackendFlows,
+  type ODFlow,
+} from './useFlowData'
 
 const SAMPLE_FLOWS: ODFlow[] = [
   {
@@ -228,5 +235,72 @@ describe('applyHourWeight', () => {
       const result = applyHourWeight(BASE_FLOWS, h)
       expect(result[0].volume).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('normalizeBackendFlows', () => {
+  it('좌표가 있는 백엔드 응답을 ODFlow 배열로 변환한다', () => {
+    const result = normalizeBackendFlows({
+      quarter: '2025Q4',
+      total_flows: 1,
+      flows: [{
+        origin_adm_cd: '11680640',
+        origin_adm_nm: '역삼1동',
+        dest_adm_cd: '11620695',
+        dest_adm_nm: '신림동',
+        trip_count: 1234.4,
+        move_purpose: 3,
+        sourceCoord: [127.036, 37.5],
+        targetCoord: [126.929, 37.484],
+      }],
+    })
+
+    expect(result).toEqual([{
+      id: '11680640-11620695',
+      sourceId: '역삼1동',
+      targetId: '신림동',
+      sourceCoord: [127.036, 37.5],
+      targetCoord: [126.929, 37.484],
+      volume: 1234,
+      purpose: '쇼핑',
+    }])
+  })
+
+  it('좌표가 없는 백엔드 응답이면 mock 폴백을 위해 null을 반환한다', () => {
+    const result = normalizeBackendFlows({
+      quarter: '2025Q4',
+      total_flows: 1,
+      flows: [{
+        origin_adm_cd: '11680640',
+        origin_adm_nm: '역삼1동',
+        dest_adm_cd: '11620695',
+        dest_adm_nm: '신림동',
+        trip_count: 1234,
+        move_purpose: null,
+      }],
+    })
+
+    expect(result).toBeNull()
+  })
+
+  it('snake_case 좌표 응답도 변환한다', () => {
+    const result = normalizeBackendFlows({
+      quarter: '2025Q4',
+      total_flows: 1,
+      flows: [{
+        origin_adm_cd: '11680640',
+        origin_adm_nm: '역삼1동',
+        dest_adm_cd: '11620695',
+        dest_adm_nm: '신림동',
+        trip_count: 1000,
+        move_purpose: '여가',
+        source_coord: [127.036, 37.5],
+        target_coord: [126.929, 37.484],
+      }],
+    })
+
+    expect(result?.[0].sourceCoord).toEqual([127.036, 37.5])
+    expect(result?.[0].targetCoord).toEqual([126.929, 37.484])
+    expect(result?.[0].purpose).toBe('여가')
   })
 })
