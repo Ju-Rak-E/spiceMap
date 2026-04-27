@@ -40,33 +40,56 @@ def type_map(
     # 현재는 전체 반환 후 프론트에서 필터하는 방식을 쓰거나,
     # 추후 comm_cd 앞자리로 자치구 매핑 테이블 추가 필요.
     # MVP에서는 gu 파라미터는 받되 현재 무시하고 전체 반환.
-    sql = text("""
-        SELECT
-            cb.comm_cd,
-            cb.comm_nm,
-            ab.gu_nm,
-            ca.commerce_type          AS commerce_type,
-            cb.comm_type              AS source_comm_type,
-            ST_AsGeoJSON(cb.geom)::json AS geometry,
-            ST_X(ST_Centroid(cb.geom)) AS centroid_lng,
-            ST_Y(ST_Centroid(cb.geom)) AS centroid_lat,
-            ca.gri_score,
-            ca.flow_volume,
-            ca.dominant_origin,
-            ca.analysis_note
-        FROM commerce_boundary cb
-        LEFT JOIN LATERAL (
-            SELECT gu_nm
-            FROM admin_boundary
-            WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
-            LIMIT 1
-        ) ab ON TRUE
-        LEFT JOIN commerce_analysis ca
-            ON cb.comm_cd = ca.comm_cd
-            AND ca.year_quarter = :quarter
-        WHERE (:gu IS NULL OR ab.gu_nm = :gu)
-        ORDER BY cb.comm_cd
-    """)
+    # Current behavior: no-gu requests skip the spatial join; gu requests use it.
+    if gu:
+        sql = text("""
+            SELECT
+                cb.comm_cd,
+                cb.comm_nm,
+                ab.gu_nm,
+                ca.commerce_type          AS commerce_type,
+                cb.comm_type              AS source_comm_type,
+                ST_AsGeoJSON(cb.geom)::json AS geometry,
+                ST_X(ST_Centroid(cb.geom)) AS centroid_lng,
+                ST_Y(ST_Centroid(cb.geom)) AS centroid_lat,
+                ca.gri_score,
+                ca.flow_volume,
+                ca.dominant_origin,
+                ca.analysis_note
+            FROM commerce_boundary cb
+            LEFT JOIN LATERAL (
+                SELECT gu_nm
+                FROM admin_boundary
+                WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
+                LIMIT 1
+            ) ab ON TRUE
+            LEFT JOIN commerce_analysis ca
+                ON cb.comm_cd = ca.comm_cd
+                AND ca.year_quarter = :quarter
+            WHERE ab.gu_nm = :gu
+            ORDER BY cb.comm_cd
+        """)
+    else:
+        sql = text("""
+            SELECT
+                cb.comm_cd,
+                cb.comm_nm,
+                NULL::text               AS gu_nm,
+                ca.commerce_type          AS commerce_type,
+                cb.comm_type              AS source_comm_type,
+                ST_AsGeoJSON(cb.geom)::json AS geometry,
+                ST_X(ST_Centroid(cb.geom)) AS centroid_lng,
+                ST_Y(ST_Centroid(cb.geom)) AS centroid_lat,
+                ca.gri_score,
+                ca.flow_volume,
+                ca.dominant_origin,
+                ca.analysis_note
+            FROM commerce_boundary cb
+            LEFT JOIN commerce_analysis ca
+                ON cb.comm_cd = ca.comm_cd
+                AND ca.year_quarter = :quarter
+            ORDER BY cb.comm_cd
+        """)
     try:
         rows = db.execute(sql, {"quarter": quarter, "gu": gu}).fetchall()
     except SQLAlchemyError as exc:
