@@ -56,7 +56,7 @@ def policy_insights(
           AND (:gu IS NULL OR ab.gu_nm = :gu)
           AND (:comm_cd IS NULL OR pc.comm_cd = :comm_cd)
           AND (:severity IS NULL OR pc.severity = :severity)
-          AND (ca.priority_score IS NULL OR ca.priority_score >= :min_priority)
+          AND (:min_priority = 0.0 OR COALESCE(ca.priority_score, 0) >= :min_priority)
         ORDER BY
             CASE pc.severity
                 WHEN 'Critical' THEN 0 WHEN 'High'   THEN 1

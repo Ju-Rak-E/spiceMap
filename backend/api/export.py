@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from backend.api.deps import get_session, get_cache
+from backend.api.deps import get_session
 
 router = APIRouter()
 
@@ -23,7 +23,6 @@ def export_csv(
     gu: str | None = Query(None, description="자치구 필터 (예: 강남구)"),
     min_priority: float = Query(80.0, ge=0.0, description="우선순위 하한 (기본 80)"),
     db: Session = Depends(get_session),
-    cache=Depends(get_cache),
 ):
     sql = text("""
         SELECT
