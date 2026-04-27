@@ -43,14 +43,18 @@ export default function App() {
   useEffect(() => {
     if (!selectedNode) return
     if (!nodes.some(node => node.id === selectedNode.id)) {
-      setSelectedNode(null)
+      queueMicrotask(() => setSelectedNode(null))
     }
   }, [nodes, selectedNode])
 
   const handleToggleDistrict = useCallback((district: string) => {
     setSelectedDistricts(prev => {
       const next = new Set(prev)
-      next.has(district) ? next.delete(district) : next.add(district)
+      if (next.has(district)) {
+        next.delete(district)
+      } else {
+        next.add(district)
+      }
       return next
     })
   }, [])
@@ -58,7 +62,11 @@ export default function App() {
   const handleToggleType = useCallback((type: CommerceType) => {
     setSelectedTypes(prev => {
       const next = new Set(prev)
-      next.has(type) ? next.delete(type) : next.add(type)
+      if (next.has(type)) {
+        next.delete(type)
+      } else {
+        next.add(type)
+      }
       return next
     })
   }, [])

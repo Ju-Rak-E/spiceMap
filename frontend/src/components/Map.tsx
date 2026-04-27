@@ -78,7 +78,7 @@ export default function Map({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
-  const [mapReady, setMapReady] = useState(false)
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
 
   useEffect(() => {
@@ -102,14 +102,14 @@ export default function Map({
 
     map.once('load', () => {
       mapRef.current = map
-      setMapReady(true)
+      setMapInstance(map)
     })
 
     return () => {
       overlayRef.current = null
       map.remove()
       mapRef.current = null
-      setMapReady(false)
+      setMapInstance(null)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -164,9 +164,9 @@ export default function Map({
         style={{ width: '100%', height: '100%', background: colors.background }}
       />
 
-      {mapReady && mapRef.current && (
+      {mapInstance && (
         <AdminBoundaryLayer
-          map={mapRef.current}
+          map={mapInstance}
           theme={theme}
           districtFilter={null}
           fillOpacity={boundaryOpacity}

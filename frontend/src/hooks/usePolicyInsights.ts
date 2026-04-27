@@ -106,14 +106,18 @@ export function usePolicyInsights(
 
   useEffect(() => {
     if (!commCd || !shouldFetchPolicyInsights(type)) {
-      setInsights([])
-      setError(null)
-      setIsLoading(false)
+      queueMicrotask(() => {
+        setInsights([])
+        setError(null)
+        setIsLoading(false)
+      })
       return
     }
 
-    setIsLoading(true)
-    setError(null)
+    queueMicrotask(() => {
+      setIsLoading(true)
+      setError(null)
+    })
 
     fetchPolicyInsights(commCd, quarter)
       .then(data => {

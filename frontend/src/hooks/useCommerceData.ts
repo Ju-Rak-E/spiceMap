@@ -38,8 +38,10 @@ export function useCommerceData(quarter = '2025Q4'): UseCommerceDataReturn {
   const [usingMockData, setUsingMockData] = useState(false)
 
   useEffect(() => {
-    setIsLoading(true)
-    setError(null)
+    queueMicrotask(() => {
+      setIsLoading(true)
+      setError(null)
+    })
     fetchCommerceNodes(quarter)
       .then(({ nodes: fetched, isMock }) => {
         setNodes(fetched)

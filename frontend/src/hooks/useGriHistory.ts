@@ -82,13 +82,17 @@ export function useGriHistory(commCd: string | null, quarter = '2025Q4'): UseGri
 
   useEffect(() => {
     if (!commCd) {
-      setSeries([])
-      setError(null)
+      queueMicrotask(() => {
+        setSeries([])
+        setError(null)
+      })
       return
     }
 
-    setIsLoading(true)
-    setError(null)
+    queueMicrotask(() => {
+      setIsLoading(true)
+      setError(null)
+    })
 
     fetchGriHistory(commCd)
       .then((raw) => {

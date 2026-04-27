@@ -191,8 +191,10 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
   const quarter = filters.quarter ?? '2025Q4'
 
   useEffect(() => {
-    setIsLoading(true)
-    setError(null)
+    queueMicrotask(() => {
+      setIsLoading(true)
+      setError(null)
+    })
     fetchFlows(quarter)
       .then(data => {
         setAllFlows(data)
