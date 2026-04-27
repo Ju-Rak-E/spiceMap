@@ -113,13 +113,17 @@ def _upsert_batch_postgres(engine: Engine, batch: pd.DataFrame) -> None:
         conn.execute(stmt, records)
 
 
-def _fetch_raw_chunks(engine: Engine, quarter: str | None):
-    """od_flows 원본을 청크로 스트리밍 (메모리 안전)."""
-    if quarter is None:
-        sql = "SELECT base_date, origin_adm_cd, dest_adm_cd, move_purpose, in_forn_div, trip_count FROM od_flows"
-        params = {}
-    else:
-        # base_date 범위로 필터 (인덱스 활용 가능)
+def _fetch_raw_chunks(engine: Engine, quarter: str | None, gu_prefix: str | None = None):
+    """od_flows 원본을 청크로 스트리밍 (메모리 안전).
+
+    Args:
+        gu_prefix: 자치구 행정동코드 앞 4자리 (예: '1168'=강남, '1162'=관악).
+                   None이면 전체.
+    """
+    conditions = []
+    params: dict = {}
+
+    if quarter is not None:
         year, q = _parse_year_quarter(quarter)
         start = date(year, (q - 1) * 3 + 1, 1)
         end_month = q * 3
@@ -127,12 +131,21 @@ def _fetch_raw_chunks(engine: Engine, quarter: str | None):
             end = date(year + 1, 1, 1)
         else:
             end = date(year, end_month + 1, 1)
-        sql = (
-            "SELECT base_date, origin_adm_cd, dest_adm_cd, move_purpose, in_forn_div, trip_count "
-            "FROM od_flows WHERE base_date >= :start AND base_date < :end"
-        )
-        params = {"start": start, "end": end}
+        conditions.append("base_date >= :start AND base_date < :end")
+        params["start"] = start
+        params["end"] = end
 
+    if gu_prefix is not None:
+        conditions.append(
+            "(origin_adm_cd LIKE :gu OR dest_adm_cd LIKE :gu)"
+        )
+        params["gu"] = f"{gu_prefix}%"
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    sql = (
+        f"SELECT base_date, origin_adm_cd, dest_adm_cd, move_purpose, in_forn_div, trip_count "
+        f"FROM od_flows {where}"
+    )
     return pd.read_sql(text(sql), engine, params=params, chunksize=BATCH_SIZE * 10)
 
 
@@ -141,14 +154,16 @@ def aggregate_to_db(
     target_engine: Engine,
     quarter: str | None = None,
     dry_run: bool = False,
+    gu_prefix: str | None = None,
 ) -> int:
     """원본(source_engine) → 집계본(target_engine) 적재. 적재된 행 수 반환.
 
     source_engine: od_flows 원본이 있는 DB (로컬 또는 동일 DB)
     target_engine: od_flows_aggregated가 있는 DB (Supabase 또는 동일 DB)
+    gu_prefix: 자치구 행정동코드 앞 4자리 필터 (예: '1168'=강남, '1162'=관악)
     """
     total = 0
-    for chunk_idx, chunk in enumerate(_fetch_raw_chunks(source_engine, quarter), start=1):
+    for chunk_idx, chunk in enumerate(_fetch_raw_chunks(source_engine, quarter, gu_prefix), start=1):
         agg = aggregate_dataframe(chunk, quarter=None)
         if agg.empty:
             continue
@@ -175,6 +190,12 @@ def parse_args() -> argparse.Namespace:
         help="od_flows 원본 DB URL (기본값: settings.database_url). "
              "로컬→Supabase 적재 시 로컬 URL을 지정한다.",
     )
+    p.add_argument(
+        "--gu",
+        default=None,
+        help="자치구 행정동코드 앞 4자리 필터 (예: 1168=강남, 1162=관악). "
+             "지정 시 해당 자치구가 출발지 또는 도착지인 OD만 집계.",
+    )
     return p.parse_args()
 
 
@@ -190,9 +211,10 @@ def main() -> int:
         source_engine = target_engine
 
     target = quarter or "전체"
-    print(f"[aggregate_od_flows] 대상: {target} (dry_run={args.dry_run})")
+    gu_info = f", gu={args.gu}" if args.gu else ""
+    print(f"[aggregate_od_flows] 대상: {target}{gu_info} (dry_run={args.dry_run})")
 
-    total = aggregate_to_db(source_engine, target_engine, quarter=quarter, dry_run=args.dry_run)
+    total = aggregate_to_db(source_engine, target_engine, quarter=quarter, dry_run=args.dry_run, gu_prefix=args.gu)
     print(f"[aggregate_od_flows] 완료: {total:,} 집계 행")
     return 0
 
