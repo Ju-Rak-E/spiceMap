@@ -10,7 +10,9 @@ class CommerceProperties(BaseModel):
     comm_cd: str
     comm_nm: str
     gu_nm: str | None = None
-    comm_type: str | None
+    commerce_type: str | None = None       # Dev-C 5유형 (ca.commerce_type)
+    source_comm_type: str | None = None    # 원천 골목/발달 (cb.comm_type, 디버그용)
+    comm_type: str | None = None           # Week 4 클린업 예정 — commerce_type 미러
     gri_score: float | None
     flow_volume: int | None
     dominant_origin: str | None
