@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-04-29
+> 최종 갱신: 2026-04-29 (Week 3 마감일 / Week 4 시작)
 
 ---
 
@@ -94,6 +94,10 @@
 - [x] `/api/insights/policy` 어댑터 — **PR #19** `policy_cards` SELECT → `PolicyCard` Pydantic 응답 (3 tests pass)
 - [x] `/api/commerce/type-map` 응답에 신규 5컬럼 노출 — **2026-04-29** (`commerce_type, priority_score, net_flow, degree_centrality, closure_rate`, 4 tests pass)
 - [x] PR 2: Supabase 이전 — **2026-04-29** `.env.example` 이미 Supabase Session Pooler 기본값, 에스컬레이션 메시지 집계본 공유 방향으로 교체 (`docs/dev_a_escalation_draft.md`)
+- [x] closure_rate spatial join 정밀화 — **2026-04-29 PR #23** signgu_cd 기반(adm_cd 앞 5자리), PostGIS LATERAL ST_Contains, fallback 휴리스틱 유지. Supabase 검증: 1,650 commerces 매핑 + 178 closure 결합
+- [x] admin_boundary.gu_nm 백필 + 자동 도출 — **2026-04-29 PR #24** Supabase 425/425 자치구 채워짐, `load_spatial.py`에 `SEOUL_SIGUNGU_CD_TO_NM` 추가로 향후 재적재 자동화. type-map gu 필터 정상 작동(강남 104·관악 74)
+- [x] 수상 전략 + 실용성 강화 플랜(D-13) — **2026-04-29 PR #22** `docs/strategy_d13.md`. 핵심 의사결정 5건 + 13일 일정 + 평가축 매핑
+- [ ] 2025Q3 od_flows_aggregated 적재 — Dev-C 진행 중 (서울 OA-22300 일별 ZIP 92일 자동 다운로드 + MVP 필터 + 분기 집계 + Supabase MCP 적재 파이프라인)
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
 
