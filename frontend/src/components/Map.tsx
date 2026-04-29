@@ -164,7 +164,7 @@ export default function Map({
 
   const colors = MAP_THEME[theme]
   const summaryText = selectedTypes
-    ? buildSummaryText(purpose, hour, topN, selectedTypes)
+    ? buildSummaryText(purpose, hour, topN, selectedTypes, nodes)
     : null
   const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
   const legendBottom = selectedNode ? 298 : 40
