@@ -128,8 +128,10 @@ export default function Map({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: theme === 'dark' ? CARTO_DARK_STYLE : VWORLD_LIGHT_STYLE(apiKey),
-      center: [126.978, 37.566],
-      zoom: 11,
+      // MVP 범위(강남·관악) 중심으로 초기 줌 — 페르소나(관악구 경제과 담당자) 동선
+      // 기존 서울 중심(126.978, 37.566) → 강남·관악 결합 중심(약 127.0, 37.49)
+      center: [127.0, 37.49],
+      zoom: 11.5,
       minZoom: 9,
       maxZoom: 18,
     })
@@ -518,8 +520,13 @@ export default function Map({
           pointerEvents: 'none',
         }}
       >
-        <div style={{ fontSize: 16, fontWeight: 700, color: colors.panelText, whiteSpace: 'nowrap' }}>
-          서울 창업 상권 지도
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: colors.panelText }}>
+            왜 이 상권이 침체됐는가
+          </div>
+          <div style={{ fontSize: 10, color: colors.secondaryText, fontWeight: 500 }}>
+            흐름으로 보는 서울 상권 위험 지도
+          </div>
         </div>
         <div style={{ width: 1, height: 18, background: colors.panelBorder, flexShrink: 0 }} />
         {summaryText && (
