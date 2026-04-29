@@ -29,6 +29,23 @@ export interface MapSummaryBadge {
   dominantTypeLabel: string
 }
 
+export type DongClusterTone = 'recommended' | 'caution' | 'low'
+export type CommerceClusterLevel = 'district' | 'dong' | 'unknown'
+
+export interface DongCommerceCluster {
+  id: string
+  dongCode: string
+  dongName: string
+  level: CommerceClusterLevel
+  center: [number, number]
+  nodes: CommerceNode[]
+  commerceCount: number
+  recommendedCount: number
+  cautionCount: number
+  bestScore: number
+  tone: DongClusterTone
+}
+
 interface SummaryAccumulator {
   id: string
   label: string
@@ -108,7 +125,7 @@ function getRings(feature: AdminBoundaryFeature): number[][][] {
   return (feature.geometry.coordinates as number[][][][]).flat()
 }
 
-function getFeatureCenter(feature: AdminBoundaryFeature): [number, number] {
+export function getFeatureCenter(feature: AdminBoundaryFeature): [number, number] {
   const points = getRings(feature).flat()
   const lngs = points.map((point) => point[0])
   const lats = points.map((point) => point[1])
@@ -118,7 +135,7 @@ function getFeatureCenter(feature: AdminBoundaryFeature): [number, number] {
   ]
 }
 
-function isPointInRing(point: [number, number], ring: number[][]): boolean {
+export function isPointInRing(point: [number, number], ring: number[][]): boolean {
   const [x, y] = point
   let inside = false
 
@@ -133,7 +150,7 @@ function isPointInRing(point: [number, number], ring: number[][]): boolean {
   return inside
 }
 
-function isPointInFeature(point: [number, number], feature: AdminBoundaryFeature): boolean {
+export function isPointInFeature(point: [number, number], feature: AdminBoundaryFeature): boolean {
   if (feature.geometry.type === 'Polygon') {
     const rings = feature.geometry.coordinates as number[][][]
     return isPointInRing(point, rings[0])
@@ -141,6 +158,129 @@ function isPointInFeature(point: [number, number], feature: AdminBoundaryFeature
 
   const polygons = feature.geometry.coordinates as number[][][][]
   return polygons.some((polygon) => isPointInRing(point, polygon[0]))
+}
+
+function getClusterTone(recommendedCount: number, cautionCount: number): DongClusterTone {
+  if (recommendedCount > 0) return 'recommended'
+  if (cautionCount > 0) return 'caution'
+  return 'low'
+}
+
+function summarizeCluster(
+  id: string,
+  code: string,
+  name: string,
+  level: CommerceClusterLevel,
+  center: [number, number],
+  nodes: CommerceNode[],
+): DongCommerceCluster {
+  const recommendedCount = nodes.filter((node) => deriveStartupSummary(node).fitLevel === 'recommended').length
+  const cautionCount = nodes.filter((node) => deriveStartupSummary(node).fitLevel === 'caution').length
+  const bestScore = Math.max(0, ...nodes.map((node) => deriveStartupSummary(node).fitScore))
+
+  return {
+    id,
+    dongCode: code,
+    dongName: name,
+    level,
+    center,
+    nodes,
+    commerceCount: nodes.length,
+    recommendedCount,
+    cautionCount,
+    bestScore,
+    tone: getClusterTone(recommendedCount, cautionCount),
+  }
+}
+
+function getAverageCenter(nodes: CommerceNode[]): [number, number] {
+  const lngSum = nodes.reduce((sum, node) => sum + node.coordinates[0], 0)
+  const latSum = nodes.reduce((sum, node) => sum + node.coordinates[1], 0)
+  return [lngSum / nodes.length, latSum / nodes.length]
+}
+
+function buildFallbackCluster(nodes: CommerceNode[]): DongCommerceCluster {
+  return summarizeCluster(
+    'unknown-commerce',
+    'unknown',
+    '행정동 미분류',
+    'unknown',
+    getAverageCenter(nodes),
+    nodes,
+  )
+}
+
+export function buildDistrictCommerceClusters(nodes: CommerceNode[]): DongCommerceCluster[] {
+  if (nodes.length === 0) return []
+
+  const byDistrict = new Map<string, CommerceNode[]>()
+
+  for (const node of nodes) {
+    const district = node.district || '자치구 미분류'
+    const groupedNodes = byDistrict.get(district)
+    if (groupedNodes) {
+      groupedNodes.push(node)
+    } else {
+      byDistrict.set(district, [node])
+    }
+  }
+
+  return [...byDistrict.entries()]
+    .map(([district, groupedNodes]) =>
+      summarizeCluster(
+        `district-${district}`,
+        district,
+        district,
+        'district',
+        getAverageCenter(groupedNodes),
+        groupedNodes,
+      ),
+    )
+    .sort((a, b) => b.bestScore - a.bestScore)
+}
+
+export function buildDongCommerceClusters(
+  nodes: CommerceNode[],
+  boundaries: AdminBoundaryCollection | null,
+): DongCommerceCluster[] {
+  if (nodes.length === 0) return []
+  if (!boundaries) return [buildFallbackCluster(nodes)]
+
+  const byDong = new Map<string, { feature: AdminBoundaryFeature; nodes: CommerceNode[] }>()
+  const unmatched: CommerceNode[] = []
+
+  for (const node of nodes) {
+    const feature = boundaries.features.find((candidate) =>
+      isPointInFeature(node.coordinates, candidate),
+    )
+    if (!feature) {
+      unmatched.push(node)
+      continue
+    }
+
+    const key = feature.properties.code
+    const existing = byDong.get(key)
+    if (existing) {
+      existing.nodes.push(node)
+    } else {
+      byDong.set(key, { feature, nodes: [node] })
+    }
+  }
+
+  const clusters = [...byDong.values()].map(({ feature, nodes: groupedNodes }) => {
+    return summarizeCluster(
+      `dong-${feature.properties.code}`,
+      feature.properties.code,
+      feature.properties.name,
+      'dong',
+      getFeatureCenter(feature),
+      groupedNodes,
+    )
+  })
+
+  if (unmatched.length > 0) clusters.push(buildFallbackCluster(unmatched))
+
+  return clusters.sort((a, b) => b.bestScore - a.bestScore)
 }
 
 export function buildDongSummaries(

@@ -34,8 +34,8 @@ const NODES_WITH_UNCLASSIFIED: CommerceNode[] = [
 ]
 
 describe('filterNodesByDistrict', () => {
-  it('빈 Set이면 전체를 반환한다', () => {
-    expect(filterNodesByDistrict(NODES, new Set())).toHaveLength(5)
+  it('빈 Set이면 빈 배열을 반환한다', () => {
+    expect(filterNodesByDistrict(NODES, new Set())).toHaveLength(0)
   })
 
   it('강남구만 선택하면 강남구 노드만 반환한다', () => {

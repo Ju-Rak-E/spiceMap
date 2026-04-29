@@ -2,27 +2,46 @@ import { ScatterplotLayer } from '@deck.gl/layers'
 import type { PickingInfo } from '@deck.gl/core'
 import type { CommerceNode } from '../types/commerce'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
+import { hexToRgba } from '../utils/colorUtils'
 
 const MAX_CANDIDATES = 50
 const MIN_CANDIDATE_RADIUS = 8
 const MAX_CANDIDATE_RADIUS = 16
-const CONTEXT_RADIUS = 4
-
-function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
+const CONTEXT_RADIUS = 6
+const CANDIDATE_SELECTED_ALPHA = 255
+const RECOMMENDED_ALPHA = 230
+const CAUTION_ALPHA = 200
+const NOT_RECOMMENDED_ALPHA = 170
+const CONTEXT_ALPHA = 105
+const SELECTED_MARKER_RADIUS = 24
 
 function getCandidateRadius(node: CommerceNode, isSelected: boolean): number {
-  if (isSelected) return 18
+  if (isSelected) return SELECTED_MARKER_RADIUS
   const { fitScore } = deriveStartupSummary(node)
   return MIN_CANDIDATE_RADIUS + (fitScore / 100) * (MAX_CANDIDATE_RADIUS - MIN_CANDIDATE_RADIUS)
 }
 
-function getCandidateColor(node: CommerceNode, isSelected: boolean): [number, number, number, number] {
-  const { fitColor } = deriveStartupSummary(node)
-  const [r, g, b] = hexToRgb(fitColor)
-  return isSelected ? [r, g, b, 255] : [r, g, b, 230]
+function getCandidateAlpha(node: CommerceNode): number {
+  const { fitLevel } = deriveStartupSummary(node)
+  if (fitLevel === 'recommended') return RECOMMENDED_ALPHA
+  if (fitLevel === 'caution') return CAUTION_ALPHA
+  return NOT_RECOMMENDED_ALPHA
+}
+
+export function getCandidateFillColor(
+  node: CommerceNode,
+  isSelected: boolean,
+): [number, number, number, number] {
+  const fill = deriveStartupSummary(node).fitColor
+  const alpha = isSelected ? CANDIDATE_SELECTED_ALPHA : getCandidateAlpha(node)
+  return hexToRgba(fill, alpha)
+}
+
+export function getContextFillColor(
+  node: CommerceNode,
+): [number, number, number, number] {
+  const fill = deriveStartupSummary(node).fitColor
+  return hexToRgba(fill, CONTEXT_ALPHA)
 }
 
 export function getGriBorderColor(
@@ -40,7 +59,7 @@ export function getGriBorderWidth(_griScore: number, isSelected: boolean): numbe
 
 export function getCandidateNodes(nodes: CommerceNode[], selectedId: string | null): CommerceNode[] {
   const candidates = nodes
-    .filter((node) => deriveStartupSummary(node).fitLevel === 'recommended')
+    .filter((node) => deriveStartupSummary(node).fitLevel !== 'unknown')
     .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
     .slice(0, MAX_CANDIDATES)
 
@@ -69,10 +88,11 @@ export function createCommerceNodeLayers(
     stroked: false,
     getPosition: (node) => node.coordinates,
     getRadius: CONTEXT_RADIUS,
-    getFillColor: [92, 111, 128, 60],
+    getFillColor: (node) => getContextFillColor(node),
     radiusUnits: 'pixels',
     updateTriggers: {
       getPosition: contextNodes,
+      getFillColor: contextNodes,
     },
   })
 
@@ -83,11 +103,11 @@ export function createCommerceNodeLayers(
     stroked: true,
     getPosition: (node) => node.coordinates,
     getRadius: (node) => getCandidateRadius(node, node.id === selectedId),
-    getFillColor: (node) => getCandidateColor(node, node.id === selectedId),
+    getFillColor: (node) => getCandidateFillColor(node, node.id === selectedId),
     getLineColor: (node) =>
-      node.id === selectedId ? getGriBorderColor(node.griScore, true) : [255, 255, 255, 150],
+      node.id === selectedId ? [255, 255, 255, 255] : [255, 255, 255, 150],
     getLineWidth: (node) =>
-      node.id === selectedId ? getGriBorderWidth(node.griScore, true) : 1.5,
+      node.id === selectedId ? 4 : 1.5,
     radiusUnits: 'pixels',
     lineWidthUnits: 'pixels',
     onHover,
@@ -117,7 +137,7 @@ export function createCommerceNodeLayer(
     stroked: true,
     getPosition: (node) => node.coordinates,
     getRadius: (node) => getCandidateRadius(node, node.id === selectedId),
-    getFillColor: (node) => getCandidateColor(node, node.id === selectedId),
+    getFillColor: (node) => getCandidateFillColor(node, node.id === selectedId),
     getLineColor: (node) =>
       getGriBorderColor(node.griScore, node.id === selectedId),
     getLineWidth: (node) =>
