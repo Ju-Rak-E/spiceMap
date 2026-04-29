@@ -47,7 +47,12 @@ def type_map(
             ca.gri_score,
             ca.flow_volume,
             ca.dominant_origin,
-            ca.analysis_note
+            ca.analysis_note,
+            ca.commerce_type,
+            ca.priority_score,
+            ca.net_flow,
+            ca.degree_centrality,
+            ca.closure_rate
         FROM commerce_boundary cb
         LEFT JOIN LATERAL (
             SELECT gu_nm
@@ -78,6 +83,11 @@ def type_map(
                 "analysis_note": row.analysis_note,
                 "centroid_lng": row.centroid_lng,
                 "centroid_lat": row.centroid_lat,
+                "commerce_type": row.commerce_type,
+                "priority_score": row.priority_score,
+                "net_flow": row.net_flow,
+                "degree_centrality": row.degree_centrality,
+                "closure_rate": row.closure_rate,
             },
         }
         for row in rows
