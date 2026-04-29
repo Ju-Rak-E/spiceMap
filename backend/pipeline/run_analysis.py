@@ -228,14 +228,75 @@ def _load_closures_by_comm(
 ) -> pd.DataFrame:
     """store_info의 자치구 단위 폐업률을 상권 단위로 매핑.
 
-    1순위: signgu_nm → comm_cd 매핑 (admin_boundary 미적재 시 fallback 필요).
-    여기서는 signgu_nm 단위 평균을 산출하고, commerce_meta의 comm_nm에 해당
-    자치구 이름이 포함되면 매칭하는 단순 휴리스틱을 사용한다 (테스트 픽스처가
-    이 구조를 따른다).
+    1순위 (production, PostGIS): commerce_boundary + admin_boundary spatial
+        join으로 각 상권의 dominant 자치구를 식별 (admin_boundary.adm_cd 앞
+        5자리 = signgu_cd) → store_info의 signgu_cd로 폐업률 결합.
+    2순위 (fallback, SQLite/테스트): commerce_meta의 comm_nm == signgu_nm
+        직접 매칭 휴리스틱.
+
+    Returns: columns = [comm_cd, closure_rate].
     """
     if commerce_meta.empty:
         return pd.DataFrame(columns=["comm_cd", "closure_rate"])
 
+    # 1) Spatial 우선
+    spatial = _closure_via_spatial_join(engine, legacy_quarter)
+    if spatial is not None and not spatial.empty:
+        return spatial.drop_duplicates(subset="comm_cd")[["comm_cd", "closure_rate"]]
+
+    # 2) Heuristic fallback
+    return _closure_via_heuristic(engine, legacy_quarter, commerce_meta)
+
+
+def _closure_via_spatial_join(
+    engine: Engine,
+    legacy_quarter: str,
+) -> pd.DataFrame | None:
+    """PostGIS spatial join + signgu_cd 결합.
+
+    상권 중심점이 포함되는 행정동의 adm_cd 앞 5자리 = 자치구 코드.
+    store_info.signgu_cd 와 동일 키로 폐업률 평균을 매칭한다.
+
+    Returns: columns = [comm_cd, closure_rate], 또는 PostGIS 미지원 시 None.
+    """
+    sql = text(
+        """
+        WITH gu_closure AS (
+            SELECT signgu_cd, AVG(close_rate) AS avg_close
+            FROM store_info
+            WHERE year_quarter = :q
+              AND signgu_cd IS NOT NULL
+              AND close_rate IS NOT NULL
+            GROUP BY signgu_cd
+        ),
+        comm_to_signgu AS (
+            SELECT cb.comm_cd, LEFT(ab.adm_cd, 5) AS signgu_cd
+            FROM commerce_boundary cb
+            LEFT JOIN LATERAL (
+                SELECT adm_cd FROM admin_boundary
+                WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
+                LIMIT 1
+            ) ab ON TRUE
+            WHERE ab.adm_cd IS NOT NULL
+        )
+        SELECT cs.comm_cd, gc.avg_close AS closure_rate
+        FROM comm_to_signgu cs
+        JOIN gu_closure gc ON cs.signgu_cd = gc.signgu_cd
+        """
+    )
+    try:
+        return pd.read_sql(sql, engine, params={"q": legacy_quarter})
+    except Exception:
+        # PostGIS 미지원 또는 admin_boundary/geom 누락 → fallback
+        return None
+
+
+def _closure_via_heuristic(
+    engine: Engine,
+    legacy_quarter: str,
+    commerce_meta: pd.DataFrame,
+) -> pd.DataFrame:
+    """fallback: comm_nm == signgu_nm 직접 매칭 (테스트 픽스처 호환)."""
     raw = pd.read_sql(
         text(
             """
@@ -256,7 +317,12 @@ def _load_closures_by_comm(
         comm_nm = str(comm["comm_nm"])
         match = raw[raw["signgu_nm"].astype(str) == comm_nm]
         if not match.empty:
-            rows.append({"comm_cd": comm["comm_cd"], "closure_rate": float(match.iloc[0]["avg_close"])})
+            rows.append(
+                {
+                    "comm_cd": comm["comm_cd"],
+                    "closure_rate": float(match.iloc[0]["avg_close"]),
+                }
+            )
     return pd.DataFrame(rows, columns=["comm_cd", "closure_rate"])
 
 

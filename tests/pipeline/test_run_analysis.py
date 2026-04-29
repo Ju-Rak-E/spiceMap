@@ -16,6 +16,7 @@ from sqlalchemy.engine import Engine
 from backend.pipeline.run_analysis import (
     AnalysisInputs,
     AnalysisResult,
+    _load_closures_by_comm,
     compose_analysis,
     quarter_to_legacy,
     run_analysis,
@@ -374,3 +375,149 @@ class TestRunAnalysisIntegration:
         counts = run_analysis(engine, "2025Q4", "2025Q3")
         assert "analysis_rows" in counts
         assert "policy_cards" in counts
+
+
+class TestLoadClosuresByComm:
+    """closure_rate 매핑 — PostGIS spatial join 우선, 휴리스틱 fallback.
+
+    Production: admin_boundary.adm_cd 앞 5자리 = signgu_cd. store_info의
+    signgu_cd와 동일 키로 평균 close_rate를 결합한다.
+    Fallback: comm_nm == signgu_nm 휴리스틱 (SQLite/테스트 환경).
+    """
+
+    def test_heuristic_fallback_when_no_postgis(self):
+        """SQLite(PostGIS 없음) — comm_nm == signgu_nm 휴리스틱 매칭."""
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        with engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO store_info (year_quarter, signgu_cd, signgu_nm, close_rate, close_count, store_count) VALUES
+                ('20254', '11680', '강남구', 6.0, 10, 100),
+                ('20254', '11620', '관악구', 12.0, 25, 200)
+            """))
+
+        commerce_meta = pd.DataFrame(
+            [
+                {"comm_cd": "C-GN", "comm_nm": "강남구"},   # 휴리스틱 매칭
+                {"comm_cd": "C-GW", "comm_nm": "관악구"},   # 휴리스틱 매칭
+                {"comm_cd": "C-XX", "comm_nm": "압구정"},  # 비매칭
+            ]
+        )
+        result = _load_closures_by_comm(engine, "20254", commerce_meta)
+        assert set(result["comm_cd"]) == {"C-GN", "C-GW"}
+        gn = result[result["comm_cd"] == "C-GN"].iloc[0]
+        assert gn["closure_rate"] == pytest.approx(6.0)
+
+    def test_spatial_join_takes_precedence(self, monkeypatch):
+        """PostGIS spatial 결과가 비어있지 않으면 휴리스틱은 무시."""
+        from backend.pipeline import run_analysis as run_mod
+
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        with engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO store_info (year_quarter, signgu_cd, signgu_nm, close_rate, close_count, store_count) VALUES
+                ('20254', '11680', '강남구', 6.0, 10, 100),
+                ('20254', '11620', '관악구', 12.0, 25, 200)
+            """))
+
+        commerce_meta = pd.DataFrame(
+            [
+                {"comm_cd": "C1", "comm_nm": "압구정"},  # 휴리스틱 비매칭
+                {"comm_cd": "C2", "comm_nm": "신림"},   # 휴리스틱 비매칭
+            ]
+        )
+        # production spatial path 결과 시뮬레이션 (이미 closure_rate 결합됨)
+        spatial_result = pd.DataFrame(
+            [
+                {"comm_cd": "C1", "closure_rate": 6.0},
+                {"comm_cd": "C2", "closure_rate": 12.0},
+            ]
+        )
+        monkeypatch.setattr(
+            run_mod, "_closure_via_spatial_join",
+            lambda _eng, _q: spatial_result,
+        )
+
+        result = _load_closures_by_comm(engine, "20254", commerce_meta)
+        assert set(result["comm_cd"]) == {"C1", "C2"}
+        c1 = result[result["comm_cd"] == "C1"].iloc[0]
+        c2 = result[result["comm_cd"] == "C2"].iloc[0]
+        assert c1["closure_rate"] == pytest.approx(6.0)
+        assert c2["closure_rate"] == pytest.approx(12.0)
+
+    def test_empty_commerce_meta_returns_empty(self):
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        empty = pd.DataFrame(columns=["comm_cd", "comm_nm"])
+        result = _load_closures_by_comm(engine, "20254", empty)
+        assert result.empty
+        assert list(result.columns) == ["comm_cd", "closure_rate"]
+
+    def test_no_store_info_for_quarter_returns_empty(self):
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        meta = pd.DataFrame([{"comm_cd": "C1", "comm_nm": "강남구"}])
+        result = _load_closures_by_comm(engine, "99991", meta)
+        assert result.empty
+
+    def test_spatial_returns_none_falls_back_to_heuristic(self, monkeypatch):
+        """spatial이 None이면 휴리스틱."""
+        from backend.pipeline import run_analysis as run_mod
+
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        with engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO store_info (year_quarter, signgu_cd, signgu_nm, close_rate, close_count, store_count) VALUES
+                ('20254', '11680', '강남구', 6.0, 10, 100)
+            """))
+        meta = pd.DataFrame([{"comm_cd": "C-GN", "comm_nm": "강남구"}])
+        monkeypatch.setattr(
+            run_mod, "_closure_via_spatial_join",
+            lambda _eng, _q: None,
+        )
+
+        result = _load_closures_by_comm(engine, "20254", meta)
+        assert len(result) == 1
+        assert result.iloc[0]["closure_rate"] == pytest.approx(6.0)
+
+    def test_spatial_returns_empty_falls_back_to_heuristic(self, monkeypatch):
+        """spatial이 빈 DataFrame이면 휴리스틱."""
+        from backend.pipeline import run_analysis as run_mod
+
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        with engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO store_info (year_quarter, signgu_cd, signgu_nm, close_rate, close_count, store_count) VALUES
+                ('20254', '11680', '강남구', 6.0, 10, 100)
+            """))
+        meta = pd.DataFrame([{"comm_cd": "C-GN", "comm_nm": "강남구"}])
+        monkeypatch.setattr(
+            run_mod, "_closure_via_spatial_join",
+            lambda _eng, _q: pd.DataFrame(columns=["comm_cd", "closure_rate"]),
+        )
+        result = _load_closures_by_comm(engine, "20254", meta)
+        assert len(result) == 1
+        assert result.iloc[0]["closure_rate"] == pytest.approx(6.0)
+
+    def test_no_duplicate_comm_cd_when_spatial_returns_dupes(self, monkeypatch):
+        """spatial이 같은 상권을 2번 반환해도 결과는 1행."""
+        from backend.pipeline import run_analysis as run_mod
+
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        meta = pd.DataFrame([{"comm_cd": "C1", "comm_nm": "압구정"}])
+        spatial_dupes = pd.DataFrame(
+            [
+                {"comm_cd": "C1", "closure_rate": 6.0},
+                {"comm_cd": "C1", "closure_rate": 6.0},
+            ]
+        )
+        monkeypatch.setattr(
+            run_mod, "_closure_via_spatial_join",
+            lambda _eng, _q: spatial_dupes,
+        )
+        result = _load_closures_by_comm(engine, "20254", meta)
+        assert len(result) == 1
