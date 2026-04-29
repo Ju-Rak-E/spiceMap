@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-04-26
+> 최종 갱신: 2026-04-29
 
 ---
 
@@ -84,16 +84,16 @@
 
 ### Dev-C
 - [~] Module D: 규칙 기반 정책 추천 생성 — **R4~R7 구현 완료** (`module_d_policy.py`), R1~R3·R8은 od_flows 적재 후 활성화
-- [x] Module E: 정책 우선순위 점수 산출 — **설계 문서 완료** (`module_e_design.md`), 구현은 Week 3 후반
+- [x] Module E: 정책 우선순위 점수 산출 — **2026-04-29 구현 완료** (`backend/analysis/module_e_priority.py`, GRI 0.60 + 매출규모 0.25 + 추세 0.15, 16 tests pass)
 - [x] H1 검증: 순유입-매출 Pearson 상관 (목표 p < 0.05) — 함수 구현 완료 (`verification_h1.py`), 실데이터 실행은 `od_flows` 적재 후
 - [x] 상권 유형 근사 분류기 구현 — **신규** (`commerce_type.py`, v1.0 — 임대료/프랜차이즈 미사용)
 - [x] PolicyCard Pydantic 스키마 — **신규** (`backend/schemas/insights.py`, FR-07 준수)
 - [x] od_flows 집계본 스키마 + 집계 스크립트 — **신규** (`OdFlowAggregated` 모델, `aggregate_od_flows.py`, `load_quarterly_od_flows` 어댑터) — 80M 원본을 ~300K로 축소, Supabase 수용 가능
 - [x] commerce_analysis 스키마 확장 + policy_cards 신규 테이블 — **2026-04-26** (`backend/models.py` 6컬럼 추가 + `PolicyCardRecord`). 결정: A+B 하이브리드 — 1:1 지표 컬럼은 commerce_analysis에 추가, 1:N PolicyCard는 별도 테이블, C 실시간 계산 거부 ("상권 클릭 ≤ 1초" 위반 위험)
-- [ ] 분석 INSERT 파이프라인 (`backend/pipeline/run_analysis.py`) — 분기 입력으로 Module A·B·D·E 실행 → `commerce_analysis` UPSERT + `policy_cards` INSERT
-- [ ] `/api/insights/policy` 어댑터 — `policy_cards` SELECT → `PolicyCard` Pydantic 응답
-- [ ] `/api/commerce/type-map` 응답에 신규 5컬럼 노출 (`commerce_type, priority_score, net_flow, degree_centrality, closure_rate`)
-- [ ] PR 2: Supabase 이전 + `.env.example` 갱신 + 에스컬레이션 메시지 수정 (집계본 공유로 변경)
+- [x] 분석 INSERT 파이프라인 (`backend/pipeline/run_analysis.py`) — **2026-04-29** 분기 입력으로 Module A·B·D·E 실행 → `commerce_analysis` 분기 DELETE+INSERT + `policy_cards` 분기 DELETE+INSERT (idempotent, 18 tests pass)
+- [x] `/api/insights/policy` 어댑터 — **PR #19** `policy_cards` SELECT → `PolicyCard` Pydantic 응답 (3 tests pass)
+- [x] `/api/commerce/type-map` 응답에 신규 5컬럼 노출 — **2026-04-29** (`commerce_type, priority_score, net_flow, degree_centrality, closure_rate`, 4 tests pass)
+- [x] PR 2: Supabase 이전 — **2026-04-29** `.env.example` 이미 Supabase Session Pooler 기본값, 에스컬레이션 메시지 집계본 공유 방향으로 교체 (`docs/dev_a_escalation_draft.md`)
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
 
