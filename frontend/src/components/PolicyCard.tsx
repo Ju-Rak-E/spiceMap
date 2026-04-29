@@ -3,6 +3,7 @@ import type { PolicyInsight } from '../hooks/usePolicyInsights'
 
 interface PolicyCardProps {
   insight: PolicyInsight
+  highlight?: boolean
 }
 
 const PRIORITY_ICON: Record<string, string> = {
@@ -11,17 +12,24 @@ const PRIORITY_ICON: Record<string, string> = {
   모니터링: '👁',
 }
 
-export default function PolicyCard({ insight }: PolicyCardProps) {
+const HIGHLIGHT_BORDER = '#FFC107'
+
+export default function PolicyCard({ insight, highlight = false }: PolicyCardProps) {
   const color = BADGE_COLORS[insight.priority]
   const icon = PRIORITY_ICON[insight.priority] ?? '📌'
 
   return (
     <div
+      data-testid={highlight ? 'policy-card-highlight' : 'policy-card'}
       style={{
         background: '#263238',
         borderRadius: 8,
         padding: '12px',
         borderLeft: `3px solid ${color}`,
+        outline: highlight ? `2px solid ${HIGHLIGHT_BORDER}` : 'none',
+        outlineOffset: highlight ? 2 : 0,
+        boxShadow: highlight ? `0 0 0 4px ${HIGHLIGHT_BORDER}22` : 'none',
+        animation: highlight ? 'heroPolicyFadeIn 300ms ease-out' : undefined,
       }}
     >
       {/* 헤더 */}

@@ -127,6 +127,43 @@ export function createCommerceNodeLayers(
   return [contextLayer, candidateLayer]
 }
 
+// docs/hero_shot_scenario.md §1-2: 강남·관악 zoom 11.5에서 신림(gw_001)을 항상 펄싱으로 강조.
+// 1.5s 주기 SVG halo 효과를 ScatterplotLayer로 구현 (캔버스 내부 → MapLibre 줌 동기화 무료).
+const HERO_PULSE_PERIOD_MS = 1500
+const HERO_PULSE_BASE_RADIUS = 14
+const HERO_PULSE_MAX_RADIUS = 34
+const HERO_PULSE_COLOR: [number, number, number] = [255, 200, 0]
+const HERO_PULSE_MAX_OPACITY = 0.7
+
+export interface HeroPulseTarget {
+  node: CommerceNode
+  elapsedMs: number
+}
+
+export function createHeroPulseLayer(
+  target: HeroPulseTarget | null,
+): ScatterplotLayer<CommerceNode> | null {
+  if (!target) return null
+  const { node, elapsedMs } = target
+  const phase = (elapsedMs % HERO_PULSE_PERIOD_MS) / HERO_PULSE_PERIOD_MS
+  const radius = HERO_PULSE_BASE_RADIUS + phase * (HERO_PULSE_MAX_RADIUS - HERO_PULSE_BASE_RADIUS)
+  const alpha = (1 - phase) * HERO_PULSE_MAX_OPACITY * 255
+  return new ScatterplotLayer<CommerceNode>({
+    id: 'commerce-hero-pulse',
+    data: [node],
+    pickable: false,
+    stroked: false,
+    getPosition: (n) => n.coordinates,
+    getRadius: radius,
+    getFillColor: [...HERO_PULSE_COLOR, alpha] as [number, number, number, number],
+    radiusUnits: 'pixels',
+    updateTriggers: {
+      getRadius: elapsedMs,
+      getFillColor: elapsedMs,
+    },
+  })
+}
+
 export function createCommerceNodeLayer(
   nodes: CommerceNode[],
   onHover: (info: PickingInfo<CommerceNode>) => void,

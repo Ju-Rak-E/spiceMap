@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
 import InsightStrip, { countCriticalCommerces } from './components/InsightStrip'
+import ValidationView from './components/ValidationView'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
@@ -16,6 +17,15 @@ const STRENGTH_TO_TOP_N: Record<number, number> = {
 const BOUNDARY_OPACITY = 0.08
 const SCOPE_LABEL = '강남구·관악구 창업 시범'
 const DEFAULT_QUARTER = '2025Q4'
+// docs/hero_shot_scenario.md §0: ?hero=1 진입 시 신림(gw_001)을 펄싱 강조.
+// 시연 외 일반 동작에는 영향 없음(쿼리 미설정 시 null).
+const HERO_NODE_ID = 'gw_001'
+
+function isHeroModeEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  const params = new URLSearchParams(window.location.search)
+  return params.get('hero') === '1'
+}
 // docs/verification_h1_h3_results.md 의 1차 실데이터 결과 (Supabase 2026-04-30 기준).
 // 후속: 백엔드 /api/verification 엔드포인트 추가 후 동적으로 갱신.
 const VERIFICATION_H1_R = 0.106
@@ -34,6 +44,9 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(new Set())
   const [selectedQuarter, setSelectedQuarter] = useState(DEFAULT_QUARTER)
+  const [heroMode] = useState<boolean>(() => isHeroModeEnabled())
+  const heroNodeId = heroMode ? HERO_NODE_ID : null
+  const [view, setView] = useState<'map' | 'validation'>('map')
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
@@ -51,6 +64,53 @@ export default function App() {
     }
   }, [nodes, selectedNode])
 
+  // docs/hero_shot_scenario.md §5: 라이브 클릭 실패 시 단축키로 시간축 강제 점프.
+  // ?hero=1 모드에서만 활성. 입력 영역 포커스 시 무시.
+  useEffect(() => {
+    if (!heroMode) return
+
+    function isInputFocused(target: EventTarget | null): boolean {
+      if (!(target instanceof HTMLElement)) return false
+      const tag = target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+      return target.isContentEditable
+    }
+
+    function handleHeroShortcut(event: KeyboardEvent) {
+      if (isInputFocused(event.target)) return
+      if (event.altKey || event.metaKey || event.ctrlKey) return
+
+      switch (event.key) {
+        case '1':
+          setSelectedNode(null)
+          setView('map')
+          break
+        case '2': {
+          const heroNode = nodes.find((node) => node.id === HERO_NODE_ID)
+          if (heroNode) {
+            setSelectedNode(heroNode)
+            setView('map')
+          }
+          break
+        }
+        case '3': {
+          const btn = document.querySelector<HTMLButtonElement>('[data-testid="hero-csv-export"]')
+          btn?.click()
+          break
+        }
+        case '4':
+          setView('validation')
+          break
+        default:
+          return
+      }
+      event.preventDefault()
+    }
+
+    window.addEventListener('keydown', handleHeroShortcut)
+    return () => window.removeEventListener('keydown', handleHeroShortcut)
+  }, [heroMode, nodes])
+
   const handleToggleDistrict = useCallback((district: string) => {
     setSelectedDistricts(prev => {
       const next = new Set(prev)
@@ -64,7 +124,32 @@ export default function App() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setView((v) => (v === 'map' ? 'validation' : 'map'))}
+        data-testid="validation-tab-toggle"
+        style={{
+          position: 'absolute',
+          top: 12,
+          right: 332,
+          zIndex: 60,
+          padding: '6px 12px',
+          borderRadius: 999,
+          border: '1px solid #304251',
+          background: view === 'validation' ? '#7BD08D22' : 'rgba(16,22,29,0.92)',
+          color: view === 'validation' ? '#7BD08D' : '#ECEFF1',
+          fontSize: 11,
+          fontWeight: 700,
+          cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        }}
+      >
+        {view === 'validation' ? '지도' : '검증 보고'}
+      </button>
+
+      {view === 'validation' && <ValidationView onClose={() => setView('map')} />}
+
       <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
         <Map
           theme="dark"
@@ -82,6 +167,7 @@ export default function App() {
           selectedDistricts={selectedDistricts}
           selectedNode={selectedNode}
           onSelectNode={setSelectedNode}
+          heroNodeId={heroNodeId}
         />
         <InsightStrip
           theme="dark"

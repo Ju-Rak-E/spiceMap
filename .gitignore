@@ -7,6 +7,8 @@
 data/
 # 프론트엔드 mock JSON은 버전 관리 포함
 !frontend/public/data/
+# 프론트엔드 정적 fixture (검증 결과 백업, 시연 fallback) 버전 관리 포함
+!frontend/src/data/
 
 # 로그
 logs/
