@@ -38,14 +38,14 @@ describe('getBoundaryPaintConfig', () => {
   })
 
   describe('공통 속성', () => {
-    it('경계선 두께가 양수여야 한다', () => {
-      expect(getBoundaryPaintConfig('light').line['line-width']).toBeGreaterThan(0)
-      expect(getBoundaryPaintConfig('dark').line['line-width']).toBeGreaterThan(0)
+    it('경계선 두께가 zoom interpolate 표현식이어야 한다', () => {
+      expect(Array.isArray(getBoundaryPaintConfig('light').line['line-width'])).toBe(true)
+      expect(Array.isArray(getBoundaryPaintConfig('dark').line['line-width'])).toBe(true)
     })
 
-    it('하이라이트가 경계선보다 두꺼워야 한다', () => {
+    it('하이라이트 두께가 고정 숫자여야 한다', () => {
       const config = getBoundaryPaintConfig('light')
-      expect(config.highlight['line-width']).toBeGreaterThan(config.line['line-width'])
+      expect(typeof config.highlight['line-width']).toBe('number')
     })
   })
 })

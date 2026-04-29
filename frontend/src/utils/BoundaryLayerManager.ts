@@ -1,6 +1,6 @@
 import maplibregl from 'maplibre-gl'
 import { MAP_THEME, type MapTheme } from '../styles/tokens'
-import { getBoundaryPaintConfig } from './boundaryLayerConfig'
+import { getBoundaryPaintConfig, FILL_OPACITY_ZOOM_EXPR } from './boundaryLayerConfig'
 
 const SOURCE_ID = 'admin-boundary'
 const FILL_LAYER_ID = 'admin-boundary-fill'
@@ -89,7 +89,10 @@ export class BoundaryLayerManager {
       id: FILL_LAYER_ID,
       type: 'fill',
       source: SOURCE_ID,
-      paint: { 'fill-color': fillColor, 'fill-opacity': this.fillOpacity },
+      paint: {
+        'fill-color': fillColor,
+        'fill-opacity': FILL_OPACITY_ZOOM_EXPR as unknown as maplibregl.ExpressionSpecification,
+      },
     })
 
     this.map.addLayer({
