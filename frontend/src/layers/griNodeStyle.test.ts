@@ -12,15 +12,20 @@ describe('getGriBorderColor', () => {
     expect(g).toBe(167)
   })
   it('GRI 39 이하: 흰색 계열 테두리를 반환한다', () => {
-    const [r, g, b] = getGriBorderColor(30, false)
+    const [r, g, b, a] = getGriBorderColor(30, false)
     expect(r).toBeGreaterThan(200)
     expect(g).toBeGreaterThan(200)
     expect(b).toBeGreaterThan(200)
+    expect(a).toBe(80)
   })
   it('선택된 노드: GRI와 무관하게 흰색 테두리를 반환한다', () => {
-    const [r, g, b, a] = getGriBorderColor(90, true)
+    const [r, _g, _b, a] = getGriBorderColor(90, true)
     expect(r).toBeGreaterThan(200)
     expect(a).toBe(255)
+  })
+  it('GRI 정확히 39: 흰색 계열을 반환한다 (40 미만 경계)', () => {
+    expect(getGriBorderColor(39, false)[0]).toBeGreaterThan(200)
+    expect(getGriBorderWidth(39, false)).toBe(20)
   })
 })
 
