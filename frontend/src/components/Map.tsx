@@ -229,7 +229,11 @@ export default function Map({
 
       {/* 노드 미니 해설 카드 */}
       {hoveredNode && (() => {
+        const HOVER_CARD_WIDTH = 220
         const { node, x, y } = hoveredNode
+        const cardLeft = x + 14 + HOVER_CARD_WIDTH > window.innerWidth
+          ? x - 14 - HOVER_CARD_WIDTH
+          : x + 14
         const token = COMMERCE_COLORS[node.type]
         const badge = getInterventionBadge(node.griScore)
         const netFlowColor = node.netFlow >= 0 ? '#A5D6A7' : '#EF9A9A'
@@ -238,7 +242,7 @@ export default function Map({
           <div
             style={{
               position: 'absolute',
-              left: x + 14,
+              left: cardLeft,
               top: y - 12,
               background: colors.panelBg,
               color: colors.panelText,
