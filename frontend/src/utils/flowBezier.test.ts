@@ -33,6 +33,20 @@ describe('getControlPoint — 거리 비례 곡률', () => {
     expect(farCurve).toBeCloseTo(maxCurve, 4)
   })
 
+  it('명시적 factor가 주어지면 거리 보정 없이 그대로 사용한다', () => {
+    const src: [number, number] = [126.90, 37.50]
+    const tgt: [number, number] = [126.92, 37.51]
+    const customFactor = 0.3
+    const ctrl = getControlPoint(src, tgt, customFactor)
+    const dx = tgt[0] - src[0]
+    const dy = tgt[1] - src[1]
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const midX = (src[0] + tgt[0]) / 2
+    const midY = (src[1] + tgt[1]) / 2
+    const actualOffset = Math.sqrt((ctrl[0] - midX) ** 2 + (ctrl[1] - midY) ** 2)
+    expect(actualOffset).toBeCloseTo(dist * customFactor, 5)
+  })
+
   it('출발지와 도착지가 같으면 출발지를 반환한다', () => {
     const src: [number, number] = [126.9, 37.5]
     expect(getControlPoint(src, src)).toEqual(src)
