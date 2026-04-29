@@ -11,6 +11,6 @@ describe('commerce node outline style', () => {
 
   it('shows one consistent outline for the selected node', () => {
     expect(getGriBorderColor(90, true)).toEqual([123, 208, 141, 255])
-    expect(getGriBorderWidth(10, true)).toBe(90)
+    expect(getGriBorderWidth(10, true)).toBe(3)
   })
 })

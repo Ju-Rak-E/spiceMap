@@ -63,8 +63,8 @@ describe('filterNodesByDistrict', () => {
 })
 
 describe('filterNodesByType', () => {
-  it('빈 Set이면 전체를 반환한다', () => {
-    expect(filterNodesByType(NODES, new Set())).toHaveLength(5)
+  it('빈 Set이면 빈 배열을 반환한다', () => {
+    expect(filterNodesByType(NODES, new Set())).toHaveLength(0)
   })
 
   it('흡수형_과열만 선택하면 해당 노드만 반환한다', () => {

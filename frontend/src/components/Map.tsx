@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
@@ -7,7 +7,7 @@ import { MAP_THEME, COMMERCE_COLORS, type MapTheme, type CommerceType } from '..
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
 import CommerceLegend from './CommerceLegend'
-import { createCommerceNodeLayer } from '../layers/CommerceNodeLayer'
+import { createCommerceNodeLayers } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
@@ -16,6 +16,12 @@ import type { CommerceNode } from '../types/commerce'
 import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatSignedFixed2 } from '../utils/numberFormat'
+import {
+  buildDistrictSummaries,
+  buildDongSummaries,
+  type AdminBoundaryCollection,
+  type MapSummaryBadge,
+} from '../utils/mapSummaries'
 
 const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
   version: 8,
@@ -35,7 +41,22 @@ const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/
 const ANIMATION_SPEED = 0.00025
 const BASE_VOLUME = 10000
 const HOVER_CARD_WIDTH = 220 // estimated from minWidth:180 + padding + badge
-const DECK_LAYER_MIN_ZOOM = 11
+const DISTRICT_ZOOM = 10.5
+const DONG_ZOOM = 12.5
+const CANDIDATE_ZOOM = 14.5
+const DISTRICT_CODES: Record<string, string> = {
+  '강남구': '1123',
+  '관악구': '1121',
+}
+
+type ZoomStage = 'city' | 'district' | 'dong' | 'candidate'
+
+function getZoomStage(zoom: number): ZoomStage {
+  if (zoom < DISTRICT_ZOOM) return 'city'
+  if (zoom < DONG_ZOOM) return 'district'
+  if (zoom < CANDIDATE_ZOOM) return 'dong'
+  return 'candidate'
+}
 
 interface MapProps {
   theme?: MapTheme
@@ -50,6 +71,7 @@ interface MapProps {
   selectedQuarter: string
   boundaryOpacity?: number
   selectedTypes?: Set<CommerceType>
+  selectedDistricts?: Set<string>
   selectedNode?: CommerceNode | null
   onSelectNode?: (node: CommerceNode | null) => void
   onToggleType?: (type: CommerceType) => void
@@ -59,6 +81,12 @@ interface HoveredNode {
   node: CommerceNode
   x: number
   y: number
+}
+
+interface SummaryBadgePosition {
+  x: number
+  y: number
+  visible: boolean
 }
 
 export default function Map({
@@ -74,6 +102,7 @@ export default function Map({
   selectedQuarter,
   boundaryOpacity = 0.2,
   selectedTypes,
+  selectedDistricts,
   selectedNode,
   onSelectNode,
   onToggleType,
@@ -82,14 +111,15 @@ export default function Map({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
-  const zoomRef = useRef(DECK_LAYER_MIN_ZOOM)
+  const zoomRef = useRef(11)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
-  const [detailPanelOpen, setDetailPanelOpen] = useState(true)
-
-  useEffect(() => {
-    if (selectedNode) setDetailPanelOpen(true)
-  }, [selectedNode?.id])
+  const [closedDetailNodeId, setClosedDetailNodeId] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(11)
+  const [viewportTick, setViewportTick] = useState(0)
+  const [boundaries, setBoundaries] = useState<AdminBoundaryCollection | null>(null)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const detailPanelOpen = !selectedNode || closedDetailNodeId !== selectedNode.id
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -110,18 +140,32 @@ export default function Map({
     map.addControl(overlay)
     overlayRef.current = overlay
 
-    map.on('zoom', () => {
-      const z = map.getZoom()
-      zoomRef.current = z
-      if (z < DECK_LAYER_MIN_ZOOM) setHoveredNode(null)
-    })
+    let viewFrame: number | null = null
+    const syncView = () => {
+      if (viewFrame !== null) return
+      viewFrame = window.requestAnimationFrame(() => {
+        viewFrame = null
+        const z = map.getZoom()
+        zoomRef.current = z
+        setZoom(z)
+        setViewportTick(prev => prev + 1)
+        if (z < CANDIDATE_ZOOM) setHoveredNode(null)
+      })
+    }
+
+    map.on('zoom', syncView)
+    map.on('move', syncView)
 
     map.once('load', () => {
       mapRef.current = map
+      syncView()
       setMapInstance(map)
     })
 
     return () => {
+      if (viewFrame !== null) window.cancelAnimationFrame(viewFrame)
+      map.off('zoom', syncView)
+      map.off('move', syncView)
       overlayRef.current = null
       map.remove()
       mapRef.current = null
@@ -136,6 +180,43 @@ export default function Map({
     map.setStyle(theme === 'dark' ? CARTO_DARK_STYLE : VWORLD_LIGHT_STYLE(apiKey))
   }, [theme])
 
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateSize = () => {
+      setContainerSize({
+        width: container.clientWidth,
+        height: container.clientHeight,
+      })
+    }
+
+    updateSize()
+    const observer = new ResizeObserver(updateSize)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetch('/data/seoul_admin_boundary.geojson')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json() as Promise<AdminBoundaryCollection>
+      })
+      .then((data) => {
+        if (!cancelled) setBoundaries(data)
+      })
+      .catch(() => {
+        if (!cancelled) setBoundaries(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const handleFrame = useCallback((delta: number) => {
     const totalVolume = flows.reduce((sum, f) => sum + f.volume, 0)
     const speedScale = Math.max(0.3, Math.min(2.0, Math.sqrt(totalVolume / BASE_VOLUME)))
@@ -143,14 +224,18 @@ export default function Map({
 
     if (!overlayRef.current) return
 
-    const showLayers = zoomRef.current >= 11
+    const stage = getZoomStage(zoomRef.current)
+
+    const flowLayers = [
+      createODFlowLayer(flows, selectedNode?.id ?? null),
+      createFlowParticleLayer(flows, progressRef.current, selectedNode?.id ?? null),
+    ]
 
     overlayRef.current.setProps({
-      layers: showLayers
+      layers: stage === 'candidate'
         ? [
-            createODFlowLayer(flows, selectedNode?.id ?? null),
-            createFlowParticleLayer(flows, progressRef.current, selectedNode?.id ?? null),
-            createCommerceNodeLayer(
+            ...flowLayers,
+            ...createCommerceNodeLayers(
               nodes,
               (info: PickingInfo<CommerceNode>) => {
                 if (info.object) {
@@ -159,14 +244,14 @@ export default function Map({
                   setHoveredNode(null)
                 }
               },
-          (info: PickingInfo<CommerceNode>) => {
-            onSelectNode?.(info.object ?? null)
-            if (info.object) setDetailPanelOpen(true)
-          },
+              (info: PickingInfo<CommerceNode>) => {
+                onSelectNode?.(info.object ?? null)
+                if (info.object) setClosedDetailNodeId(null)
+              },
               selectedNode?.id ?? null,
             ),
           ]
-        : [],
+        : flowLayers,
     })
   }, [flows, nodes, onSelectNode, selectedNode?.id])
 
@@ -178,6 +263,74 @@ export default function Map({
     : null
   const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
   const legendBottom = selectedNode ? 298 : 40
+  const zoomStage = getZoomStage(zoom)
+  const districtSummaries = useMemo(() => buildDistrictSummaries(nodes), [nodes])
+  const dongSummaries = useMemo(() => buildDongSummaries(nodes, boundaries), [nodes, boundaries])
+  const visibleSummaries = useMemo(() => {
+    if (zoomStage === 'district') return districtSummaries
+    if (zoomStage === 'dong') return dongSummaries
+    return []
+  }, [districtSummaries, dongSummaries, zoomStage])
+  const selectedDistrictCodes = useMemo(
+    () => [...(selectedDistricts ?? new Set<string>())]
+      .map((district) => DISTRICT_CODES[district])
+      .filter((code): code is string => Boolean(code)),
+    [selectedDistricts],
+  )
+
+  const summaryPositions = useMemo(() => {
+    void viewportTick
+    if (!mapInstance || containerSize.width === 0 || containerSize.height === 0) return {}
+    const next: Record<string, SummaryBadgePosition> = {}
+    for (const summary of visibleSummaries) {
+      const point = mapInstance.project(summary.coord)
+      next[summary.id] = {
+        x: point.x,
+        y: point.y,
+        visible: point.x >= -80
+          && point.x <= containerSize.width + 80
+          && point.y >= 40
+          && point.y <= containerSize.height + 80,
+      }
+    }
+    return next
+  }, [containerSize.height, containerSize.width, mapInstance, viewportTick, visibleSummaries])
+
+  function renderSummaryBadge(summary: MapSummaryBadge) {
+    const position = summaryPositions[summary.id]
+    if (!position?.visible) return null
+
+    return (
+      <div
+        key={summary.id}
+        style={{
+          position: 'absolute',
+          left: position.x,
+          top: position.y,
+          transform: 'translate(-50%, -50%)',
+          zIndex: 6,
+          minWidth: 136,
+          background: 'rgba(16,22,29,0.9)',
+          border: `1px solid ${colors.panelBorder}`,
+          borderRadius: 6,
+          padding: '8px 10px',
+          boxShadow: '0 8px 18px rgba(0,0,0,0.3)',
+          color: colors.panelText,
+          pointerEvents: 'none',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        <div style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.2 }}>{summary.label}</div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 5, fontSize: 11, color: colors.secondaryText }}>
+          <span>후보 {summary.candidateCount}</span>
+          <span style={{ color: '#A5D6A7', fontWeight: 700 }}>최고 {summary.bestScore}</span>
+        </div>
+        <div style={{ marginTop: 3, fontSize: 10, color: colors.mutedText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {summary.dominantTypeLabel}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -191,9 +344,12 @@ export default function Map({
           map={mapInstance}
           theme={theme}
           districtFilter={null}
+          districtFilters={selectedDistrictCodes}
           fillOpacity={boundaryOpacity}
         />
       )}
+
+      {visibleSummaries.map(renderSummaryBadge)}
 
       {/* 상단 종합 해설바 */}
       <div
@@ -252,7 +408,7 @@ export default function Map({
       {/* 노드 미니 해설 카드 */}
       {hoveredNode && (() => {
         const { node, x, y } = hoveredNode
-        const containerWidth = containerRef.current?.clientWidth ?? window.innerWidth
+        const containerWidth = containerSize.width || window.innerWidth
         const rawLeft = x + 14 + HOVER_CARD_WIDTH > containerWidth
           ? x - 14 - HOVER_CARD_WIDTH
           : x + 14
@@ -364,7 +520,7 @@ export default function Map({
       {selectedNode && !detailPanelOpen && (
         <button
           type="button"
-          onClick={() => setDetailPanelOpen(true)}
+          onClick={() => setClosedDetailNodeId(null)}
           style={{
             position: 'absolute',
             left: 16,
@@ -390,7 +546,7 @@ export default function Map({
           node={selectedNode ?? null}
           quarter={selectedQuarter}
           usingMockData={usingMockData}
-          onClose={() => setDetailPanelOpen(false)}
+          onClose={() => setClosedDetailNodeId(selectedNode?.id ?? null)}
         />
       )}
 

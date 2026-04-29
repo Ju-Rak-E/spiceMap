@@ -10,7 +10,12 @@ import type { CommerceType } from './styles/tokens'
 import { COMMERCE_COLORS } from './styles/tokens'
 import './App.css'
 
-const ALL_TYPES = new Set(Object.keys(COMMERCE_COLORS) as CommerceType[])
+const ALL_TYPES = Object.keys(COMMERCE_COLORS) as CommerceType[]
+const DEFAULT_TYPES = new Set(
+  ALL_TYPES.filter(
+    (type) => COMMERCE_COLORS[type].icon !== 'help-circle',
+  ),
+)
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
   1: 5, 2: 10, 3: 15, 4: 20, 5: 30,
@@ -30,7 +35,7 @@ export default function App() {
   const [flowStrength, setFlowStrength] = useState(3)
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(new Set())
-  const [selectedTypes, setSelectedTypes] = useState<Set<CommerceType>>(new Set(ALL_TYPES))
+  const [selectedTypes, setSelectedTypes] = useState<Set<CommerceType>>(new Set(DEFAULT_TYPES))
   const [selectedQuarter, setSelectedQuarter] = useState(DEFAULT_QUARTER)
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
@@ -91,6 +96,7 @@ export default function App() {
           selectedQuarter={selectedQuarter}
           boundaryOpacity={BOUNDARY_OPACITY}
           selectedTypes={selectedTypes}
+          selectedDistricts={selectedDistricts}
           selectedNode={selectedNode}
           onSelectNode={setSelectedNode}
           onToggleType={handleToggleType}

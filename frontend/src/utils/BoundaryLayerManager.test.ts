@@ -3,6 +3,7 @@ import { MAP_THEME } from '../styles/tokens'
 import { BoundaryLayerManager } from './BoundaryLayerManager'
 
 const LINE_LAYER_ID = 'admin-boundary-line'
+const HIGHLIGHT_FILL_LAYER_ID = 'admin-boundary-highlight-fill'
 const HIGHLIGHT_LAYER_ID = 'admin-boundary-highlight'
 
 function createMockMap(styleLoaded = true) {
@@ -56,7 +57,7 @@ describe('BoundaryLayerManager', () => {
     new BoundaryLayerManager(map as never, 'light')
 
     expect(map.addSource).toHaveBeenCalledOnce()
-    expect(map.addLayer).toHaveBeenCalledTimes(3)
+    expect(map.addLayer).toHaveBeenCalledTimes(4)
   })
 
   it('restores layers with the latest dark theme after async style load', () => {
@@ -134,15 +135,32 @@ describe('BoundaryLayerManager', () => {
     const { map, emit, resetStyle } = createMockMap(true)
 
     new BoundaryLayerManager(map as never, 'dark')
-    expect(map.addLayer).toHaveBeenCalledTimes(3)
+    expect(map.addLayer).toHaveBeenCalledTimes(4)
 
     resetStyle()
     map.addLayer.mockClear()
     emit('idle')
 
-    expect(map.addLayer).toHaveBeenCalledTimes(3)
+    expect(map.addLayer).toHaveBeenCalledTimes(4)
     const highlightCall = map.addLayer.mock.calls.find(([layer]) => layer.id === HIGHLIGHT_LAYER_ID)
     expect(highlightCall?.[0].paint['line-color']).toBe(MAP_THEME.dark.highlightLine)
+  })
+
+  it('applies the latest district filter to highlight fill and line layers', () => {
+    const { map } = createMockMap(true)
+
+    const manager = new BoundaryLayerManager(map as never, 'light')
+    map.setFilter.mockClear()
+
+    manager.setDistrictFilter(['1123', '1121'])
+
+    const expectedFilter = [
+      'in',
+      ['get', 'gu_code'],
+      ['literal', ['1123', '1121']],
+    ]
+    expect(map.setFilter).toHaveBeenCalledWith(HIGHLIGHT_FILL_LAYER_ID, expectedFilter)
+    expect(map.setFilter).toHaveBeenCalledWith(HIGHLIGHT_LAYER_ID, expectedFilter)
   })
 
   it('does not recreate layers after destroy', () => {

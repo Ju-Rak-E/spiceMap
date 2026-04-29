@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceType } from '../styles/tokens'
 
@@ -49,6 +49,9 @@ export default function CommerceLegend({
     moved: boolean
   } | null>(null)
   const suppressClickRef = useRef(false)
+  const [parentHeight, setParentHeight] = useState(() =>
+    typeof window === 'undefined' ? 0 : window.innerHeight,
+  )
   const isDark = theme === 'dark'
   const bg = isDark ? 'rgba(16,22,29,0.96)' : 'rgba(255,255,255,0.96)'
   const panelBg = isDark ? 'rgba(21,29,38,0.98)' : 'rgba(247,249,251,0.98)'
@@ -58,8 +61,18 @@ export default function CommerceLegend({
   const buttonBg = isDark ? '#151D26' : '#FFFFFF'
   const summaryLabel = useMemo(() => getSummaryLabel(selectedTypes), [selectedTypes])
   const allSelected = selectedTypes.size === Object.keys(COMMERCE_COLORS).length
-  const parentHeight = containerRef.current?.parentElement?.clientHeight ?? window.innerHeight
   const opensDown = position ? position.y < parentHeight / 2 : false
+
+  useLayoutEffect(() => {
+    const parent = containerRef.current?.parentElement
+    if (!parent) return
+
+    const updateHeight = () => setParentHeight(parent.clientHeight)
+    updateHeight()
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(parent)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (!isFirstVisit) return

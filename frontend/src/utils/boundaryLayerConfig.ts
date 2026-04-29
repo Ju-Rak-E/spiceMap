@@ -7,21 +7,29 @@ export interface BoundaryPaintConfig {
   line: {
     'line-color': string
     'line-width': number | MaplibreExpression
-    'line-opacity': number
+    'line-opacity': number | MaplibreExpression
   }
   highlight: {
     'line-color': string
     'line-width': number | MaplibreExpression
-    'line-opacity': number
+    'line-opacity': number | MaplibreExpression
   }
 }
 
-// zoom 10 → 0.4px, zoom 13 → 1.2px, zoom 16 → 2.5px
 export const LINE_WIDTH_ZOOM_EXPR: MaplibreExpression = [
   'interpolate', ['linear'], ['zoom'],
-  10, 0.4,
-  13, 1.2,
-  16, 2.5,
+  9, 0.2,
+  10.5, 0.5,
+  12.5, 1.4,
+  14.5, 2.2,
+]
+
+export const LINE_OPACITY_ZOOM_EXPR: MaplibreExpression = [
+  'interpolate', ['linear'], ['zoom'],
+  9, 0.2,
+  10.5, 0.35,
+  12.5, 0.9,
+  14.5, 0.6,
 ]
 
 export function getBoundaryPaintConfig(theme: MapTheme): BoundaryPaintConfig {
@@ -30,7 +38,7 @@ export function getBoundaryPaintConfig(theme: MapTheme): BoundaryPaintConfig {
     line: {
       'line-color': colors.boundaryLine,
       'line-width': LINE_WIDTH_ZOOM_EXPR,
-      'line-opacity': 0.7,
+      'line-opacity': LINE_OPACITY_ZOOM_EXPR,
     },
     highlight: {
       'line-color': colors.highlightLine,
@@ -40,17 +48,20 @@ export function getBoundaryPaintConfig(theme: MapTheme): BoundaryPaintConfig {
   }
 }
 
-// zoom 10 → 0.15, zoom 14+ → 0.25
 export const FILL_OPACITY_ZOOM_EXPR: MaplibreExpression = [
   'interpolate', ['linear'], ['zoom'],
-  10, 0.15,
-  14, 0.25,
+  9, 0,
+  10.5, 0.08,
+  12.5, 0.22,
+  14.5, 0.08,
 ]
 
 export function getFillOpacityZoomExpr(opacity: number): MaplibreExpression {
   return [
     'interpolate', ['linear'], ['zoom'],
-    10, 0.15 * opacity,
-    14, 0.25 * opacity,
+    9, 0,
+    10.5, 0.08 * opacity,
+    12.5, 0.22 * opacity,
+    14.5, 0.08 * opacity,
   ]
 }
