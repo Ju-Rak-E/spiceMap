@@ -54,6 +54,7 @@ def type_map(
                 ST_Y(ST_Centroid(cb.geom)) AS centroid_lat,
                 ca.gri_score,
                 ca.flow_volume,
+                ca.priority_score,
                 ca.net_flow,
                 ca.degree_centrality,
                 ca.closure_rate,
@@ -85,6 +86,7 @@ def type_map(
                 ST_Y(ST_Centroid(cb.geom)) AS centroid_lat,
                 ca.gri_score,
                 ca.flow_volume,
+                ca.priority_score,
                 ca.net_flow,
                 ca.degree_centrality,
                 ca.closure_rate,
@@ -114,13 +116,15 @@ def type_map(
                 "comm_type": row.commerce_type,  # Week 4 클린업 예정 미러
                 "gri_score": row.gri_score,
                 "flow_volume": row.flow_volume,
-                "net_flow": row.net_flow,
-                "degree_centrality": row.degree_centrality,
                 "close_rate": row.closure_rate,
                 "dominant_origin": row.dominant_origin,
                 "analysis_note": row.analysis_note,
                 "centroid_lng": row.centroid_lng,
                 "centroid_lat": row.centroid_lat,
+                "priority_score": row.priority_score,
+                "net_flow": row.net_flow,
+                "degree_centrality": row.degree_centrality,
+                "closure_rate": row.closure_rate,
             },
         }
         for row in rows
