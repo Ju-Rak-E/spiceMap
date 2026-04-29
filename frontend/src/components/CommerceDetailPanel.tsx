@@ -268,8 +268,8 @@ export default function CommerceDetailPanel({
           </div>
           <div style={S.kpiCard}>
             <div style={S.kpiLabel}>순유입 변화</div>
-            <div style={S.kpiValue()}>준비중</div>
-            <div style={S.sourceLabel}>분기별 OD 합산 API 연결 예정</div>
+            <div style={S.kpiValue()} title="Q3·Q4 OD 적재 완료 — 비교 API 연결 후 활성">분기 비교 API 대기</div>
+            <div style={S.sourceLabel}>od_flows_aggregated Q3·Q4 적재됨, 비교 엔드포인트 미구현</div>
           </div>
         </div>
       </div>

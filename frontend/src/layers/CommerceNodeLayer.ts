@@ -13,6 +13,7 @@ const RECOMMENDED_ALPHA = 230
 const CAUTION_ALPHA = 200
 const NOT_RECOMMENDED_ALPHA = 170
 const CONTEXT_ALPHA = 105
+const CONTEXT_UNKNOWN_ALPHA = 38  // 분석 미보유(`fitLevel='unknown'`) 상권 — 매우 흐리게(15%)
 const SELECTED_MARKER_RADIUS = 24
 
 function getCandidateRadius(node: CommerceNode, isSelected: boolean): number {
@@ -40,8 +41,11 @@ export function getCandidateFillColor(
 export function getContextFillColor(
   node: CommerceNode,
 ): [number, number, number, number] {
-  const fill = deriveStartupSummary(node).fitColor
-  return hexToRgba(fill, CONTEXT_ALPHA)
+  const summary = deriveStartupSummary(node)
+  // 분석 미보유(`unknown`)는 화면 노이즈 줄이기 위해 추가로 흐리게.
+  // strategy_d13.md §5: 회색 default 비율 ≤ 5% 목표.
+  const alpha = summary.fitLevel === 'unknown' ? CONTEXT_UNKNOWN_ALPHA : CONTEXT_ALPHA
+  return hexToRgba(summary.fitColor, alpha)
 }
 
 export function getGriBorderColor(
