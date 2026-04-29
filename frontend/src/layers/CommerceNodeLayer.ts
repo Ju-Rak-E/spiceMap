@@ -23,10 +23,21 @@ function getColor(node: CommerceNode, isHighlight: boolean): [number, number, nu
   return isHighlight ? [r, g, b, 255] : [r, g, b, 200]
 }
 
-function getTop10PercentThreshold(nodes: CommerceNode[]): number {
-  if (nodes.length === 0) return 1
-  const sorted = [...nodes].sort((a, b) => a.degreeCentrality - b.degreeCentrality)
-  return sorted[Math.floor(sorted.length * 0.9)]?.degreeCentrality ?? 1
+export function getGriBorderColor(
+  griScore: number,
+  isSelected: boolean,
+): [number, number, number, number] {
+  if (isSelected) return [236, 239, 241, 255]
+  if (griScore >= 70) return [239, 83, 80, 255]
+  if (griScore >= 40) return [255, 167, 38, 255]
+  return [236, 239, 241, 80]
+}
+
+export function getGriBorderWidth(griScore: number, isSelected: boolean): number {
+  if (isSelected) return 90
+  if (griScore >= 70) return 90
+  if (griScore >= 40) return 60
+  return 20
 }
 
 export function createCommerceNodeLayer(
@@ -35,8 +46,6 @@ export function createCommerceNodeLayer(
   onClick: (info: PickingInfo<CommerceNode>) => void,
   selectedId: string | null,
 ): ScatterplotLayer<CommerceNode> {
-  const threshold = getTop10PercentThreshold(nodes)
-
   return new ScatterplotLayer<CommerceNode>({
     id: 'commerce-nodes',
     data: nodes,
@@ -44,15 +53,11 @@ export function createCommerceNodeLayer(
     stroked: true,
     getPosition: (node) => node.coordinates,
     getRadius: (node) => getRadius(node.netFlow),
-    getFillColor: (node) =>
-      getColor(node, node.degreeCentrality >= threshold || node.id === selectedId),
+    getFillColor: (node) => getColor(node, node.id === selectedId),
     getLineColor: (node) =>
-      node.id === selectedId
-        ? [236, 239, 241, 255]
-        : node.degreeCentrality >= threshold
-          ? [236, 239, 241, 220]
-          : [236, 239, 241, 80],
-    getLineWidth: (node) => (node.id === selectedId ? 90 : node.degreeCentrality >= threshold ? 60 : 20),
+      getGriBorderColor(node.griScore, node.id === selectedId),
+    getLineWidth: (node) =>
+      getGriBorderWidth(node.griScore, node.id === selectedId),
     radiusUnits: 'meters',
     lineWidthUnits: 'meters',
     onHover,
