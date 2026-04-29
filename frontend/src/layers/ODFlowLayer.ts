@@ -4,9 +4,11 @@ import { getControlPoint, quadBezier, PURPOSE_COLORS } from '../utils/flowBezier
 
 const SEGMENTS = 32
 const MIN_WIDTH = 1.5
-const MAX_WIDTH = 8
+const MAX_UNSELECTED_WIDTH = 8
 const MAX_VOLUME = 10000
 
+// NOTE: sourceId/targetId are admin-district codes. Highlighting activates when
+// Dev-A adds originCommCd/destCommCd to the OD flow API response.
 export function getFlowAlpha(flow: ODFlow, selectedId: string | null): number {
   if (selectedId === null) return 140
   if (flow.sourceId === selectedId || flow.targetId === selectedId) return 200
@@ -15,9 +17,9 @@ export function getFlowAlpha(flow: ODFlow, selectedId: string | null): number {
 
 export function getFlowWidth(volume: number, selectedId: string | null, flow: ODFlow): number {
   const ratio = Math.min(volume / MAX_VOLUME, 1)
-  const base = MIN_WIDTH + ratio * (MAX_WIDTH - MIN_WIDTH)
+  const base = MIN_WIDTH + ratio * (MAX_UNSELECTED_WIDTH - MIN_WIDTH)
   if (selectedId !== null && (flow.sourceId === selectedId || flow.targetId === selectedId)) {
-    return Math.min(base * 1.5, MAX_WIDTH * 1.5)
+    return Math.min(base * 1.5, MAX_UNSELECTED_WIDTH * 1.5)
   }
   return base
 }
