@@ -12,12 +12,13 @@ export function getControlPoint(
   const dy = tgt[1] - src[1]
   const dist = Math.sqrt(dx * dx + dy * dy)
   if (dist === 0) return src
+  const effectiveFactor = Math.min(factor, 0.15 + dist * 0.6)  // 단거리일수록 곡률 감소
   // 수직 방향 (시계방향 90° 회전)
   const perpX = dy / dist
   const perpY = -dx / dist
   return [
-    (src[0] + tgt[0]) / 2 + perpX * dist * factor,
-    (src[1] + tgt[1]) / 2 + perpY * dist * factor,
+    (src[0] + tgt[0]) / 2 + perpX * dist * effectiveFactor,
+    (src[1] + tgt[1]) / 2 + perpY * dist * effectiveFactor,
   ]
 }
 
