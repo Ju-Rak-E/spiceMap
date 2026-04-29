@@ -23,8 +23,18 @@ function getParticleCount(volume: number): number {
   return Math.max(1, Math.round(ratio * 3) + 1)
 }
 
-function generateParticles(flows: ODFlow[], progress: number): Particle[] {
+function generateParticles(
+  flows: ODFlow[],
+  progress: number,
+  selectedNodeId: string | null,
+): Particle[] {
   return flows.flatMap((flow) => {
+    const isRelated =
+      selectedNodeId === null ||
+      flow.sourceId === selectedNodeId ||
+      flow.targetId === selectedNodeId
+    if (!isRelated) return []
+
     const ctrl = getControlPoint(flow.sourceCoord, flow.targetCoord)
     const radius = getParticleRadius(flow.volume)
     const count = getParticleCount(flow.volume)
@@ -44,8 +54,9 @@ function generateParticles(flows: ODFlow[], progress: number): Particle[] {
 export function createFlowParticleLayer(
   flows: ODFlow[],
   progress: number,
+  selectedNodeId: string | null = null,
 ): ScatterplotLayer<Particle> {
-  const particles = generateParticles(flows, progress)
+  const particles = generateParticles(flows, progress, selectedNodeId)
   return new ScatterplotLayer<Particle>({
     id: 'flow-particles',
     data: particles,
@@ -57,9 +68,9 @@ export function createFlowParticleLayer(
     radiusMinPixels: 3,
     radiusMaxPixels: 14,
     updateTriggers: {
-      getFillColor: progress,
-      getPosition: progress,
-      getRadius: progress,
+      getFillColor: [progress, selectedNodeId],
+      getPosition: [progress, selectedNodeId],
+      getRadius: [progress, selectedNodeId],
     },
   })
 }

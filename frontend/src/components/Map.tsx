@@ -128,8 +128,8 @@ export default function Map({
     if (!overlayRef.current) return
     overlayRef.current.setProps({
       layers: [
-        createODFlowLayer(flows),
-        createFlowParticleLayer(flows, progressRef.current),
+        createODFlowLayer(flows, selectedNode?.id ?? null),
+        createFlowParticleLayer(flows, progressRef.current, selectedNode?.id ?? null),
         createCommerceNodeLayer(
           nodes,
           (info: PickingInfo<CommerceNode>) => {
