@@ -53,17 +53,19 @@ cd frontend && npm run dev                        # 프론트엔드
 
 - `docs/FR_Role_Workflow.md` — 기능/요구/5주 일정 포괄 spec
 - `prompt_plan.md` — 5주 체크리스트
-- `docs/current_status.md` — 코드 기준 현재 구현 상태 스냅샷
+- `docs/strategy_d13.md` — D-13 수상 전략 + 실용성 강화 플랜
+- `docs/schema.md` — DB 스키마 (commerce_analysis 5컬럼 확장 + policy_cards)
 - `docs/od_flows_aggregation.md` — od_flows 분기 집계본 설계
-- `docs/schema.md` — DB 스키마
-- `docs/week2_decisions.md` — 주요 의사결정
+- `docs/admin_boundary_gu_backfill.md` — gu_nm 백필 SQL + 검증
+- `docs/week2_decisions.md` — Week 2 주요 의사결정
 - `docs/README.md` — 전체 문서 인덱스
 
 ## 현재 주차
 
-- **Week 2 (4/15~4/21)**: 완료. Module A 골격, B/D(R4~R7) 구현, E 설계, od_flows 분기 집계본(PR 1).
-- **Week 3 (4/22~4/28)**: 진행 중. API 연동 + 상세 패널 + H1 검증 + PR 2 (Supabase 이전).
-- **잔여 블로커**: 원본 `od_flows` 공유 (집계본으로 우회), `admin_boundary`/`commerce_boundary` 적재.
+- **Week 2 (4/15~4/21)**: 완료.
+- **Week 3 (4/22~4/28)**: 완료. API 5종, Module A/B/D/E, run_analysis 파이프라인, closure_rate spatial join, admin_boundary 백필, type-map gu 필터, Dev-B 상세패널·타임라인·자치구필터.
+- **Week 4 (4/29~5/5)**: 시작. H2/H3 검증 + 흐름 단절 레이어 + 베이스라인 비교 + 색각 검토.
+- **이월 블로커**: 원본 `od_flows`만 Dev-A 로컬 (집계본으로 우회). admin/commerce boundary 모두 Supabase 적재 완료.
 
 ## 원칙
 
