@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-04-21
+> 최종 갱신: 2026-04-26
 
 ---
 
@@ -73,9 +73,9 @@
 ## Week 3 (4/22 ~ 4/28) — API 연동 + UI 핵심 기능
 
 ### Dev-A
-- [ ] 전체 엔드포인트 완성 (`/api/od/flows`, `/api/barriers`, `/api/insights/policy`)
-- [ ] `/api/export/csv` CSV 다운로드 기능
-- [ ] 성능 테스트: 지도 로딩 ≤ 5초 (캐시 ≤ 3초), 상권 클릭 ≤ 1초
+- [x] 전체 엔드포인트 완성 (`/api/od/flows`, `/api/barriers`, `/api/insights/policy`) — **PR #19** (2026-04-27)
+- [x] `/api/export/csv` CSV 다운로드 기능 — **PR #19**
+- [x] 성능 테스트: 지도 로딩 ≤ 5초 (캐시 ≤ 3초), 상권 클릭 ≤ 1초 — **107 tests pass** (PR #19)
 
 ### Dev-B
 - [ ] 상권 클릭 → 상세 패널 API 연동 (GRI·폐업률·추세 그래프)
@@ -89,6 +89,10 @@
 - [x] 상권 유형 근사 분류기 구현 — **신규** (`commerce_type.py`, v1.0 — 임대료/프랜차이즈 미사용)
 - [x] PolicyCard Pydantic 스키마 — **신규** (`backend/schemas/insights.py`, FR-07 준수)
 - [x] od_flows 집계본 스키마 + 집계 스크립트 — **신규** (`OdFlowAggregated` 모델, `aggregate_od_flows.py`, `load_quarterly_od_flows` 어댑터) — 80M 원본을 ~300K로 축소, Supabase 수용 가능
+- [x] commerce_analysis 스키마 확장 + policy_cards 신규 테이블 — **2026-04-26** (`backend/models.py` 6컬럼 추가 + `PolicyCardRecord`). 결정: A+B 하이브리드 — 1:1 지표 컬럼은 commerce_analysis에 추가, 1:N PolicyCard는 별도 테이블, C 실시간 계산 거부 ("상권 클릭 ≤ 1초" 위반 위험)
+- [ ] 분석 INSERT 파이프라인 (`backend/pipeline/run_analysis.py`) — 분기 입력으로 Module A·B·D·E 실행 → `commerce_analysis` UPSERT + `policy_cards` INSERT
+- [ ] `/api/insights/policy` 어댑터 — `policy_cards` SELECT → `PolicyCard` Pydantic 응답
+- [ ] `/api/commerce/type-map` 응답에 신규 5컬럼 노출 (`commerce_type, priority_score, net_flow, degree_centrality, closure_rate`)
 - [ ] PR 2: Supabase 이전 + `.env.example` 갱신 + 에스컬레이션 메시지 수정 (집계본 공유로 변경)
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
