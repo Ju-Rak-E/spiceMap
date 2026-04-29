@@ -16,7 +16,7 @@ export interface BoundaryPaintConfig {
 }
 
 // zoom 10 → 0.4px, zoom 13 → 1.2px, zoom 16 → 2.5px
-const LINE_WIDTH_ZOOM_EXPR: MaplibreExpression = [
+export const LINE_WIDTH_ZOOM_EXPR: MaplibreExpression = [
   'interpolate', ['linear'], ['zoom'],
   10, 0.4,
   13, 1.2,

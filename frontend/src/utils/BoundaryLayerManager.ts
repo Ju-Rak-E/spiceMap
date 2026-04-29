@@ -59,9 +59,6 @@ export class BoundaryLayerManager {
 
   setFillOpacity(opacity: number) {
     this.fillOpacity = opacity
-    if (this.map.getLayer(FILL_LAYER_ID)) {
-      this.map.setPaintProperty(FILL_LAYER_ID, 'fill-opacity', opacity)
-    }
   }
 
   private syncLayers() {
@@ -116,7 +113,11 @@ export class BoundaryLayerManager {
 
     if (this.map.getLayer(FILL_LAYER_ID)) {
       this.map.setPaintProperty(FILL_LAYER_ID, 'fill-color', MAP_THEME[this.theme].boundaryFill)
-      this.map.setPaintProperty(FILL_LAYER_ID, 'fill-opacity', this.fillOpacity)
+      this.map.setPaintProperty(
+        FILL_LAYER_ID,
+        'fill-opacity',
+        FILL_OPACITY_ZOOM_EXPR as unknown as maplibregl.ExpressionSpecification,
+      )
     }
 
     if (this.map.getLayer(LINE_LAYER_ID)) {
