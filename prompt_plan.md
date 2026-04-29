@@ -147,3 +147,40 @@
 
 - 2026-04-16: Dev-A 응답 대기 시한 (od_flows 등 3종 적재)
 - 2026-04-17: 미완료 시 범위 축소 검토 조건 (서울 전역 → 강남·관악만)
+
+---
+
+## 진행 중 작업 (Dev-B): 상권 유형별 색상 구분 복원 (2026-04-29)
+
+### 문제
+
+지도 노드들이 `commerce type`이 아닌 `startup fitColor`(4단계)로 색칠되고, 후보 필터(`fitLevel === 'recommended'`)로 인해 표시 노드 다수가 녹색 1색으로 수렴 → 범례의 6 유형 색상 약속과 불일치.
+
+### 근본 원인
+
+`frontend/src/layers/CommerceNodeLayer.ts:22-26` `getCandidateColor()`가 `deriveStartupSummary(node).fitColor`를 사용 (startup fit 색상). 컨텍스트 레이어도 고정 회색(`[92,111,128,60]`)이라 유형 식별 불가.
+
+### 설계 결정
+
+| 시각 채널 | 인코딩 |
+|---|---|
+| 색상 | 상권 유형 (6종, `COMMERCE_COLORS[node.type].fill`) |
+| 크기 | 창업 적합도 (`deriveStartupSummary().fitScore`, 후보만 8~16px) |
+| 테두리 | 선택 상태 (기존 유지) |
+
+색각 이상 대응(FR-11): 1차에서는 색+크기+테두리 + 호버 카드의 심볼로 대응, 항시 IconLayer 심볼은 후속.
+
+### 단계
+
+- [ ] Phase 1: `colorUtils.ts` 추출 (hexToRgb 분리 + 단위 테스트)
+- [ ] Phase 2: `CommerceNodeLayer.ts` 색상 로직 변경 + 테스트
+  - 후보 노드: `COMMERCE_COLORS[type].fill` (alpha 230, 선택 시 255)
+  - 컨텍스트 노드: 동일 유형색 (alpha 90)
+- [ ] Phase 3: 시각 검증 (`npm run dev`)
+
+### 영향 파일
+
+- `frontend/src/utils/colorUtils.ts` (신규)
+- `frontend/src/utils/colorUtils.test.ts` (신규)
+- `frontend/src/layers/CommerceNodeLayer.ts` (수정)
+- `frontend/src/layers/griNodeStyle.test.ts` (확장)

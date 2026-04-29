@@ -3,24 +3,23 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
-import { MAP_THEME, COMMERCE_COLORS, type MapTheme, type CommerceType } from '../styles/tokens'
+import { MAP_THEME, COMMERCE_COLORS, type MapTheme } from '../styles/tokens'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
-import CommerceLegend from './CommerceLegend'
 import { createCommerceNodeLayers } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
-import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
+import { getNodeInterpretation } from '../utils/summaryFormatter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatSignedFixed2 } from '../utils/numberFormat'
 import {
-  buildDistrictSummaries,
-  buildDongSummaries,
+  buildDistrictCommerceClusters,
+  buildDongCommerceClusters,
   type AdminBoundaryCollection,
-  type MapSummaryBadge,
+  type DongCommerceCluster,
 } from '../utils/mapSummaries'
 
 const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
@@ -30,7 +29,7 @@ const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
       type: 'raster',
       tiles: [`https://api.vworld.kr/req/wmts/1.0.0/${apiKey}/Base/{z}/{y}/{x}.png`],
       tileSize: 256,
-      attribution: '© 국토지리정보원',
+      attribution: '© VWorld',
     },
   },
   layers: [{ id: 'vworld-base', type: 'raster', source: 'vworld-base' }],
@@ -40,7 +39,7 @@ const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/
 
 const ANIMATION_SPEED = 0.00025
 const BASE_VOLUME = 10000
-const HOVER_CARD_WIDTH = 220 // estimated from minWidth:180 + padding + badge
+const HOVER_CARD_WIDTH = 220
 const DISTRICT_ZOOM = 10.5
 const DONG_ZOOM = 12.5
 const CANDIDATE_ZOOM = 14.5
@@ -70,11 +69,10 @@ interface MapProps {
   dataStatusLabel: string
   selectedQuarter: string
   boundaryOpacity?: number
-  selectedTypes?: Set<CommerceType>
+  showFlows?: boolean
   selectedDistricts?: Set<string>
   selectedNode?: CommerceNode | null
   onSelectNode?: (node: CommerceNode | null) => void
-  onToggleType?: (type: CommerceType) => void
 }
 
 interface HoveredNode {
@@ -83,11 +81,13 @@ interface HoveredNode {
   y: number
 }
 
-interface SummaryBadgePosition {
+interface ScreenPosition {
   x: number
   y: number
   visible: boolean
 }
+
+type ClusterPositionMap = Record<string, ScreenPosition>
 
 export default function Map({
   theme = 'dark',
@@ -101,11 +101,10 @@ export default function Map({
   dataStatusLabel,
   selectedQuarter,
   boundaryOpacity = 0.2,
-  selectedTypes,
+  showFlows = true,
   selectedDistricts,
-  selectedNode,
+  selectedNode = null,
   onSelectNode,
-  onToggleType,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -119,7 +118,8 @@ export default function Map({
   const [viewportTick, setViewportTick] = useState(0)
   const [boundaries, setBoundaries] = useState<AdminBoundaryCollection | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
-  const detailPanelOpen = !selectedNode || closedDetailNodeId !== selectedNode.id
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
+  const detailPanelOpen = selectedNode !== null && closedDetailNodeId !== selectedNode.id
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -224,53 +224,71 @@ export default function Map({
 
     if (!overlayRef.current) return
 
-    const stage = getZoomStage(zoomRef.current)
+    const flowLayers = showFlows
+      ? [
+          createODFlowLayer(flows, null),
+          createFlowParticleLayer(flows, progressRef.current, null),
+        ]
+      : []
 
-    const flowLayers = [
-      createODFlowLayer(flows, selectedNode?.id ?? null),
-      createFlowParticleLayer(flows, progressRef.current, selectedNode?.id ?? null),
-    ]
+    const commerceLayers = nodes.length > 0 && zoomRef.current >= CANDIDATE_ZOOM
+      ? createCommerceNodeLayers(
+          nodes,
+          (info: PickingInfo<CommerceNode>) => {
+            if (info.object) {
+              setHoveredNode({ node: info.object, x: info.x, y: info.y })
+            } else {
+              setHoveredNode(null)
+            }
+          },
+          (info: PickingInfo<CommerceNode>) => {
+            onSelectNode?.(info.object ?? null)
+            if (info.object) {
+              setClosedDetailNodeId(null)
+              setSelectedClusterId(null)
+            }
+          },
+          selectedNode?.id ?? null,
+        )
+      : []
 
     overlayRef.current.setProps({
-      layers: stage === 'candidate'
-        ? [
-            ...flowLayers,
-            ...createCommerceNodeLayers(
-              nodes,
-              (info: PickingInfo<CommerceNode>) => {
-                if (info.object) {
-                  setHoveredNode({ node: info.object, x: info.x, y: info.y })
-                } else {
-                  setHoveredNode(null)
-                }
-              },
-              (info: PickingInfo<CommerceNode>) => {
-                onSelectNode?.(info.object ?? null)
-                if (info.object) setClosedDetailNodeId(null)
-              },
-              selectedNode?.id ?? null,
-            ),
-          ]
-        : flowLayers,
+      layers: [...flowLayers, ...commerceLayers],
     })
-  }, [flows, nodes, onSelectNode, selectedNode?.id])
+  }, [flows, nodes, onSelectNode, selectedNode?.id, showFlows])
 
   useAnimationFrame(handleFrame)
 
+  const focusCommerceNode = useCallback((node: CommerceNode) => {
+    const map = mapRef.current
+    if (!map) return
+
+    map.easeTo({
+      center: node.coordinates,
+      zoom: Math.max(map.getZoom(), CANDIDATE_ZOOM + 0.3),
+      duration: 650,
+      essential: true,
+    })
+  }, [])
+
   const colors = MAP_THEME[theme]
-  const summaryText = selectedTypes
-    ? buildSummaryText(purpose, hour, topN, selectedTypes, nodes)
-    : null
-  const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
-  const legendBottom = selectedNode ? 298 : 40
   const zoomStage = getZoomStage(zoom)
-  const districtSummaries = useMemo(() => buildDistrictSummaries(nodes), [nodes])
-  const dongSummaries = useMemo(() => buildDongSummaries(nodes, boundaries), [nodes, boundaries])
-  const visibleSummaries = useMemo(() => {
-    if (zoomStage === 'district') return districtSummaries
-    if (zoomStage === 'dong') return dongSummaries
+  const districtClusters = useMemo(() => buildDistrictCommerceClusters(nodes), [nodes])
+  const dongClusters = useMemo(() => buildDongCommerceClusters(nodes, boundaries), [nodes, boundaries])
+  const clusters = useMemo(() => {
+    if (zoomStage === 'district') return districtClusters
+    if (zoomStage === 'dong') return dongClusters
     return []
-  }, [districtSummaries, dongSummaries, zoomStage])
+  }, [districtClusters, dongClusters, zoomStage])
+  const showClusters = clusters.length > 0
+  const selectedCluster = useMemo(
+    () => clusters.find((cluster) => cluster.id === selectedClusterId) ?? null,
+    [clusters, selectedClusterId],
+  )
+  const summaryText = nodes.length > 0
+    ? `선택 자치구 상권 ${nodes.length.toLocaleString()}개 · 자치구 ${districtClusters.length.toLocaleString()}개 · 행정동 ${dongClusters.length.toLocaleString()}개 · ${hour}시 ${purpose ?? '전체'} 상위 ${topN}개 흐름`
+    : ''
+  const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
   const selectedDistrictCodes = useMemo(
     () => [...(selectedDistricts ?? new Set<string>())]
       .map((district) => DISTRICT_CODES[district])
@@ -278,13 +296,13 @@ export default function Map({
     [selectedDistricts],
   )
 
-  const summaryPositions = useMemo(() => {
+  const clusterPositions = useMemo((): ClusterPositionMap => {
     void viewportTick
     if (!mapInstance || containerSize.width === 0 || containerSize.height === 0) return {}
-    const next: Record<string, SummaryBadgePosition> = {}
-    for (const summary of visibleSummaries) {
-      const point = mapInstance.project(summary.coord)
-      next[summary.id] = {
+    const next: ClusterPositionMap = {}
+    for (const cluster of clusters) {
+      const point = mapInstance.project(cluster.center)
+      next[cluster.id] = {
         x: point.x,
         y: point.y,
         visible: point.x >= -80
@@ -294,39 +312,171 @@ export default function Map({
       }
     }
     return next
-  }, [containerSize.height, containerSize.width, mapInstance, viewportTick, visibleSummaries])
+  }, [clusters, containerSize.height, containerSize.width, mapInstance, viewportTick])
 
-  function renderSummaryBadge(summary: MapSummaryBadge) {
-    const position = summaryPositions[summary.id]
+  function getClusterColor(cluster: DongCommerceCluster) {
+    if (cluster.tone === 'recommended') return '#43A047'
+    if (cluster.tone === 'caution') return '#FB8C00'
+    return '#78909C'
+  }
+
+  function getClusterDisplayName(cluster: DongCommerceCluster) {
+    if (cluster.level === 'district') return `${cluster.dongName} 전체`
+    return cluster.dongName
+  }
+
+  function getClusterListHint(cluster: DongCommerceCluster) {
+    if (cluster.level === 'district') return '확대하면 행정동별 묶음으로 나뉩니다. 항목을 누르면 상권 상세 분석을 엽니다.'
+    return '항목을 누르면 해당 상권 상세 분석을 엽니다.'
+  }
+
+  function renderClusterBadge(cluster: DongCommerceCluster) {
+    if (!showClusters) return null
+    const position = clusterPositions[cluster.id]
     if (!position?.visible) return null
+    const color = getClusterColor(cluster)
+    const active = cluster.id === selectedClusterId
 
     return (
-      <div
-        key={summary.id}
+      <button
+        type="button"
+        key={cluster.id}
+        aria-label={`${getClusterDisplayName(cluster)} 상권 ${cluster.commerceCount}개 추천 ${cluster.recommendedCount} 최고 ${cluster.bestScore}`}
+        onClick={() => {
+          setSelectedClusterId((prev) => prev === cluster.id ? null : cluster.id)
+          onSelectNode?.(null)
+        }}
         style={{
           position: 'absolute',
           left: position.x,
           top: position.y,
           transform: 'translate(-50%, -50%)',
           zIndex: 6,
-          minWidth: 136,
+          minWidth: 192,
           background: 'rgba(16,22,29,0.9)',
-          border: `1px solid ${colors.panelBorder}`,
-          borderRadius: 6,
-          padding: '8px 10px',
+          border: `1.5px solid ${active ? color : colors.panelBorder}`,
+          borderRadius: 10,
+          padding: '10px 12px',
           boxShadow: '0 8px 18px rgba(0,0,0,0.3)',
           color: colors.panelText,
-          pointerEvents: 'none',
+          cursor: 'pointer',
           backdropFilter: 'blur(8px)',
+          textAlign: 'left',
         }}
       >
-        <div style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.2 }}>{summary.label}</div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 5, fontSize: 11, color: colors.secondaryText }}>
-          <span>후보 {summary.candidateCount}</span>
-          <span style={{ color: '#A5D6A7', fontWeight: 700 }}>최고 {summary.bestScore}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 999, background: color, flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.2 }}>
+            {getClusterDisplayName(cluster)} 상권 {cluster.commerceCount}개
+          </span>
         </div>
-        <div style={{ marginTop: 3, fontSize: 10, color: colors.mutedText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {summary.dominantTypeLabel}
+        <div style={{ display: 'flex', gap: 9, marginTop: 5, fontSize: 11, color: colors.secondaryText }}>
+          <span style={{ color: '#A5D6A7', fontWeight: 700 }}>추천 {cluster.recommendedCount}</span>
+          <span>최고 {cluster.bestScore}</span>
+          <span>목록 보기</span>
+        </div>
+      </button>
+    )
+  }
+
+  function renderClusterPanel() {
+    if (!selectedCluster || !showClusters) return null
+    const sortedNodes = [...selectedCluster.nodes]
+      .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          left: 16,
+          top: 64,
+          zIndex: 18,
+          width: 332,
+          maxHeight: 'calc(100% - 96px)',
+          overflowY: 'auto',
+          background: 'rgba(16,22,29,0.96)',
+          border: `1px solid ${colors.panelBorder}`,
+          borderRadius: 12,
+          padding: 12,
+          color: colors.panelText,
+          boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>{getClusterDisplayName(selectedCluster)}</div>
+            <div style={{ marginTop: 4, fontSize: 11, color: colors.secondaryText }}>
+              상권 {selectedCluster.commerceCount} · 추천 {selectedCluster.recommendedCount} · 최고 {selectedCluster.bestScore}
+            </div>
+            <div style={{ marginTop: 4, fontSize: 10, color: colors.mutedText }}>
+              {getClusterListHint(selectedCluster)}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedClusterId(null)}
+            aria-label="행정동 상권 목록 닫기"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: colors.mutedText,
+              cursor: 'pointer',
+              fontSize: 18,
+              lineHeight: 1,
+            }}
+          >
+            x
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 12 }}>
+          {sortedNodes.map((node) => {
+            const summary = deriveStartupSummary(node)
+            const active = selectedNode?.id === node.id
+            return (
+              <button
+                type="button"
+                key={node.id}
+                onClick={() => {
+                  onSelectNode?.(node)
+                  setClosedDetailNodeId(null)
+                  setSelectedClusterId(null)
+                  focusCommerceNode(node)
+                }}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto',
+                  gap: 8,
+                  alignItems: 'center',
+                  width: '100%',
+                  padding: '9px 10px',
+                  borderRadius: 8,
+                  border: active ? `1.5px solid ${summary.fitColor}` : `1px solid ${colors.panelBorder}`,
+                  borderLeft: active ? `6px solid ${summary.fitColor}` : `1px solid ${colors.panelBorder}`,
+                  background: active
+                    ? `linear-gradient(90deg, ${summary.fitColor}38, rgba(21,29,38,0.98) 58%)`
+                    : 'rgba(21,29,38,0.92)',
+                  color: colors.panelText,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  boxShadow: active ? `0 0 0 1px ${summary.fitColor}44, 0 8px 18px rgba(0,0,0,0.25)` : 'none',
+                }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700 }}>
+                  {node.name}
+                </span>
+                <span style={{ color: summary.fitColor, fontSize: 12, fontWeight: 800 }}>
+                  {summary.fitScore}
+                </span>
+                <span style={{ color: colors.secondaryText, fontSize: 10 }}>
+                  {summary.fitLabel}
+                </span>
+                <span style={{ color: COMMERCE_COLORS[node.type].textColor, fontSize: 10, textAlign: 'right' }}>
+                  {COMMERCE_COLORS[node.type].label}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
     )
@@ -349,9 +499,9 @@ export default function Map({
         />
       )}
 
-      {visibleSummaries.map(renderSummaryBadge)}
+      {clusters.map(renderClusterBadge)}
+      {renderClusterPanel()}
 
-      {/* 상단 종합 해설바 */}
       <div
         style={{
           position: 'absolute',
@@ -405,7 +555,6 @@ export default function Map({
         </div>
       </div>
 
-      {/* 노드 미니 해설 카드 */}
       {hoveredNode && (() => {
         const { node, x, y } = hoveredNode
         const containerWidth = containerSize.width || window.innerWidth
@@ -425,7 +574,7 @@ export default function Map({
               top: y - 12,
               background: colors.panelBg,
               color: colors.panelText,
-              border: `1px solid ${token.outline}`,
+              border: `1px solid ${startup.fitColor}`,
               borderRadius: 8,
               padding: '10px 14px',
               fontSize: 13,
@@ -436,7 +585,6 @@ export default function Map({
               minWidth: 180,
             }}
           >
-            {/* 상권명 + 유형 배지 */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>{node.name}</span>
               <span
@@ -454,7 +602,6 @@ export default function Map({
               </span>
             </div>
 
-            {/* 유형 배지 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
               <span
                 style={{
@@ -477,7 +624,6 @@ export default function Map({
               <span style={{ fontSize: 12, color: token.textColor }}>{startup.characterLabel}</span>
             </div>
 
-            {/* 지표 2열 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>적합도</div>
@@ -491,7 +637,6 @@ export default function Map({
               </div>
             </div>
 
-            {/* 1줄 상태 해석 */}
             <div
               style={{
                 fontSize: 11,
@@ -506,16 +651,6 @@ export default function Map({
           </div>
         )
       })()}
-
-      {/* 상권 유형 범례 (필터 겸용) */}
-      {selectedTypes && onToggleType && (
-        <CommerceLegend
-          theme={theme}
-          bottom={legendBottom}
-          selectedTypes={selectedTypes}
-          onToggle={onToggleType}
-        />
-      )}
 
       {selectedNode && !detailPanelOpen && (
         <button
@@ -543,14 +678,13 @@ export default function Map({
 
       {detailPanelOpen && (
         <CommerceDetailPanel
-          node={selectedNode ?? null}
+          node={selectedNode}
           quarter={selectedQuarter}
           usingMockData={usingMockData}
           onClose={() => setClosedDetailNodeId(selectedNode?.id ?? null)}
         />
       )}
 
-      {/* 목 데이터 배너 */}
       {usingMockData && (
         <div
           style={{
@@ -567,7 +701,7 @@ export default function Map({
             zIndex: 10,
           }}
         >
-          캐시 데이터로 표시 중
+          데모 데이터 표시 중
         </div>
       )}
     </div>

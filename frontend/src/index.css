@@ -2,6 +2,8 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  scrollbar-color: #24323F #10161D;
+  scrollbar-width: thin;
 }
 
 html, body, #root {
@@ -9,4 +11,27 @@ html, body, #root {
   height: 100%;
   overflow: hidden;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #10161D;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #24323F;
+  border: 2px solid #10161D;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #304251;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #10161D;
 }

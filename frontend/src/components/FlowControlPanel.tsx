@@ -44,9 +44,11 @@ interface FlowControlPanelProps {
   purposeTotals: PurposeVolumeMap
   isPlaying: boolean
   speed: 1 | 2 | 4
+  showFlows: boolean
   onPlay: () => void
   onPause: () => void
   onToggleSpeed: () => void
+  onToggleFlows: () => void
   selectedDistricts: Set<string>
   onToggleDistrict: (d: string) => void
   onSelectNode: (node: CommerceNode) => void
@@ -354,6 +356,41 @@ const S = {
     cursor: 'pointer',
     minWidth: 52,
   } satisfies CSSProperties,
+  switchRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: '8px 0 2px',
+  } satisfies CSSProperties,
+  switchLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: COLORS.secondaryText,
+  } satisfies CSSProperties,
+  switchTrack: (active: boolean): CSSProperties => ({
+    position: 'relative',
+    width: 36,
+    height: 20,
+    border: 'none',
+    borderRadius: 999,
+    background: active ? '#43A047' : '#B8BEC5',
+    cursor: 'pointer',
+    padding: 0,
+    transition: 'background 0.16s ease',
+    flexShrink: 0,
+  }),
+  switchThumb: (active: boolean): CSSProperties => ({
+    position: 'absolute',
+    top: 2,
+    left: active ? 18 : 2,
+    width: 16,
+    height: 16,
+    borderRadius: '50%',
+    background: '#FFFFFF',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+    transition: 'left 0.16s ease',
+  }),
   priorityList: {
     display: 'flex',
     flexDirection: 'column',
@@ -436,9 +473,11 @@ export default function FlowControlPanel({
   purposeTotals,
   isPlaying,
   speed,
+  showFlows,
   onPlay,
   onPause,
   onToggleSpeed,
+  onToggleFlows,
   selectedDistricts,
   onToggleDistrict,
   onSelectNode,
@@ -643,6 +682,19 @@ export default function FlowControlPanel({
             aria-label={`재생 속도 ${speed}배`}
           >
             {speed}x
+          </button>
+        </div>
+        <div style={S.switchRow}>
+          <span style={S.switchLabel}>OD flow 표시</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showFlows}
+            onClick={onToggleFlows}
+            aria-label="OD flow display toggle"
+            style={S.switchTrack(showFlows)}
+          >
+            <span style={S.switchThumb(showFlows)} />
           </button>
         </div>
         <div style={S.subLabel}>
