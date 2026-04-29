@@ -1,9 +1,9 @@
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceNode } from '../types/commerce'
 import { useGriHistory } from '../hooks/useGriHistory'
-import { usePolicyInsights } from '../hooks/usePolicyInsights'
+import { formatQuarter } from '../utils/quarter'
+import { deriveStartupSummary } from '../utils/startupAdvisor'
 import TrendChart from './TrendChart'
-import PolicyCard from './PolicyCard'
 
 interface CommerceDetailPanelProps {
   node: CommerceNode | null
@@ -13,11 +13,11 @@ interface CommerceDetailPanelProps {
 }
 
 const TYPE_ICON: Record<string, string> = {
-  흡수형_과열: '⚠',
-  흡수형_성장: '↑',
-  방출형_침체: '↓',
-  고립형_단절: '✕',
-  안정형:      '✓',
+  흡수형_과열: '!',
+  흡수형_성장: '+',
+  방출형_침체: '-',
+  고립형_단절: 'x',
+  안정형: 'ok',
 }
 
 const S = {
@@ -46,7 +46,7 @@ const S = {
     right: 12,
     background: 'transparent',
     border: 'none',
-    color: '#546E7A',
+    color: '#78909C',
     fontSize: 20,
     cursor: 'pointer',
     lineHeight: 1,
@@ -62,15 +62,40 @@ const S = {
     padding: '2px 8px',
     fontSize: 12,
     color: fill,
-    fontWeight: 600,
+    fontWeight: 700,
   }),
   sectionTitle: {
     fontSize: 11,
-    color: '#546E7A',
-    fontWeight: 600,
+    color: '#78909C',
+    fontWeight: 700,
     marginBottom: 6,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
+  },
+  summaryCard: {
+    background: '#263238',
+    borderRadius: 8,
+    border: '1px solid #37474F',
+    padding: '12px 12px',
+  },
+  summaryHeadline: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#ECEFF1',
+    lineHeight: 1.45,
+    marginBottom: 8,
+  },
+  list: {
+    margin: 0,
+    paddingLeft: 17,
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: 5,
+  },
+  listItem: {
+    fontSize: 12,
+    color: '#B0BEC5',
+    lineHeight: 1.45,
   },
   kpiGrid: {
     display: 'grid' as const,
@@ -82,7 +107,7 @@ const S = {
     borderRadius: 8,
     padding: '10px 12px',
   },
-  kpiLabel: { fontSize: 11, color: '#546E7A', marginBottom: 3 },
+  kpiLabel: { fontSize: 11, color: '#78909C', marginBottom: 3 },
   kpiValue: (color?: string): React.CSSProperties => ({
     fontSize: 20,
     fontWeight: 700,
@@ -90,7 +115,7 @@ const S = {
   }),
   sourceLabel: {
     fontSize: 10,
-    color: '#37474F',
+    color: '#78909C',
     marginTop: 2,
   },
   chartBox: {
@@ -98,9 +123,19 @@ const S = {
     borderRadius: 8,
     padding: '10px 12px',
   },
+  hintGrid: {
+    display: 'grid' as const,
+    gridTemplateColumns: '1fr',
+    gap: 8,
+  },
+  hintBox: {
+    background: '#263238',
+    borderRadius: 8,
+    padding: '10px 12px',
+  },
   errorText: { fontSize: 12, color: '#EF5350' },
-  loadingText: { fontSize: 12, color: '#546E7A' },
-  emptyText: { fontSize: 12, color: '#90A4AE', lineHeight: 1.5 },
+  loadingText: { fontSize: 12, color: '#78909C' },
+  emptyText: { fontSize: 12, color: '#B0BEC5', lineHeight: 1.5 },
 }
 
 function netFlowColor(v: number): string {
@@ -115,75 +150,126 @@ export default function CommerceDetailPanel({
 }: CommerceDetailPanelProps) {
   const nodeId = node?.id ?? null
   const { series, isLoading, error } = useGriHistory(nodeId, quarter)
-  const { insights, isLoading: policyLoading, error: policyError } = usePolicyInsights(nodeId, quarter, node?.type)
-  if (!node) return null
+  if (!node) {
+    return (
+      <div
+        style={{
+          ...S.overlay,
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#546E7A',
+          textAlign: 'center',
+          gap: 8,
+        }}
+      >
+        <div style={{ fontSize: 28, lineHeight: 1 }}>🗺</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#78909C' }}>
+          상권을 클릭하면
+        </div>
+        <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+          GRI · 폐업률 · 흐름 추세<br />상세 분석을 확인할 수 있습니다
+        </div>
+      </div>
+    )
+  }
+
   const colorToken = COMMERCE_COLORS[node.type]
-  const icon = TYPE_ICON[node.type] ?? '●'
+  const startup = deriveStartupSummary(node)
+  const icon = TYPE_ICON[node.type] ?? 'type'
 
   return (
     <div style={S.overlay}>
-      <button style={S.closeBtn} onClick={onClose} aria-label="패널 닫기">✕</button>
+      <button style={S.closeBtn} onClick={onClose} aria-label="패널 닫기">x</button>
 
       <div>
         <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, paddingRight: 28 }}>
           {node.name}
         </div>
-        <span style={S.typeBadge(colorToken.fill)}>
-          <span aria-hidden="true">{icon}</span>
-          {node.type}
-        </span>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <span style={S.typeBadge(startup.fitColor)}>{startup.fitLabel}</span>
+          <span style={S.typeBadge(colorToken.fill)}>
+            <span aria-hidden="true">{icon}</span>
+            {startup.characterLabel}
+          </span>
+        </div>
         <div style={{ marginTop: 8, fontSize: 11, color: '#90A4AE' }}>
-          {quarter} · {usingMockData ? '캐시 데이터' : 'API 연결'}
+          {formatQuarter(quarter)} · {usingMockData ? '캐시 데이터' : 'API 연결'} · 판단 신뢰도 {startup.dataConfidenceLabel}
         </div>
       </div>
 
       <div>
-        <div style={S.sectionTitle}>주요 지표</div>
+        <div style={S.sectionTitle}>창업 판단</div>
+        <div style={S.summaryCard}>
+          <div style={S.summaryHeadline}>{startup.headline}</div>
+          <ul style={S.list}>
+            {startup.reasons.map((reason) => (
+              <li key={reason} style={S.listItem}>{reason}</li>
+            ))}
+          </ul>
+          <div style={{ marginTop: 8, fontSize: 11, color: '#78909C' }}>
+            성격 근거: {startup.characterBasis}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style={S.sectionTitle}>핵심 지표</div>
         <div style={S.kpiGrid}>
           <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>GRI 점수</div>
-            <div style={S.kpiValue()}>{node.griScore}</div>
-            <div style={S.sourceLabel}>출처: 서울시 공공데이터포털</div>
+            <div style={S.kpiLabel}>창업 적합도</div>
+            <div style={S.kpiValue(startup.fitColor)}>{startup.fitScore}</div>
+            <div style={S.sourceLabel}>높을수록 검토 우선</div>
           </div>
           <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>순유입</div>
-            <div style={S.kpiValue(netFlowColor(node.netFlow))}>
-              {node.netFlow >= 0 ? '+' : ''}{node.netFlow}
+            <div style={S.kpiLabel}>고객 흐름</div>
+            <div style={S.kpiValue(netFlowColor(node.netFlow))}>{startup.flowLabel}</div>
+            <div style={S.sourceLabel}>순유입 {node.netFlow >= 0 ? '+' : ''}{node.netFlow}</div>
+          </div>
+          <div style={S.kpiCard}>
+            <div style={S.kpiLabel}>폐업률</div>
+            <div style={S.kpiValue(node.closeRate != null && node.closeRate >= 10 ? '#EF5350' : undefined)}>
+              {node.closeRate != null ? `${node.closeRate.toFixed(1)}%` : '-'}
             </div>
-            <div style={S.sourceLabel}>출처: 생활이동 데이터</div>
+            <div style={S.sourceLabel}>점포 데이터 기준</div>
           </div>
           <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>중심성</div>
-            <div style={S.kpiValue()}>{(node.degreeCentrality * 100).toFixed(0)}%</div>
-            <div style={S.sourceLabel}>출처: OD 흐름 분석</div>
-          </div>
-          <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>상권 등급</div>
-            <div style={{ ...S.kpiValue(colorToken.fill), fontSize: 15 }}>{node.type.split('_')[0]}</div>
-            <div style={S.sourceLabel}>규칙 기반 | AI 미사용</div>
+            <div style={S.kpiLabel}>상권 위험도</div>
+            <div style={S.kpiValue(colorToken.fill)}>{node.griScore}</div>
+            <div style={S.sourceLabel}>GRI 기반 보조 지표</div>
           </div>
         </div>
       </div>
 
       <div style={S.chartBox}>
-        <div style={S.sectionTitle}>GRI 12개월 추세</div>
+        <div style={S.sectionTitle}>상권 위험도 추세</div>
         {isLoading && <div style={S.loadingText}>불러오는 중...</div>}
         {error && <div style={S.errorText}>{error}</div>}
         {!isLoading && !error && <TrendChart series={series} width={296} height={110} />}
       </div>
 
       <div>
-        <div style={S.sectionTitle}>정책 추천</div>
-        {policyLoading && <div style={S.loadingText}>불러오는 중...</div>}
-        {policyError && <div style={S.errorText}>{policyError}</div>}
-        {!policyLoading && !policyError && insights.length === 0 && (
-          <div style={S.emptyText}>발동된 정책 없음</div>
-        )}
-        {!policyLoading && !policyError && insights.map(insight => (
-          <div key={`${insight.nodeId}-${insight.ruleId ?? insight.title}`} style={{ marginBottom: 8 }}>
-            <PolicyCard insight={insight} />
+        <div style={S.sectionTitle}>주의 신호</div>
+        <div style={S.summaryCard}>
+          <ul style={S.list}>
+            {startup.risks.map((risk) => (
+              <li key={risk} style={S.listItem}>{risk}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div style={S.sectionTitle}>업종 힌트</div>
+        <div style={S.hintGrid}>
+          <div style={S.hintBox}>
+            <div style={S.kpiLabel}>검토 업종</div>
+            <div style={S.emptyText}>{startup.suitableIndustries.join(', ')}</div>
           </div>
-        ))}
+          <div style={S.hintBox}>
+            <div style={S.kpiLabel}>주의 업종</div>
+            <div style={S.emptyText}>{startup.cautionIndustries.join(', ')}</div>
+          </div>
+        </div>
       </div>
     </div>
   )
