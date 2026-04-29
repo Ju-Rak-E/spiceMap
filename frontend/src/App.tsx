@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
+import InsightStrip, { countCriticalCommerces } from './components/InsightStrip'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
@@ -15,6 +16,11 @@ const STRENGTH_TO_TOP_N: Record<number, number> = {
 const BOUNDARY_OPACITY = 0.08
 const SCOPE_LABEL = '강남구·관악구 창업 시범'
 const DEFAULT_QUARTER = '2025Q4'
+// docs/verification_h1_h3_results.md 의 1차 실데이터 결과 (Supabase 2026-04-30 기준).
+// 후속: 백엔드 /api/verification 엔드포인트 추가 후 동적으로 갱신.
+const VERIFICATION_H1_R = 0.106
+const VERIFICATION_H1_P = 2.83e-5
+const POLICY_CARD_COUNT_Q4 = 414
 const QUARTERS = [
   '2024Q1', '2024Q2', '2024Q3', '2024Q4',
   '2025Q1', '2025Q4',
@@ -36,6 +42,7 @@ export default function App() {
   const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour, quarter: selectedQuarter })
 
   const nodes = filterNodesByDistrict(rawNodes, selectedDistricts)
+  const criticalCount = useMemo(() => countCriticalCommerces(nodes), [nodes])
 
   useEffect(() => {
     if (!selectedNode) return
@@ -75,6 +82,14 @@ export default function App() {
           selectedDistricts={selectedDistricts}
           selectedNode={selectedNode}
           onSelectNode={setSelectedNode}
+        />
+        <InsightStrip
+          theme="dark"
+          h1R={usingMockData ? null : VERIFICATION_H1_R}
+          h1P={usingMockData ? null : VERIFICATION_H1_P}
+          policyCardCount={POLICY_CARD_COUNT_Q4}
+          criticalCommerceCount={criticalCount}
+          quarter={selectedQuarter}
         />
       </div>
 
