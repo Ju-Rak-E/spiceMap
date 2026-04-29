@@ -30,7 +30,7 @@ def _row(**overrides):
         comm_cd="3110053",
         comm_nm="신림 골목상권",
         gu_nm="관악구",
-        comm_type="골목상권",
+        source_comm_type="골목상권",  # PR #20: cb.comm_type 원천 보존
         geometry={"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
         centroid_lng=126.93,
         centroid_lat=37.48,
@@ -38,7 +38,7 @@ def _row(**overrides):
         flow_volume=1234,
         dominant_origin="1168010100",
         analysis_note=None,
-        commerce_type="흡수형_과열",
+        commerce_type="흡수형_과열",  # ca.commerce_type Dev-C 5유형
         priority_score=87.3,
         net_flow=3200.0,
         degree_centrality=0.65,
