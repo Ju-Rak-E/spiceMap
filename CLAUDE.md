@@ -38,6 +38,8 @@ python -m backend.pipeline.init_db                # 스키마 생성
 python -m backend.pipeline.collect_living_pop     # 생활인구 수집
 python -m backend.pipeline.collect_store_info     # 점포 수집
 python -m backend.pipeline.collect_commerce_sales # 매출 수집
+python -m backend.pipeline.batch --type monthly   # 월간 배치 (cron 등록용)
+python -m backend.pipeline.aggregate_od_flows     # od_flows 분기 집계 (UPSERT)
 uvicorn backend.main:app --reload                 # API 서버
 cd frontend && npm run dev                        # 프론트엔드
 ```
@@ -51,15 +53,17 @@ cd frontend && npm run dev                        # 프론트엔드
 
 - `docs/FR_Role_Workflow.md` — 기능/요구/5주 일정 포괄 spec
 - `prompt_plan.md` — 5주 체크리스트
+- `docs/current_status.md` — 코드 기준 현재 구현 상태 스냅샷
+- `docs/od_flows_aggregation.md` — od_flows 분기 집계본 설계
 - `docs/schema.md` — DB 스키마
 - `docs/week2_decisions.md` — 주요 의사결정
 - `docs/README.md` — 전체 문서 인덱스
 
 ## 현재 주차
 
-- **Week 2 (4/15~4/21)**: 마감일. Module A·B·C 착수.
-- **이월 블로커**: `od_flows`, `admin_boundary`, `commerce_boundary` 미적재 (Dev-A 대응 중)
-- **Week 3 (4/22~4/28)**: API 연동 + 상세 패널 + Module D·E + H1 검증
+- **Week 2 (4/15~4/21)**: 완료. Module A 골격, B/D(R4~R7) 구현, E 설계, od_flows 분기 집계본(PR 1).
+- **Week 3 (4/22~4/28)**: 진행 중. API 연동 + 상세 패널 + H1 검증 + PR 2 (Supabase 이전).
+- **잔여 블로커**: 원본 `od_flows` 공유 (집계본으로 우회), `admin_boundary`/`commerce_boundary` 적재.
 
 ## 원칙
 

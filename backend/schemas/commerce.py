@@ -19,6 +19,11 @@ class CommerceProperties(BaseModel):
     analysis_note: str | None
     centroid_lng: float | None = None
     centroid_lat: float | None = None
+    # commerce_analysis Module A/E 추가 (commerce_type은 위 정의를 사용)
+    priority_score: float | None = None    # Module E 우선순위 0~100
+    net_flow: float | None = None          # Module A 순유입
+    degree_centrality: float | None = None # Module A 중심성 0~1
+    closure_rate: float | None = None      # 분기 폐업률 %
 
 
 class Feature(BaseModel):

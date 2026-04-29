@@ -2,7 +2,7 @@
 
 > PostgreSQL + PostGIS  
 > ORM: SQLAlchemy (`backend/models.py`)  
-> 최종 수정: 2026-04-17
+> 최종 수정: 2026-04-26
 
 ---
 
@@ -12,12 +12,14 @@
 |--------|-----------|-----------|------|
 | `admin_boundary` | **OA-22160** | 서울시 상권분석서비스 (영역-행정동) | 서울 열린데이터광장 |
 | `commerce_boundary` | **OA-15560** | 서울시 상권분석서비스 (영역-상권) | 서울 열린데이터광장 |
-| `od_flows` | **OA-22300** | 수도권 광역 OD (생활이동) | 공공데이터포털 |
+| `od_flows` | **OA-22300** | 수도권 광역 OD (생활이동) — Dev-A 로컬 원본 | 공공데이터포털 |
+| `od_flows_aggregated` | — | OD 분기 집계본 (팀 공유 canonical 입력) | Dev-C 산출 |
 | `living_population` | **OA-14991** | 서울 생활인구 (SPOP_LOCAL_RESD_DONG) | 공공데이터포털 |
 | `store_info` | **OA-15577** | 상권분석 점포정보 (VwsmSignguStorW) | 공공데이터포털 |
 | `commerce_sales` | **OA-15572** | 상권분석 추정매출 (VwsmTrdarSelngQq) | 공공데이터포털 |
-| `commerce_analysis` | — | Dev-C 분석 산출물 (GRI, 유형, 우선순위) | — |
+| `commerce_analysis` | — | Dev-C 분석 산출물 (GRI, 유형, 우선순위, 중심성, 폐업률 캐시) | — |
 | `flow_barriers` | — | Dev-C 분석 산출물 (흐름 단절 구간) | — |
+| `policy_cards` | — | Dev-C Module D 정책 추천 카드 (1상권 N카드) | — |
 
 ---
 
@@ -34,7 +36,8 @@ commerce_boundary (상권 폴리곤)
     ├── commerce_sales    (상권별 추정 매출)
     │
     └── commerce_analysis (분석 결과 ← Dev-C 산출물, FastAPI가 서빙)
-         └── flow_barriers (흐름 단절 구간 ← Dev-C 산출물)
+         ├── flow_barriers  (흐름 단절 구간 ← Dev-C Module C)
+         └── policy_cards   (정책 추천 카드 ← Dev-C Module D, 1:N)
 ```
 
 ---
@@ -150,20 +153,29 @@ commerce_boundary (상권 폴리곤)
 
 ## 7. `commerce_analysis` — 분석 결과 (Dev-C 산출)
 
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| `id` | BIGINT PK | 자동 증가 |
-| `year_quarter` | VARCHAR(7) | 분기 (예: `2025Q4`) |
-| `comm_cd` | VARCHAR(20) | 상권 코드 |
-| `comm_nm` | VARCHAR(100) | 상권 명 |
-| `gri_score` | FLOAT | 상권 위험 지수 (0~100) |
-| `flow_volume` | BIGINT | 유입 이동량 합산 |
-| `dominant_origin` | VARCHAR(10) | 주 유입 출발 행정동 코드 |
-| `analysis_note` | TEXT | 정책 제언 텍스트 |
+`grain = (year_quarter, comm_cd)` — 1행 = 1상권 분기 스냅샷. UNIQUE 제약.
 
-**산출**: Dev-C Module B (GRI 산출)  
-**서빙**: FastAPI가 직접 쿼리 → 프론트엔드  
-**현황**: 미산출 (Week 2 대상)
+| 컬럼 | 타입 | 설명 | 산출 모듈 |
+|------|------|------|---------|
+| `id` | BIGINT PK | 자동 증가 | — |
+| `year_quarter` | VARCHAR(7) | 분기 (예: `2025Q4`) | — |
+| `comm_cd` | VARCHAR(20) | 상권 코드 | — |
+| `comm_nm` | VARCHAR(100) | 상권 명 | — |
+| `gri_score` | FLOAT | 상권 위험 지수 (0~100) | Module B |
+| `flow_volume` | BIGINT | 유입 이동량 합산 | Module A |
+| `dominant_origin` | VARCHAR(10) | 주 유입 출발 행정동 코드 | Module A |
+| `net_flow` | INTEGER | 순유입 (in_degree − out_degree) | Module A |
+| `degree_centrality` | FLOAT | 연결 중심성 (NetworkX, 0~1) | Module A |
+| `commerce_type` | VARCHAR(20) | 5유형: 흡수형_과열/흡수형_성장/방출형_침체/고립형_단절/안정형 (+ unclassified) | Module D 분류기 (`commerce_type.py`) |
+| `priority_score` | FLOAT | 정책 우선순위 (0~100 percentile rank) | Module E |
+| `closure_rate` | FLOAT | 자치구 분기 폐업률 % (store_info 집계 캐시) | store_info 집계 |
+| `analysis_note` | TEXT | 정책 제언 텍스트 (요약) | — |
+| `computed_at` | TIMESTAMP | 분석 실행 시각 | server_default=now() |
+
+**제약**: `UNIQUE(year_quarter, comm_cd)` — 분기·상권당 1행만 유지 (UPSERT).
+**서빙**: FastAPI가 직접 쿼리 → `/api/commerce/type-map` 응답에 모든 필드 노출.
+**현황**: 0행 (Week 3 INSERT 파이프라인 대기)
+**참고**: PolicyCard 본문은 1:N이므로 별도 `policy_cards` 테이블에 저장.
 
 ---
 
@@ -178,8 +190,33 @@ commerce_boundary (상권 폴리곤)
 | `barrier_score` | FLOAT | 단절 강도 (높을수록 단절) |
 | `barrier_type` | VARCHAR(50) | 단절 유형 (예: `도로`, `경계`) |
 
-**산출**: Dev-C Module C (흐름 단절 탐지)  
+**산출**: Dev-C Module C (흐름 단절 탐지)
 **현황**: 미산출 (Week 2 대상)
+
+---
+
+## 9. `policy_cards` — 정책 추천 카드 (Dev-C Module D)
+
+`grain = (year_quarter, comm_cd, rule_id)` — 1상권당 R4~R7 중 발동된 룰 0~4건. UNIQUE 제약.
+`backend/schemas/insights.py:PolicyCard` Pydantic 스키마와 1:1 매핑.
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| `id` | BIGINT PK | 자동 증가 |
+| `year_quarter` | VARCHAR(7) | 분기 (예: `2026Q1`) |
+| `comm_cd` | VARCHAR(20) | 상권 코드 |
+| `comm_nm` | VARCHAR(100) | 상권 명 |
+| `rule_id` | VARCHAR(8) | 발동 룰 ID (R1~R8) |
+| `severity` | VARCHAR(10) | `Critical` / `High` / `Medium` / `Low` |
+| `policy_text` | TEXT | 정책 추천 본문 |
+| `rationale` | TEXT | 발동 근거 1문장 |
+| `triggering_metrics` | JSONB | 발동 시 지표 스냅샷 (`gri_score`, `net_flow`, `degree_centrality`, `closure_rate`) |
+| `generation_mode` | VARCHAR(20) | `rule_based` / `llm` (현 v1.0은 rule_based 고정) |
+| `generated_at` | TIMESTAMP | 카드 생성 시각 (server_default=now()) |
+
+**제약**: `UNIQUE(year_quarter, comm_cd, rule_id)`.
+**서빙**: `/api/insights/policy?comm_cd=...&quarter=...` → JSON 배열 반환.
+**현황**: 0행 (Week 3 INSERT 파이프라인 대기)
 
 ---
 
@@ -193,10 +230,11 @@ commerce_boundary (상권 폴리곤)
 | `living_population` | 94,944 | 2025-10-01 ~ 2025-12-31 (강남·관악 MVP 필터) | ✅ 완료 |
 | `store_info` | 5,599 | 2019Q1 ~ 2025Q4 | ✅ 완료 |
 | `commerce_sales` | 21,333 | 2025Q4 | ✅ 완료 |
-| `commerce_analysis` | 0 | — | Week 2 (Dev-C 산출 대기) |
+| `commerce_analysis` | 0 | — | Week 3 INSERT 파이프라인 대기 (모델 확장 완료 4/26) |
 | `flow_barriers` | 0 | — | Week 2 (Dev-C 산출 대기) |
+| `policy_cards` | 0 | — | Week 3 INSERT 파이프라인 대기 (모델 신규 4/26) |
 
-> 최종 갱신: 2026-04-16
+> 최종 갱신: 2026-04-26
 
 ---
 

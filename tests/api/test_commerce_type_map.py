@@ -38,6 +38,11 @@ def _fake_row_base(**overrides):
         dominant_origin=None,
         analysis_note=None,
         commerce_type=None,
+        # PR #21 추가 4종 (Module A/E)
+        priority_score=None,
+        net_flow=None,
+        degree_centrality=None,
+        closure_rate=None,
     )
     defaults.update(overrides)
     return FakeRow(**defaults)
