@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
-import { MAP_THEME, COMMERCE_COLORS, getInterventionBadge, type MapTheme, type CommerceType } from '../styles/tokens'
+import { MAP_THEME, COMMERCE_COLORS, type MapTheme, type CommerceType } from '../styles/tokens'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
 import CommerceLegend from './CommerceLegend'
@@ -14,6 +14,7 @@ import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
+import { deriveStartupSummary } from '../utils/startupAdvisor'
 
 const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
   version: 8,
@@ -79,6 +80,7 @@ export default function Map({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
+  const zoomRef = useRef(11)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
 
@@ -100,6 +102,10 @@ export default function Map({
     const overlay = new MapboxOverlay({ interleaved: false, layers: [] })
     map.addControl(overlay)
     overlayRef.current = overlay
+
+    map.on('zoom', () => {
+      zoomRef.current = map.getZoom()
+    })
 
     map.once('load', () => {
       mapRef.current = map
@@ -127,25 +133,30 @@ export default function Map({
     progressRef.current = (progressRef.current + delta * ANIMATION_SPEED * speedScale) % 1
 
     if (!overlayRef.current) return
+
+    const showLayers = zoomRef.current >= 11
+
     overlayRef.current.setProps({
-      layers: [
-        createODFlowLayer(flows, selectedNode?.id ?? null),
-        createFlowParticleLayer(flows, progressRef.current, selectedNode?.id ?? null),
-        createCommerceNodeLayer(
-          nodes,
-          (info: PickingInfo<CommerceNode>) => {
-            if (info.object) {
-              setHoveredNode({ node: info.object, x: info.x, y: info.y })
-            } else {
-              setHoveredNode(null)
-            }
-          },
-          (info: PickingInfo<CommerceNode>) => {
-            onSelectNode?.(info.object ?? null)
-          },
-          selectedNode?.id ?? null,
-        ),
-      ],
+      layers: showLayers
+        ? [
+            createODFlowLayer(flows, selectedNode?.id ?? null),
+            createFlowParticleLayer(flows, progressRef.current, selectedNode?.id ?? null),
+            createCommerceNodeLayer(
+              nodes,
+              (info: PickingInfo<CommerceNode>) => {
+                if (info.object) {
+                  setHoveredNode({ node: info.object, x: info.x, y: info.y })
+                } else {
+                  setHoveredNode(null)
+                }
+              },
+              (info: PickingInfo<CommerceNode>) => {
+                onSelectNode?.(info.object ?? null)
+              },
+              selectedNode?.id ?? null,
+            ),
+          ]
+        : [],
     })
   }, [flows, nodes, onSelectNode, selectedNode?.id])
 
@@ -192,7 +203,7 @@ export default function Map({
         }}
       >
         <div style={{ fontSize: 16, fontWeight: 700, color: colors.panelText, whiteSpace: 'nowrap' }}>
-          서울 상권 흐름 지도
+          서울 창업 상권 지도
         </div>
         <div style={{ width: 1, height: 18, background: colors.panelBorder, flexShrink: 0 }} />
         {summaryText && (
@@ -237,7 +248,7 @@ export default function Map({
           : x + 14
         const cardLeft = Math.max(0, rawLeft)
         const token = COMMERCE_COLORS[node.type]
-        const badge = getInterventionBadge(node.griScore)
+        const startup = deriveStartupSummary(node)
         const netFlowColor = node.netFlow >= 0 ? '#A5D6A7' : '#EF9A9A'
         const interpretation = getNodeInterpretation(node.type, node.griScore)
         return (
@@ -262,21 +273,19 @@ export default function Map({
             {/* 상권명 + 유형 배지 */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>{node.name}</span>
-              {badge && (
-                <span
-                  style={{
-                    background: badge.bg,
-                    color: badge.color,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    borderRadius: 4,
-                    padding: '2px 6px',
-                    letterSpacing: '0.03em',
-                  }}
-                >
-                  {badge.label}
-                </span>
-              )}
+              <span
+                style={{
+                  background: `${startup.fitColor}22`,
+                  color: startup.fitColor,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  borderRadius: 4,
+                  padding: '2px 6px',
+                  letterSpacing: '0.03em',
+                }}
+              >
+                {startup.fitLabel}
+              </span>
             </div>
 
             {/* 유형 배지 */}
@@ -299,14 +308,14 @@ export default function Map({
               >
                 {token.symbol}
               </span>
-              <span style={{ fontSize: 12, color: token.textColor }}>{token.label}</span>
+              <span style={{ fontSize: 12, color: token.textColor }}>{startup.characterLabel}</span>
             </div>
 
             {/* 지표 2열 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', marginBottom: 8 }}>
               <div>
-                <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>GRI</div>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>{node.griScore}</div>
+                <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>적합도</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: startup.fitColor }}>{startup.fitScore}</div>
               </div>
               <div>
                 <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>순유입</div>
@@ -326,7 +335,7 @@ export default function Map({
                 lineHeight: 1.4,
               }}
             >
-              {interpretation}
+              {startup.headline} {interpretation}
             </div>
           </div>
         )
