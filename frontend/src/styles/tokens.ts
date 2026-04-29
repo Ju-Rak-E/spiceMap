@@ -4,6 +4,7 @@ export const COMMERCE_COLORS = {
   방출형_침체: { fill: '#9E9E9E', icon: 'trending-down', symbol: '↘', label: '방출형 침체', badgeColor: 'rgba(158,158,158,0.18)', textColor: '#BDBDBD', outline: '#616161', description: '유출이 지속되고 침체 위험이 큰 상권' },
   고립형_단절: { fill: '#424242', icon: 'slash',         symbol: '○', label: '고립형 단절', badgeColor: 'rgba(66,66,66,0.35)',    textColor: '#90A4AE', outline: '#37474F', description: '연결이 약해 흐름이 고립된 상권' },
   안정형:      { fill: '#43A047', icon: 'check-circle',  symbol: '●', label: '안정형',     badgeColor: 'rgba(67,160,71,0.18)',   textColor: '#A5D6A7', outline: '#2E7D32', description: '유입·유출 변동이 비교적 안정적인 상권' },
+  미분류:      { fill: '#5C6F80', icon: 'help-circle',   symbol: '?', label: '미분류 (분석 대기)', badgeColor: 'rgba(92,111,128,0.18)', textColor: '#B0BEC5', outline: '#37474F', description: 'Dev-C 분석 결과가 아직 산출되지 않은 상권' },
 } as const
 
 export type CommerceType = keyof typeof COMMERCE_COLORS

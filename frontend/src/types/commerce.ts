@@ -5,10 +5,12 @@ export interface CommerceNode {
   name: string
   coordinates: [number, number]  // [lng, lat]
   type: CommerceType
+  sourceCommType?: string | null  // 서울시 원본 상권 구분
   district: string               // 자치구명 (예: '강남구')
   netFlow: number                // 순유입 (양수=유입, 음수=유출)
   degreeCentrality: number       // 0~1
   griScore: number               // 0~100
+  closeRate?: number             // 폐업률 (%) — OA-15577
 }
 
 // Dev-A API: GeoJSON FeatureCollection 응답 타입
@@ -16,9 +18,14 @@ export interface CommerceFeatureProperties {
   comm_cd: string
   comm_nm: string
   gu_nm?: string | null
+  commerce_type?: string | null
+  source_comm_type?: string | null
   comm_type: string | null
   gri_score: number | null
   flow_volume: number | null
+  net_flow?: number | null
+  degree_centrality?: number | null
+  close_rate?: number | null
   dominant_origin: string | null
   analysis_note: string | null
   centroid_lng: number | null
@@ -39,12 +46,14 @@ export interface CommerceTypeMapResponse {
 }
 
 const VALID_TYPES = new Set([
-  '흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형',
+  '흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형', '미분류',
 ])
 
 function resolveType(raw: string | null): CommerceType {
+  if (!raw) return '미분류'
+  if (raw === 'unclassified') return '미분류'
   if (raw && VALID_TYPES.has(raw)) return raw as CommerceType
-  return '안정형'
+  return '미분류'
 }
 
 function resolveCentroid(
@@ -75,6 +84,11 @@ function resolveCentroid(
   }
 }
 
+function formatCommerceName(raw: string): string {
+  if (/(상권|시장|관광특구|거리|로|길|일대)$/.test(raw)) return raw
+  return `${raw} 일대`
+}
+
 export function featuresToNodes(features: CommerceFeature[]): CommerceNode[] {
   const nodes: CommerceNode[] = []
   for (const f of features) {
@@ -82,13 +96,15 @@ export function featuresToNodes(features: CommerceFeature[]): CommerceNode[] {
     if (!coords) continue
     nodes.push({
       id: f.properties.comm_cd,
-      name: f.properties.comm_nm,
+      name: formatCommerceName(f.properties.comm_nm),
       coordinates: coords,
-      type: resolveType(f.properties.comm_type),
+      type: resolveType(f.properties.commerce_type ?? f.properties.comm_type ?? null),
+      sourceCommType: f.properties.source_comm_type ?? f.properties.comm_type ?? null,
       district: f.properties.gu_nm ?? '',
-      netFlow: f.properties.flow_volume ?? 0,
-      degreeCentrality: 0,  // Dev-C Module A 완성 전 폴백
+      netFlow: f.properties.net_flow ?? 0,
+      degreeCentrality: f.properties.degree_centrality ?? 0,
       griScore: f.properties.gri_score ?? 0,
+      closeRate: f.properties.close_rate ?? undefined,
     })
   }
   return nodes

@@ -35,6 +35,8 @@ def load_boundaries() -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
         ENGINE, geom_col="geom", crs=CRS_WGS84,
     )
     print(f"로드 완료: 행정동 {len(admin)}건, 상권 {len(commerce)}건")
+    admin = admin.rename_geometry("geometry")
+    commerce = commerce.rename_geometry("geometry")
     return admin, commerce
 
 
@@ -42,9 +44,10 @@ def _repair_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """유효하지 않은 폴리곤을 buffer(0)으로 수정."""
     invalid = ~gdf.geometry.is_valid
     if invalid.any():
-        print(f"  WARN: {invalid.sum()}개 유효하지 않은 폴리곤 — buffer(0) 수정")
+        print(f"  WARN: {invalid.sum()} invalid polygons - buffer(0) repair")
         gdf = gdf.copy()
-        gdf.loc[invalid, "geometry"] = gdf.loc[invalid, "geometry"].buffer(0)
+        geom_col = gdf.geometry.name
+        gdf.loc[invalid, geom_col] = gdf.loc[invalid, geom_col].buffer(0)
     return gdf
 
 

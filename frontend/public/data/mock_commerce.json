@@ -7,7 +7,8 @@
     "district": "강남구",
     "netFlow": 1200,
     "degreeCentrality": 0.95,
-    "griScore": 88
+    "griScore": 88,
+    "closeRate": 3.2
   },
   {
     "id": "gc_002",
@@ -17,7 +18,8 @@
     "district": "강남구",
     "netFlow": 780,
     "degreeCentrality": 0.82,
-    "griScore": 74
+    "griScore": 74,
+    "closeRate": 5.8
   },
   {
     "id": "gc_003",
@@ -27,7 +29,8 @@
     "district": "강남구",
     "netFlow": 620,
     "degreeCentrality": 0.71,
-    "griScore": 71
+    "griScore": 71,
+    "closeRate": 6.4
   },
   {
     "id": "gc_004",
@@ -37,7 +40,8 @@
     "district": "강남구",
     "netFlow": 310,
     "degreeCentrality": 0.58,
-    "griScore": 55
+    "griScore": 55,
+    "closeRate": 7.1
   },
   {
     "id": "gc_005",
@@ -47,7 +51,8 @@
     "district": "강남구",
     "netFlow": 950,
     "degreeCentrality": 0.88,
-    "griScore": 85
+    "griScore": 85,
+    "closeRate": 4.1
   },
   {
     "id": "gc_006",
@@ -57,7 +62,8 @@
     "district": "강남구",
     "netFlow": 540,
     "degreeCentrality": 0.67,
-    "griScore": 72
+    "griScore": 72,
+    "closeRate": 5.5
   },
   {
     "id": "gc_007",
@@ -67,7 +73,8 @@
     "district": "강남구",
     "netFlow": 210,
     "degreeCentrality": 0.45,
-    "griScore": 48
+    "griScore": 48,
+    "closeRate": 8.3
   },
   {
     "id": "gw_001",
@@ -77,7 +84,8 @@
     "district": "관악구",
     "netFlow": -380,
     "degreeCentrality": 0.42,
-    "griScore": 62
+    "griScore": 62,
+    "closeRate": 14.7
   },
   {
     "id": "gw_002",
@@ -87,7 +95,8 @@
     "district": "관악구",
     "netFlow": -220,
     "degreeCentrality": 0.31,
-    "griScore": 58
+    "griScore": 58,
+    "closeRate": 13.2
   },
   {
     "id": "gw_003",
@@ -97,7 +106,8 @@
     "district": "관악구",
     "netFlow": -500,
     "degreeCentrality": 0.08,
-    "griScore": 41
+    "griScore": 41,
+    "closeRate": 16.5
   },
   {
     "id": "gw_004",
@@ -107,7 +117,8 @@
     "district": "관악구",
     "netFlow": 180,
     "degreeCentrality": 0.52,
-    "griScore": 44
+    "griScore": 44,
+    "closeRate": 9.8
   },
   {
     "id": "gw_005",
@@ -117,6 +128,7 @@
     "district": "관악구",
     "netFlow": -150,
     "degreeCentrality": 0.38,
-    "griScore": 56
+    "griScore": 56,
+    "closeRate": 12.1
   }
 ]

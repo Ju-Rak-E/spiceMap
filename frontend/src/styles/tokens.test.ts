@@ -44,11 +44,11 @@ describe('MAP_THEME', () => {
 })
 
 describe('COMMERCE_COLORS', () => {
-  const TYPES = ['흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형'] as const
+  const TYPES = ['흡수형_과열', '흡수형_성장', '방출형_침체', '고립형_단절', '안정형', '미분류'] as const
   const HEX = /^#[0-9A-Fa-f]{6}$/
 
-  it('5개 상권 유형이 모두 정의되어 있어야 한다', () => {
-    expect(Object.keys(COMMERCE_COLORS)).toHaveLength(5)
+  it('6개 상권 유형이 모두 정의되어 있어야 한다', () => {
+    expect(Object.keys(COMMERCE_COLORS)).toHaveLength(6)
     for (const t of TYPES) {
       expect(COMMERCE_COLORS).toHaveProperty(t)
     }

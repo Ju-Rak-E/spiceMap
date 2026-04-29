@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import { type MapTheme } from '../styles/tokens'
 import { BoundaryLayerManager } from '../utils/BoundaryLayerManager'
@@ -7,6 +7,7 @@ interface AdminBoundaryLayerProps {
   map: maplibregl.Map
   theme?: MapTheme
   districtFilter?: string | null
+  districtFilters?: string[]
   fillOpacity?: number
 }
 
@@ -14,12 +15,17 @@ export default function AdminBoundaryLayer({
   map,
   theme = 'light',
   districtFilter,
+  districtFilters,
   fillOpacity = 0.3,
 }: AdminBoundaryLayerProps) {
   const managerRef = useRef<BoundaryLayerManager | null>(null)
+  const activeDistrictFilters = useMemo(
+    () => districtFilters ?? (districtFilter ? [districtFilter] : []),
+    [districtFilter, districtFilters],
+  )
 
   useEffect(() => {
-    const manager = new BoundaryLayerManager(map, theme, districtFilter ?? null, fillOpacity)
+    const manager = new BoundaryLayerManager(map, theme, activeDistrictFilters, fillOpacity)
     managerRef.current = manager
 
     return () => {
@@ -33,8 +39,8 @@ export default function AdminBoundaryLayer({
   }, [theme])
 
   useEffect(() => {
-    managerRef.current?.setDistrictFilter(districtFilter ?? null)
-  }, [districtFilter])
+    managerRef.current?.setDistrictFilter(activeDistrictFilters)
+  }, [activeDistrictFilters])
 
   useEffect(() => {
     managerRef.current?.setFillOpacity(fillOpacity)

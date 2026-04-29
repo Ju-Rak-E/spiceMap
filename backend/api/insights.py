@@ -1,8 +1,10 @@
 """GET /api/insights/policy — 정책 추천 카드 + 우선순위 목록."""
 import json
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from redis.exceptions import RedisError
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.api.deps import get_session, get_cache
@@ -26,9 +28,12 @@ def policy_insights(
         f"insights-policy:{quarter}:{gu or 'all'}:"
         f"{comm_cd or 'all'}:{min_priority}:{severity or 'all'}"
     )
-    cached = cache.get(cache_key)
-    if cached:
-        return json.loads(cached)
+    try:
+        cached = cache.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except RedisError:
+        pass
 
     sql = text("""
         SELECT
@@ -65,16 +70,19 @@ def policy_insights(
             END,
             COALESCE(ca.priority_score, 0) DESC
     """)
-    rows = db.execute(
-        sql,
-        {
-            "quarter": quarter,
-            "gu": gu,
-            "comm_cd": comm_cd,
-            "severity": severity,
-            "min_priority": min_priority,
-        },
-    ).fetchall()
+    try:
+        rows = db.execute(
+            sql,
+            {
+                "quarter": quarter,
+                "gu": gu,
+                "comm_cd": comm_cd,
+                "severity": severity,
+                "min_priority": min_priority,
+            },
+        ).fetchall()
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable for /api/insights/policy") from exc
 
     cards = [
         PolicyCard(
@@ -96,5 +104,8 @@ def policy_insights(
         generation_mode="rule_based",
         cards=cards,
     )
-    cache.setex(cache_key, CACHE_TTL, result.model_dump_json())
+    try:
+        cache.setex(cache_key, CACHE_TTL, result.model_dump_json())
+    except RedisError:
+        pass
     return result

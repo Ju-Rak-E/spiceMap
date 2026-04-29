@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { MAP_THEME } from '../styles/tokens'
-import { getBoundaryPaintConfig } from './boundaryLayerConfig'
+import { getBoundaryPaintConfig, getFillOpacityZoomExpr } from './boundaryLayerConfig'
 
 describe('getBoundaryPaintConfig', () => {
   describe('light 테마', () => {
@@ -38,14 +38,24 @@ describe('getBoundaryPaintConfig', () => {
   })
 
   describe('공통 속성', () => {
-    it('경계선 두께가 양수여야 한다', () => {
-      expect(getBoundaryPaintConfig('light').line['line-width']).toBeGreaterThan(0)
-      expect(getBoundaryPaintConfig('dark').line['line-width']).toBeGreaterThan(0)
+    it('경계선 두께가 zoom interpolate 표현식이어야 한다', () => {
+      expect(Array.isArray(getBoundaryPaintConfig('light').line['line-width'])).toBe(true)
+      expect(Array.isArray(getBoundaryPaintConfig('dark').line['line-width'])).toBe(true)
     })
 
-    it('하이라이트가 경계선보다 두꺼워야 한다', () => {
+    it('하이라이트 두께가 고정 숫자여야 한다', () => {
       const config = getBoundaryPaintConfig('light')
-      expect(config.highlight['line-width']).toBeGreaterThan(config.line['line-width'])
+      expect(typeof config.highlight['line-width']).toBe('number')
+    })
+
+    it('fill opacity zoom 표현식은 zoom이 최상위 interpolate 입력이어야 한다', () => {
+      const expr = getFillOpacityZoomExpr(0.2)
+      expect(expr[0]).toBe('interpolate')
+      expect(expr[2]).toEqual(['zoom'])
+      expect(expr[4]).toBeCloseTo(0)
+      expect(expr[6]).toBeCloseTo(0.016)
+      expect(expr[8]).toBeCloseTo(0.044)
+      expect(expr[10]).toBeCloseTo(0.016)
     })
   })
 })

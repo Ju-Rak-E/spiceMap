@@ -36,3 +36,4 @@ htmlcov/
 # 로컬 작업 메모 / 에이전트 산출물
 .claude/
 frontend/prompt_plan.md
+docs/commerce_analysis_load_review.md

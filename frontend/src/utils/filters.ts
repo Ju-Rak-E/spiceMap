@@ -7,6 +7,6 @@ export function filterNodesByDistrict(nodes: CommerceNode[], districts: Set<stri
 }
 
 export function filterNodesByType(nodes: CommerceNode[], types: Set<CommerceType>): CommerceNode[] {
-  if (types.size === 0) return nodes
+  if (types.size === 0) return []
   return nodes.filter(n => types.has(n.type))
 }

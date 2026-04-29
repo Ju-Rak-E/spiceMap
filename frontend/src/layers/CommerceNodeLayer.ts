@@ -1,32 +1,106 @@
 import { ScatterplotLayer } from '@deck.gl/layers'
 import type { PickingInfo } from '@deck.gl/core'
-import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceNode } from '../types/commerce'
+import { deriveStartupSummary } from '../utils/startupAdvisor'
 
-const MIN_RADIUS = 300
-const MAX_RADIUS = 1500
-const MAX_ABS_FLOW = 1200
+const MAX_CANDIDATES = 50
+const MIN_CANDIDATE_RADIUS = 8
+const MAX_CANDIDATE_RADIUS = 16
+const CONTEXT_RADIUS = 4
 
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
-function getRadius(netFlow: number): number {
-  const ratio = Math.min(Math.abs(netFlow) / MAX_ABS_FLOW, 1)
-  return MIN_RADIUS + ratio * (MAX_RADIUS - MIN_RADIUS)
+function getCandidateRadius(node: CommerceNode, isSelected: boolean): number {
+  if (isSelected) return 18
+  const { fitScore } = deriveStartupSummary(node)
+  return MIN_CANDIDATE_RADIUS + (fitScore / 100) * (MAX_CANDIDATE_RADIUS - MIN_CANDIDATE_RADIUS)
 }
 
-function getColor(node: CommerceNode, isHighlight: boolean): [number, number, number, number] {
-  const colorToken = COMMERCE_COLORS[node.type]
-  const [r, g, b] = hexToRgb(colorToken.fill)
-  return isHighlight ? [r, g, b, 255] : [r, g, b, 200]
+function getCandidateColor(node: CommerceNode, isSelected: boolean): [number, number, number, number] {
+  const { fitColor } = deriveStartupSummary(node)
+  const [r, g, b] = hexToRgb(fitColor)
+  return isSelected ? [r, g, b, 255] : [r, g, b, 230]
 }
 
-function getTop10PercentThreshold(nodes: CommerceNode[]): number {
-  if (nodes.length === 0) return 1
-  const sorted = [...nodes].sort((a, b) => a.degreeCentrality - b.degreeCentrality)
-  return sorted[Math.floor(sorted.length * 0.9)]?.degreeCentrality ?? 1
+export function getGriBorderColor(
+  _griScore: number,
+  isSelected: boolean,
+): [number, number, number, number] {
+  if (isSelected) return [123, 208, 141, 255]
+  return [0, 0, 0, 0]
+}
+
+export function getGriBorderWidth(_griScore: number, isSelected: boolean): number {
+  if (isSelected) return 3
+  return 0
+}
+
+export function getCandidateNodes(nodes: CommerceNode[], selectedId: string | null): CommerceNode[] {
+  const candidates = nodes
+    .filter((node) => deriveStartupSummary(node).fitLevel === 'recommended')
+    .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
+    .slice(0, MAX_CANDIDATES)
+
+  const selected = selectedId ? nodes.find((node) => node.id === selectedId) : null
+  if (selected && !candidates.some((node) => node.id === selected.id)) {
+    return [selected, ...candidates]
+  }
+
+  return candidates
+}
+
+export function createCommerceNodeLayers(
+  nodes: CommerceNode[],
+  onHover: (info: PickingInfo<CommerceNode>) => void,
+  onClick: (info: PickingInfo<CommerceNode>) => void,
+  selectedId: string | null,
+): ScatterplotLayer<CommerceNode>[] {
+  const candidateNodes = getCandidateNodes(nodes, selectedId)
+  const candidateIds = new Set(candidateNodes.map((node) => node.id))
+  const contextNodes = nodes.filter((node) => !candidateIds.has(node.id))
+
+  const contextLayer = new ScatterplotLayer<CommerceNode>({
+    id: 'commerce-nodes-context',
+    data: contextNodes,
+    pickable: false,
+    stroked: false,
+    getPosition: (node) => node.coordinates,
+    getRadius: CONTEXT_RADIUS,
+    getFillColor: [92, 111, 128, 60],
+    radiusUnits: 'pixels',
+    updateTriggers: {
+      getPosition: contextNodes,
+    },
+  })
+
+  const candidateLayer = new ScatterplotLayer<CommerceNode>({
+    id: 'commerce-nodes-candidates',
+    data: candidateNodes,
+    pickable: true,
+    stroked: true,
+    getPosition: (node) => node.coordinates,
+    getRadius: (node) => getCandidateRadius(node, node.id === selectedId),
+    getFillColor: (node) => getCandidateColor(node, node.id === selectedId),
+    getLineColor: (node) =>
+      node.id === selectedId ? getGriBorderColor(node.griScore, true) : [255, 255, 255, 150],
+    getLineWidth: (node) =>
+      node.id === selectedId ? getGriBorderWidth(node.griScore, true) : 1.5,
+    radiusUnits: 'pixels',
+    lineWidthUnits: 'pixels',
+    onHover,
+    onClick,
+    updateTriggers: {
+      getRadius: [candidateNodes, selectedId],
+      getFillColor: [candidateNodes, selectedId],
+      getLineColor: [candidateNodes, selectedId],
+      getLineWidth: [candidateNodes, selectedId],
+    },
+  })
+
+  return [contextLayer, candidateLayer]
 }
 
 export function createCommerceNodeLayer(
@@ -35,33 +109,28 @@ export function createCommerceNodeLayer(
   onClick: (info: PickingInfo<CommerceNode>) => void,
   selectedId: string | null,
 ): ScatterplotLayer<CommerceNode> {
-  const threshold = getTop10PercentThreshold(nodes)
-
+  const candidateNodes = getCandidateNodes(nodes, selectedId)
   return new ScatterplotLayer<CommerceNode>({
-    id: 'commerce-nodes',
-    data: nodes,
+    id: 'commerce-nodes-candidates',
+    data: candidateNodes,
     pickable: true,
     stroked: true,
     getPosition: (node) => node.coordinates,
-    getRadius: (node) => getRadius(node.netFlow),
-    getFillColor: (node) =>
-      getColor(node, node.degreeCentrality >= threshold || node.id === selectedId),
+    getRadius: (node) => getCandidateRadius(node, node.id === selectedId),
+    getFillColor: (node) => getCandidateColor(node, node.id === selectedId),
     getLineColor: (node) =>
-      node.id === selectedId
-        ? [236, 239, 241, 255]
-        : node.degreeCentrality >= threshold
-          ? [236, 239, 241, 220]
-          : [236, 239, 241, 80],
-    getLineWidth: (node) => (node.id === selectedId ? 90 : node.degreeCentrality >= threshold ? 60 : 20),
-    radiusUnits: 'meters',
-    lineWidthUnits: 'meters',
+      getGriBorderColor(node.griScore, node.id === selectedId),
+    getLineWidth: (node) =>
+      getGriBorderWidth(node.griScore, node.id === selectedId),
+    radiusUnits: 'pixels',
+    lineWidthUnits: 'pixels',
     onHover,
     onClick,
     updateTriggers: {
-      getRadius: nodes,
-      getFillColor: [nodes, selectedId],
-      getLineColor: [nodes, selectedId],
-      getLineWidth: [nodes, selectedId],
+      getRadius: [candidateNodes, selectedId],
+      getFillColor: [candidateNodes, selectedId],
+      getLineColor: [candidateNodes, selectedId],
+      getLineWidth: [candidateNodes, selectedId],
     },
   })
 }

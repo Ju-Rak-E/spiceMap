@@ -1,8 +1,9 @@
 # DB 스키마 정의 (spiceMap)
 
-> PostgreSQL + PostGIS  
-> ORM: SQLAlchemy (`backend/models.py`)  
-> 최종 수정: 2026-04-26
+> PostgreSQL + PostGIS
+> ORM: SQLAlchemy (`backend/models.py`)
+> 최종 수정: 2026-04-29
+> MVP 범위: 강남구(`11680`) · 관악구(`11620`)
 
 ---
 
@@ -12,65 +13,66 @@
 |--------|-----------|-----------|------|
 | `admin_boundary` | **OA-22160** | 서울시 상권분석서비스 (영역-행정동) | 서울 열린데이터광장 |
 | `commerce_boundary` | **OA-15560** | 서울시 상권분석서비스 (영역-상권) | 서울 열린데이터광장 |
-| `od_flows` | **OA-22300** | 수도권 광역 OD (생활이동) — Dev-A 로컬 원본 | 공공데이터포털 |
-| `od_flows_aggregated` | — | OD 분기 집계본 (팀 공유 canonical 입력) | Dev-C 산출 |
+| `od_flows` | **OA-22300** | 수도권 광역 OD (생활이동) 원본 | 공공데이터포털 |
+| `od_flows_aggregated` | - | OD 분기 집계본 | 내부 집계 산출 |
 | `living_population` | **OA-14991** | 서울 생활인구 (SPOP_LOCAL_RESD_DONG) | 공공데이터포털 |
 | `store_info` | **OA-15577** | 상권분석 점포정보 (VwsmSignguStorW) | 공공데이터포털 |
 | `commerce_sales` | **OA-15572** | 상권분석 추정매출 (VwsmTrdarSelngQq) | 공공데이터포털 |
-| `commerce_analysis` | — | Dev-C 분석 산출물 (GRI, 유형, 우선순위, 중심성, 폐업률 캐시) | — |
-| `flow_barriers` | — | Dev-C 분석 산출물 (흐름 단절 구간) | — |
-| `policy_cards` | — | Dev-C Module D 정책 추천 카드 (1상권 N카드) | — |
+| `commerce_analysis` | - | GRI, 유형, 우선순위, 중심성, 폐업률 캐시 | 내부 분석 산출 |
+| `adm_comm_mapping` | - | 행정동-상권 공간 교차 매핑 | `spatial_join.py` 산출 |
+| `flow_barriers` | - | 흐름 단절 구간 | 내부 분석 산출 |
+| `policy_cards` | - | 정책 추천 카드 | 내부 분석 산출 |
 
 ---
 
 ## 테이블 관계 개요
 
-```
+```text
 admin_boundary (행정동 폴리곤)
     ↕ 공간 결합 (PostGIS)
 commerce_boundary (상권 폴리곤)
     │
-    ├── od_flows          (행정동 간 이동량 → 상권 유입량 집계 재료)
-    ├── living_population (행정동별 시간대 생활인구)
-    ├── store_info        (자치구별 업종 점포 수·폐업률)
-    ├── commerce_sales    (상권별 추정 매출)
+    ├── adm_comm_mapping      (행정동-상권 면적 교차 비율)
+    ├── od_flows              (행정동 간 이동량 원본)
+    ├── od_flows_aggregated   (분기 OD 집계본)
+    ├── living_population     (행정동별 시간대 생활인구)
+    ├── store_info            (자치구별 업종 점포 수·폐업률)
+    ├── commerce_sales        (상권별 추정 매출)
     │
-    └── commerce_analysis (분석 결과 ← Dev-C 산출물, FastAPI가 서빙)
-         ├── flow_barriers  (흐름 단절 구간 ← Dev-C Module C)
-         └── policy_cards   (정책 추천 카드 ← Dev-C Module D, 1:N)
+    └── commerce_analysis     (FastAPI 서빙용 분석 결과)
+         ├── flow_barriers    (흐름 단절 구간)
+         └── policy_cards     (정책 추천 카드, 1:N)
 ```
 
 ---
 
-## 1. `admin_boundary` — 행정동 경계 `[서울시 상권분석서비스 영역-행정동]`
+## 1. `admin_boundary` — 행정동 경계
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
-| `adm_cd` | VARCHAR(10) PK | 행정동 코드 (8자리, 예: `11680500`) |
-| `adm_nm` | VARCHAR(100) | 행정동 명 (예: `역삼1동`) |
-| `gu_nm` | VARCHAR(50) | 자치구 명 (예: `강남구`) |
+| `adm_cd` | VARCHAR(10) PK | 행정동 코드 |
+| `adm_nm` | VARCHAR(100) | 행정동 명 |
+| `gu_nm` | VARCHAR(50) | 자치구 명 |
 | `geom` | MULTIPOLYGON (SRID 4326) | 행정동 경계 폴리곤 |
 
-**원본**: 서울시 상권분석서비스(영역-행정동) SHP  
-**용도**: OD 흐름 시각화 기준 폴리곤, 생활인구 히트맵, 행정동↔상권 공간 결합 기준
+**용도**: OD 흐름 시각화 기준 폴리곤, 생활인구 히트맵, 행정동-상권 공간 결합 기준.
 
 ---
 
-## 2. `commerce_boundary` — 상권 경계 `[서울시 상권분석서비스 영역-상권]`
+## 2. `commerce_boundary` — 상권 경계
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
-| `comm_cd` | VARCHAR(20) PK | 상권 코드 (예: `3110008`) |
-| `comm_nm` | VARCHAR(100) | 상권 명 (예: `배화여자대학교`) |
-| `comm_type` | VARCHAR(50) | 상권 유형 (예: `골목상권`, `발달상권`) |
+| `comm_cd` | VARCHAR(20) PK | 상권 코드 |
+| `comm_nm` | VARCHAR(100) | 상권 명 |
+| `comm_type` | VARCHAR(50) | 원천 상권 유형 |
 | `geom` | MULTIPOLYGON (SRID 4326) | 상권 경계 폴리곤 |
 
-**원본**: 서울시 상권분석서비스(영역-상권) SHP (1,650개 상권)  
-**용도**: 상권 노드 폴리곤, 분석 단위 기준, 행정동↔상권 공간 결합 대상
+**용도**: 상권 노드 폴리곤, 분석 단위 기준, 행정동-상권 공간 결합 대상.
 
 ---
 
-## 3. `od_flows` — 행정동 간 OD 이동량 `[OA-22300]`
+## 3. `od_flows` — 행정동 간 OD 이동량 원본
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -78,18 +80,31 @@ commerce_boundary (상권 폴리곤)
 | `base_date` | DATE | 기준일 |
 | `origin_adm_cd` | VARCHAR(10) | 출발 행정동 코드 |
 | `dest_adm_cd` | VARCHAR(10) | 도착 행정동 코드 |
-| `move_purpose` | INTEGER | 이동 목적 코드 (1=출근, 2=하원, 3=귀가, …) |
-| `in_forn_div` | VARCHAR(10) | 내외국인 구분 (`내국인` / `단기외국인` / `장기외국인`) |
+| `move_purpose` | INTEGER | 이동 목적 코드 |
+| `in_forn_div` | VARCHAR(10) | 내외국인 구분 |
 | `trip_count` | FLOAT | 이동 건수 추정값 |
 
-**원본**: OA-22300 (서울 광역 OD), 일별 ZIP 다운로드  
-**현황**: 2025-10-01 ~ 진행 중 (2025Q4 수집 중)  
-**MVP 필터**: 출발 또는 도착이 강남구(`1168xxxx`) · 관악구(`1162xxxx`)  
-**분석 활용**: 3개월 롤링 평균 → 분기 단위 집계, 행정동별 순유입·순유출 계산
+**MVP 필터**: 출발 또는 도착이 강남구(`1168xxxx`) · 관악구(`1162xxxx`).
 
 ---
 
-## 4. `living_population` — 서울 생활인구 `[OA-14991]`
+## 4. `od_flows_aggregated` — OD 분기 집계본
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| `id` | BIGINT PK | 자동 증가 |
+| `year_quarter` | VARCHAR(6) | 분기 |
+| `origin_adm_cd` | VARCHAR(10) | 출발 행정동 코드 |
+| `dest_adm_cd` | VARCHAR(10) | 도착 행정동 코드 |
+| `move_purpose` | INTEGER | 이동 목적 코드 |
+| `trip_count_sum` | FLOAT | 일자·내외국인 합산 이동량 |
+
+**유니크 제약**: `(year_quarter, origin_adm_cd, dest_adm_cd, move_purpose)`
+**용도**: Module A/B/C/D/E의 canonical OD 입력.
+
+---
+
+## 5. `living_population` — 서울 생활인구
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -99,87 +114,94 @@ commerce_boundary (상권 폴리곤)
 | `adm_cd` | VARCHAR(10) | 행정동 코드 |
 | `total_pop` | FLOAT | 총 생활인구 수 |
 
-**원본**: OA-14991 (서울 생활인구 월별 CSV 파일)  
-**현황**: 2025-10 ~ 2025-12 적재 완료 (94,944행)  
-**MVP 필터**: 강남구(`1168xxxx`) · 관악구(`1162xxxx`)  
-**분석 활용**: 출근피크(6~9시), 점심(11~14시), 저녁(17~20시) 평균 → 시간대 수요 지표
+**분석 활용**: 출근피크, 점심, 저녁 평균을 시간대 수요 지표로 사용.
 
 ---
 
-## 5. `store_info` — 자치구별 점포 정보 `[OA-15577]`
+## 6. `store_info` — 자치구별 점포 정보
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | `id` | BIGINT PK | 자동 증가 |
-| `year_quarter` | VARCHAR(6) | 연도분기 코드 (예: `20254`) |
-| `signgu_cd` | VARCHAR(10) | 자치구 코드 (예: `11680`) |
+| `year_quarter` | VARCHAR(6) | 연도분기 코드 |
+| `signgu_cd` | VARCHAR(10) | 자치구 코드 |
 | `signgu_nm` | VARCHAR(50) | 자치구 명 |
 | `industry_cd` | VARCHAR(20) | 업종 코드 |
 | `industry_nm` | VARCHAR(100) | 업종 명 |
 | `store_count` | FLOAT | 점포 수 |
-| `open_rate` | FLOAT | 개업률 (%) |
+| `open_rate` | FLOAT | 개업률 |
 | `open_count` | FLOAT | 개업 점포 수 |
-| `close_rate` | FLOAT | 폐업률 (%) |
+| `close_rate` | FLOAT | 폐업률 |
 | `close_count` | FLOAT | 폐업 점포 수 |
 | `franchise_count` | FLOAT | 프랜차이즈 점포 수 |
 
-**원본**: OA-15577 (VwsmSignguStorW), 분기별  
-**현황**: 5,599행 적재  
-**단위 주의**: 자치구 단위 (상권 코드 없음) — 상권과 결합 시 자치구 코드(`signgu_cd`) 기준
+**단위 주의**: 자치구 단위 데이터이므로 상권과 결합 시 `signgu_cd` 기준.
 
 ---
 
-## 6. `commerce_sales` — 상권별 추정 매출 `[OA-15572]`
+## 7. `commerce_sales` — 상권별 추정 매출
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | `id` | BIGINT PK | 자동 증가 |
-| `year_quarter` | VARCHAR(6) | 연도분기 코드 (예: `20254`) |
-| `trdar_cd` | VARCHAR(20) | 상권 코드 (`commerce_boundary.comm_cd`와 결합) |
+| `year_quarter` | VARCHAR(6) | 연도분기 코드 |
+| `trdar_cd` | VARCHAR(20) | 상권 코드 |
 | `trdar_nm` | VARCHAR(100) | 상권 명 |
-| `trdar_se_cd` | VARCHAR(5) | 상권 구분 코드 (`A`=골목, `D`=발달 등) |
+| `trdar_se_cd` | VARCHAR(5) | 상권 구분 코드 |
 | `industry_cd` | VARCHAR(20) | 업종 코드 |
 | `industry_nm` | VARCHAR(100) | 업종 명 |
-| `sales_amount` | FLOAT | 월 매출액 (원) |
+| `sales_amount` | FLOAT | 월 매출액 |
 | `sales_count` | FLOAT | 월 매출 건수 |
 | `weekday_sales` | FLOAT | 주중 매출액 |
 | `weekend_sales` | FLOAT | 주말 매출액 |
 
-**원본**: OA-15572 (VwsmTrdarSelngQq), 분기별  
-**현황**: 21,333행 적재  
-**결합 키**: `trdar_cd` ↔ `commerce_boundary.comm_cd`
+**결합 키**: `trdar_cd` ↔ `commerce_boundary.comm_cd`.
 
 ---
 
-## 7. `commerce_analysis` — 분석 결과 (Dev-C 산출)
+## 8. `commerce_analysis` — 분석 결과
 
-`grain = (year_quarter, comm_cd)` — 1행 = 1상권 분기 스냅샷. UNIQUE 제약.
+`grain = (year_quarter, comm_cd)` — 1행 = 1상권 분기 스냅샷.
 
 | 컬럼 | 타입 | 설명 | 산출 모듈 |
 |------|------|------|---------|
-| `id` | BIGINT PK | 자동 증가 | — |
-| `year_quarter` | VARCHAR(7) | 분기 (예: `2025Q4`) | — |
-| `comm_cd` | VARCHAR(20) | 상권 코드 | — |
-| `comm_nm` | VARCHAR(100) | 상권 명 | — |
-| `gri_score` | FLOAT | 상권 위험 지수 (0~100) | Module B |
+| `id` | BIGINT PK | 자동 증가 | - |
+| `year_quarter` | VARCHAR(7) | 분기 | - |
+| `comm_cd` | VARCHAR(20) | 상권 코드 | - |
+| `comm_nm` | VARCHAR(100) | 상권 명 | - |
+| `gri_score` | FLOAT | 상권 위험 지수 | Module B |
 | `flow_volume` | BIGINT | 유입 이동량 합산 | Module A |
 | `dominant_origin` | VARCHAR(10) | 주 유입 출발 행정동 코드 | Module A |
-| `net_flow` | INTEGER | 순유입 (in_degree − out_degree) | Module A |
-| `degree_centrality` | FLOAT | 연결 중심성 (NetworkX, 0~1) | Module A |
-| `commerce_type` | VARCHAR(20) | 5유형: 흡수형_과열/흡수형_성장/방출형_침체/고립형_단절/안정형 (+ unclassified) | Module D 분류기 (`commerce_type.py`) |
-| `priority_score` | FLOAT | 정책 우선순위 (0~100 percentile rank) | Module E |
-| `closure_rate` | FLOAT | 자치구 분기 폐업률 % (store_info 집계 캐시) | store_info 집계 |
-| `analysis_note` | TEXT | 정책 제언 텍스트 (요약) | — |
-| `computed_at` | TIMESTAMP | 분석 실행 시각 | server_default=now() |
+| `net_flow` | FLOAT | 순유입 | Module A |
+| `degree_centrality` | FLOAT | 연결 중심성 | Module A |
+| `commerce_type` | VARCHAR(20) | 5유형 및 `unclassified` | Module D |
+| `priority_score` | FLOAT | 정책 우선순위 | Module E |
+| `closure_rate` | FLOAT | 자치구 분기 폐업률 | store_info 집계 |
+| `analysis_note` | TEXT | 정책 제언 요약 | - |
+| `computed_at` | TIMESTAMP | 분석 실행 시각 | - |
 
-**제약**: `UNIQUE(year_quarter, comm_cd)` — 분기·상권당 1행만 유지 (UPSERT).
-**서빙**: FastAPI가 직접 쿼리 → `/api/commerce/type-map` 응답에 모든 필드 노출.
-**현황**: 0행 (Week 3 INSERT 파이프라인 대기)
-**참고**: PolicyCard 본문은 1:N이므로 별도 `policy_cards` 테이블에 저장.
+**제약**: `UNIQUE(year_quarter, comm_cd)`
+**서빙**: `/api/commerce/type-map` 응답에 분석 필드를 GeoJSON properties로 노출.
 
 ---
 
-## 8. `flow_barriers` — 흐름 단절 구간 (Dev-C 산출)
+## 9. `adm_comm_mapping` — 행정동-상권 공간 교차 매핑
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| `id` | BIGINT PK | 자동 증가 |
+| `adm_cd` | VARCHAR(10) | 행정동 코드 |
+| `comm_cd` | VARCHAR(20) | 상권 코드 |
+| `overlap_area` | FLOAT | 교차 면적 |
+| `comm_area_ratio` | FLOAT | 상권 기준 면적 비율 |
+| `adm_area_ratio` | FLOAT | 행정동 기준 면적 비율 |
+
+**유니크 제약**: `(adm_cd, comm_cd)`
+**용도**: 행정동 데이터를 상권 단위로 배분하거나 상권 데이터를 행정동으로 역배분.
+
+---
+
+## 10. `flow_barriers` — 흐름 단절 구간
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
@@ -187,36 +209,30 @@ commerce_boundary (상권 폴리곤)
 | `year_quarter` | VARCHAR(7) | 분기 |
 | `from_comm_cd` | VARCHAR(20) | 출발 상권 코드 |
 | `to_comm_cd` | VARCHAR(20) | 도착 상권 코드 |
-| `barrier_score` | FLOAT | 단절 강도 (높을수록 단절) |
-| `barrier_type` | VARCHAR(50) | 단절 유형 (예: `도로`, `경계`) |
-
-**산출**: Dev-C Module C (흐름 단절 탐지)
-**현황**: 미산출 (Week 2 대상)
+| `barrier_score` | FLOAT | 단절 강도 |
+| `barrier_type` | VARCHAR(50) | 단절 유형 |
 
 ---
 
-## 9. `policy_cards` — 정책 추천 카드 (Dev-C Module D)
+## 11. `policy_cards` — 정책 추천 카드
 
-`grain = (year_quarter, comm_cd, rule_id)` — 1상권당 R4~R7 중 발동된 룰 0~4건. UNIQUE 제약.
-`backend/schemas/insights.py:PolicyCard` Pydantic 스키마와 1:1 매핑.
+`grain = (year_quarter, comm_cd, rule_id)` — 1상권당 0~N건.
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | `id` | BIGINT PK | 자동 증가 |
-| `year_quarter` | VARCHAR(7) | 분기 (예: `2026Q1`) |
+| `year_quarter` | VARCHAR(7) | 분기 |
 | `comm_cd` | VARCHAR(20) | 상권 코드 |
 | `comm_nm` | VARCHAR(100) | 상권 명 |
-| `rule_id` | VARCHAR(8) | 발동 룰 ID (R1~R8) |
+| `rule_id` | VARCHAR(8) | 발동 룰 ID |
 | `severity` | VARCHAR(10) | `Critical` / `High` / `Medium` / `Low` |
 | `policy_text` | TEXT | 정책 추천 본문 |
-| `rationale` | TEXT | 발동 근거 1문장 |
-| `triggering_metrics` | JSONB | 발동 시 지표 스냅샷 (`gri_score`, `net_flow`, `degree_centrality`, `closure_rate`) |
-| `generation_mode` | VARCHAR(20) | `rule_based` / `llm` (현 v1.0은 rule_based 고정) |
-| `generated_at` | TIMESTAMP | 카드 생성 시각 (server_default=now()) |
+| `rationale` | TEXT | 발동 근거 |
+| `triggering_metrics` | JSONB | 발동 시 지표 스냅샷 |
+| `generation_mode` | VARCHAR(20) | `rule_based` / `llm` |
+| `generated_at` | TIMESTAMP | 카드 생성 시각 |
 
-**제약**: `UNIQUE(year_quarter, comm_cd, rule_id)`.
-**서빙**: `/api/insights/policy?comm_cd=...&quarter=...` → JSON 배열 반환.
-**현황**: 0행 (Week 3 INSERT 파이프라인 대기)
+**서빙**: `/api/insights/policy?comm_cd=...&quarter=...`.
 
 ---
 
@@ -224,41 +240,32 @@ commerce_boundary (상권 폴리곤)
 
 | 테이블 | 행 수 | 데이터 범위 | 상태 |
 |--------|-------|-----------|------|
-| `admin_boundary` | 425 | 서울시 행정동 전체 | ✅ 완료 |
-| `commerce_boundary` | 1,650 | 서울시 상권 전체 | ✅ 완료 |
-| `od_flows` | 80,573,657 | 2025-10-01 ~ 2026-02-28 (강남·관악 MVP 필터) | ✅ 완료 |
-| `living_population` | 94,944 | 2025-10-01 ~ 2025-12-31 (강남·관악 MVP 필터) | ✅ 완료 |
-| `store_info` | 5,599 | 2019Q1 ~ 2025Q4 | ✅ 완료 |
-| `commerce_sales` | 21,333 | 2025Q4 | ✅ 완료 |
-| `commerce_analysis` | 0 | — | Week 3 INSERT 파이프라인 대기 (모델 확장 완료 4/26) |
-| `flow_barriers` | 0 | — | Week 2 (Dev-C 산출 대기) |
-| `policy_cards` | 0 | — | Week 3 INSERT 파이프라인 대기 (모델 신규 4/26) |
-
-> 최종 갱신: 2026-04-26
+| `admin_boundary` | 425 | 서울시 행정동 전체 | 완료 |
+| `commerce_boundary` | 1,650 | 서울시 상권 전체 | 완료 |
+| `od_flows` | 80,573,657 | 2025-10-01 ~ 2026-02-28, 강남·관악 MVP 필터 | 완료 |
+| `living_population` | 94,944 | 2025-10-01 ~ 2025-12-31, 강남·관악 MVP 필터 | 완료 |
+| `store_info` | 5,599 | 2019Q1 ~ 2025Q4 | 완료 |
+| `commerce_sales` | 21,333 | 2025Q4 | 완료 |
+| `commerce_analysis` | 0 | - | INSERT 파이프라인 대기 |
+| `adm_comm_mapping` | - | - | 공간 조인 산출 대상 |
+| `flow_barriers` | 0 | - | 분석 산출 대기 |
+| `policy_cards` | 0 | - | 분석 산출 대기 |
 
 ---
 
 ## DB 접속 방법 (로컬)
 
 ```bash
-# docker-compose 실행 (처음 한 번)
 docker compose up -d
-
-# psql 접속
 psql -h localhost -p 5433 -U postgres -d spicemap
-
-# 테이블 목록 확인
 \dt
-
-# 스키마 확인 (예: od_flows)
 \d od_flows
-
-# 행 수 확인
 SELECT COUNT(*) FROM od_flows;
 ```
 
-`.env` 파일 필요 (팀장에게 요청):
-```
+`.env` 파일 필요:
+
+```dotenv
 DB_HOST=localhost
 DB_PORT=5433
 DB_NAME=spicemap

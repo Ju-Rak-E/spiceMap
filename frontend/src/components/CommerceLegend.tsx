@@ -1,6 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceType } from '../styles/tokens'
+
+const CLASSIFIED_TYPES = [
+  '흡수형_과열',
+  '흡수형_성장',
+  '방출형_침체',
+  '고립형_단절',
+  '안정형',
+] as const
+
+const UNCLASSIFIED_TYPES = ['미분류'] as const
 
 interface CommerceLegendProps {
   theme?: 'dark' | 'light'
@@ -26,8 +36,22 @@ export default function CommerceLegend({
   selectedTypes,
   onToggle,
 }: CommerceLegendProps) {
-  const [open, setOpen] = useState(false)
+  const isFirstVisit = !sessionStorage.getItem('legend-seen')
+  const [open, setOpen] = useState(isFirstVisit)
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    originX: number
+    originY: number
+    moved: boolean
+  } | null>(null)
+  const suppressClickRef = useRef(false)
+  const [parentHeight, setParentHeight] = useState(() =>
+    typeof window === 'undefined' ? 0 : window.innerHeight,
+  )
   const isDark = theme === 'dark'
   const bg = isDark ? 'rgba(16,22,29,0.96)' : 'rgba(255,255,255,0.96)'
   const panelBg = isDark ? 'rgba(21,29,38,0.98)' : 'rgba(247,249,251,0.98)'
@@ -37,6 +61,25 @@ export default function CommerceLegend({
   const buttonBg = isDark ? '#151D26' : '#FFFFFF'
   const summaryLabel = useMemo(() => getSummaryLabel(selectedTypes), [selectedTypes])
   const allSelected = selectedTypes.size === Object.keys(COMMERCE_COLORS).length
+  const opensDown = position ? position.y < parentHeight / 2 : false
+
+  useLayoutEffect(() => {
+    const parent = containerRef.current?.parentElement
+    if (!parent) return
+
+    const updateHeight = () => setParentHeight(parent.clientHeight)
+    updateHeight()
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(parent)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!isFirstVisit) return
+    sessionStorage.setItem('legend-seen', '1')
+    const timer = setTimeout(() => setOpen(false), 3000)
+    return () => clearTimeout(timer)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return
@@ -61,13 +104,59 @@ export default function CommerceLegend({
     }
   }, [open])
 
+  const handleDragStart = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0 || !containerRef.current?.parentElement) return
+    const parentRect = containerRef.current.parentElement.getBoundingClientRect()
+    const rect = containerRef.current.getBoundingClientRect()
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left - parentRect.left,
+      originY: rect.top - parentRect.top,
+      moved: false,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handleDragMove = (event: PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== event.pointerId || !containerRef.current?.parentElement) return
+    const dx = event.clientX - drag.startX
+    const dy = event.clientY - drag.startY
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return
+    drag.moved = true
+
+    const parentRect = containerRef.current.parentElement.getBoundingClientRect()
+    const rect = containerRef.current.getBoundingClientRect()
+    const maxX = Math.max(0, parentRect.width - rect.width)
+    const maxY = Math.max(0, parentRect.height - rect.height)
+    setPosition({
+      x: Math.max(0, Math.min(maxX, drag.originX + dx)),
+      y: Math.max(48, Math.min(maxY, drag.originY + dy)),
+    })
+  }
+
+  const handleDragEnd = (event: PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    dragRef.current = null
+    if (drag.moved) {
+      suppressClickRef.current = true
+      window.setTimeout(() => {
+        suppressClickRef.current = false
+      }, 0)
+    }
+  }
+
   return (
     <div
       ref={containerRef}
       style={{
         position: 'absolute',
-        bottom,
-        right: 16,
+        ...(position
+          ? { left: position.x, top: position.y }
+          : { bottom, right: 16 }),
         zIndex: 7,
         userSelect: 'none',
       }}
@@ -76,7 +165,7 @@ export default function CommerceLegend({
         <div
           style={{
             position: 'absolute',
-            bottom: 52,
+            ...(opensDown ? { top: 52 } : { bottom: 52 }),
             right: 0,
             width: 232,
             background: panelBg,
@@ -113,8 +202,9 @@ export default function CommerceLegend({
             </button>
           </div>
 
-          {(Object.entries(COMMERCE_COLORS) as [CommerceType, typeof COMMERCE_COLORS[CommerceType]][]).map(
-            ([key, token]) => {
+          {[...CLASSIFIED_TYPES, ...UNCLASSIFIED_TYPES].map(
+            (key) => {
+              const token = COMMERCE_COLORS[key]
               const active = selectedTypes.has(key)
               return (
                 <button
@@ -129,8 +219,9 @@ export default function CommerceLegend({
                     width: '100%',
                     background: 'none',
                     border: 'none',
+                    borderTop: key === '미분류' ? `1px solid ${border}` : 'none',
                     cursor: 'pointer',
-                    padding: '4px 0',
+                    padding: key === '미분류' ? '10px 0 4px' : '4px 0',
                     borderRadius: 4,
                     opacity: active ? 1 : 0.38,
                     transition: 'opacity 0.15s',
@@ -174,7 +265,17 @@ export default function CommerceLegend({
       <button
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen(prev => !prev)}
+        onPointerDown={handleDragStart}
+        onPointerMove={handleDragMove}
+        onPointerUp={handleDragEnd}
+        onPointerCancel={handleDragEnd}
+        onClick={(event) => {
+          if (suppressClickRef.current) {
+            event.preventDefault()
+            return
+          }
+          setOpen(prev => !prev)
+        }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -190,6 +291,7 @@ export default function CommerceLegend({
           boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
           cursor: 'pointer',
           backdropFilter: 'blur(10px)',
+          touchAction: 'none',
         }}
       >
         <span

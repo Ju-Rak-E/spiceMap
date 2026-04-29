@@ -10,14 +10,24 @@ import type { CommerceType } from './styles/tokens'
 import { COMMERCE_COLORS } from './styles/tokens'
 import './App.css'
 
-const ALL_TYPES = new Set(Object.keys(COMMERCE_COLORS) as CommerceType[])
+const ALL_TYPES = Object.keys(COMMERCE_COLORS) as CommerceType[]
+const DEFAULT_TYPES = new Set(
+  ALL_TYPES.filter(
+    (type) => COMMERCE_COLORS[type].icon !== 'help-circle',
+  ),
+)
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
   1: 5, 2: 10, 3: 15, 4: 20, 5: 30,
 }
 
-const BOUNDARY_OPACITY = 0.2
-const SCOPE_LABEL = '강남구·관악구 시범'
+const BOUNDARY_OPACITY = 0.08
+const SCOPE_LABEL = '강남구·관악구 창업 시범'
+const DEFAULT_QUARTER = '2025Q4'
+const QUARTERS = [
+  '2024Q1', '2024Q2', '2024Q3', '2024Q4',
+  '2025Q1', '2025Q4',
+]
 
 export default function App() {
   const [purpose, setPurpose] = useState<FlowPurpose | null>(null)
@@ -25,13 +35,14 @@ export default function App() {
   const [flowStrength, setFlowStrength] = useState(3)
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(new Set())
-  const [selectedTypes, setSelectedTypes] = useState<Set<CommerceType>>(new Set(ALL_TYPES))
+  const [selectedTypes, setSelectedTypes] = useState<Set<CommerceType>>(new Set(DEFAULT_TYPES))
+  const [selectedQuarter, setSelectedQuarter] = useState(DEFAULT_QUARTER)
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
-  const { nodes: rawNodes, usingMockData } = useCommerceData()
-  const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour })
+  const { nodes: rawNodes, usingMockData } = useCommerceData(selectedQuarter)
+  const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour, quarter: selectedQuarter })
 
   const nodes = filterNodesByType(
     filterNodesByDistrict(rawNodes, selectedDistricts),
@@ -41,14 +52,18 @@ export default function App() {
   useEffect(() => {
     if (!selectedNode) return
     if (!nodes.some(node => node.id === selectedNode.id)) {
-      setSelectedNode(null)
+      queueMicrotask(() => setSelectedNode(null))
     }
   }, [nodes, selectedNode])
 
   const handleToggleDistrict = useCallback((district: string) => {
     setSelectedDistricts(prev => {
       const next = new Set(prev)
-      next.has(district) ? next.delete(district) : next.add(district)
+      if (next.has(district)) {
+        next.delete(district)
+      } else {
+        next.add(district)
+      }
       return next
     })
   }, [])
@@ -56,7 +71,11 @@ export default function App() {
   const handleToggleType = useCallback((type: CommerceType) => {
     setSelectedTypes(prev => {
       const next = new Set(prev)
-      next.has(type) ? next.delete(type) : next.add(type)
+      if (next.has(type)) {
+        next.delete(type)
+      } else {
+        next.add(type)
+      }
       return next
     })
   }, [])
@@ -74,8 +93,10 @@ export default function App() {
           topN={topN}
           scopeLabel={SCOPE_LABEL}
           dataStatusLabel={usingMockData ? '캐시 데이터' : 'API 연결'}
+          selectedQuarter={selectedQuarter}
           boundaryOpacity={BOUNDARY_OPACITY}
           selectedTypes={selectedTypes}
+          selectedDistricts={selectedDistricts}
           selectedNode={selectedNode}
           onSelectNode={setSelectedNode}
           onToggleType={handleToggleType}
@@ -89,10 +110,13 @@ export default function App() {
         onHourChange={setHour}
         flowStrength={flowStrength}
         onStrengthChange={setFlowStrength}
+        selectedQuarter={selectedQuarter}
+        quarters={QUARTERS}
+        onQuarterChange={setSelectedQuarter}
         topN={topN}
         scopeLabel={SCOPE_LABEL}
         usingMockData={usingMockData}
-        selectedTypes={selectedTypes}
+        nodes={nodes}
         selectedNode={selectedNode}
         stats={{
           totalVolume: flowData.totalVolume,
@@ -100,6 +124,7 @@ export default function App() {
           topInflow: flowData.topInflow,
           topOutflow: flowData.topOutflow,
         }}
+        purposeTotals={flowData.purposeTotals}
         isPlaying={isPlaying}
         speed={speed}
         onPlay={play}
@@ -107,7 +132,7 @@ export default function App() {
         onToggleSpeed={toggleSpeed}
         selectedDistricts={selectedDistricts}
         onToggleDistrict={handleToggleDistrict}
-        onToggleType={handleToggleType}
+        onSelectNode={setSelectedNode}
       />
     </div>
   )

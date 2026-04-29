@@ -29,8 +29,13 @@ class TestOdFlows:
             FakeRow(
                 origin_adm_cd="1168010100",
                 origin_adm_nm="역삼1동",
+                source_lng=127.036,
+                source_lat=37.5,
                 dest_adm_cd="1162010200",
                 dest_adm_nm="신림동",
+                target_lng=126.929,
+                target_lat=37.484,
+                move_purpose=1,
                 trip_count=4200.0,
             )
         ]
@@ -47,7 +52,9 @@ class TestOdFlows:
         assert data["total_flows"] == 1
         assert data["flows"][0]["origin_adm_cd"] == "1168010100"
         assert data["flows"][0]["trip_count"] == 4200.0
-        assert data["flows"][0]["move_purpose"] is None
+        assert data["flows"][0]["move_purpose"] == 1
+        assert data["flows"][0]["sourceCoord"] == [127.036, 37.5]
+        assert data["flows"][0]["targetCoord"] == [126.929, 37.484]
 
         app.dependency_overrides.clear()
 
