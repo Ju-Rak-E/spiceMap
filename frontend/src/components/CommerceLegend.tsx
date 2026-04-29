@@ -36,7 +36,8 @@ export default function CommerceLegend({
   selectedTypes,
   onToggle,
 }: CommerceLegendProps) {
-  const [open, setOpen] = useState(false)
+  const isFirstVisit = !sessionStorage.getItem('legend-seen')
+  const [open, setOpen] = useState(isFirstVisit)
   const containerRef = useRef<HTMLDivElement>(null)
   const isDark = theme === 'dark'
   const bg = isDark ? 'rgba(16,22,29,0.96)' : 'rgba(255,255,255,0.96)'
@@ -47,6 +48,13 @@ export default function CommerceLegend({
   const buttonBg = isDark ? '#151D26' : '#FFFFFF'
   const summaryLabel = useMemo(() => getSummaryLabel(selectedTypes), [selectedTypes])
   const allSelected = selectedTypes.size === Object.keys(COMMERCE_COLORS).length
+
+  useEffect(() => {
+    if (!isFirstVisit) return
+    sessionStorage.setItem('legend-seen', '1')
+    const timer = setTimeout(() => setOpen(false), 3000)
+    return () => clearTimeout(timer)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return
