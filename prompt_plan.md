@@ -97,7 +97,8 @@
 - [x] closure_rate spatial join 정밀화 — **2026-04-29 PR #23** signgu_cd 기반(adm_cd 앞 5자리), PostGIS LATERAL ST_Contains, fallback 휴리스틱 유지. Supabase 검증: 1,650 commerces 매핑 + 178 closure 결합
 - [x] admin_boundary.gu_nm 백필 + 자동 도출 — **2026-04-29 PR #24** Supabase 425/425 자치구 채워짐, `load_spatial.py`에 `SEOUL_SIGUNGU_CD_TO_NM` 추가로 향후 재적재 자동화. type-map gu 필터 정상 작동(강남 104·관악 74)
 - [x] 수상 전략 + 실용성 강화 플랜(D-13) — **2026-04-29 PR #22** `docs/strategy_d13.md`. 핵심 의사결정 5건 + 13일 일정 + 평가축 매핑
-- [ ] 2025Q3 od_flows_aggregated 적재 — Dev-C 진행 중 (서울 OA-22300 일별 ZIP 92일 자동 다운로드 + MVP 필터 + 분기 집계 + Supabase MCP 적재 파이프라인)
+- [x] 2025Q3 od_flows_aggregated 적재 — **2026-04-29** 서울 OA-22300 일별 ZIP 92일(7/1~9/30) 자동 다운로드 + MVP 필터 + 분기 집계 + psycopg2 `execute_values` 업로드. 인코딩 fallback(cp949→utf-8), 5일마다 rolling 컴팩트+체크포인트로 메모리 35MB 제한. 결과 183,506행 (median 256.4, max 3,059,390, total 415M)
+- [x] 2025Q4 od_flows_aggregated 재적재 — **2026-04-29** Q3 적재 후 검증에서 Q4 `trip_count_sum` 단위 불일치 발견(median 3.5 vs Q3 256). 동일 파이프라인으로 92일(10/1~12/31) 재처리 + `ON CONFLICT DO UPDATE` 덮어쓰기. 결과 182,971행 (median 256.8, max 2,898,398, total 405M). Q3·Q4 비율 0.94~1.05로 동등 척도 확보 → trend_penalty/H2/H3/Hero shot 모두 활성
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
 
