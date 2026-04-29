@@ -16,9 +16,13 @@ const STRENGTH_TO_TOP_N: Record<number, number> = {
   1: 5, 2: 10, 3: 15, 4: 20, 5: 30,
 }
 
-const BOUNDARY_OPACITY = 0.2
-const SCOPE_LABEL = '강남구·관악구 시범'
+const BOUNDARY_OPACITY = 0.08
+const SCOPE_LABEL = '강남구·관악구 창업 시범'
 const DEFAULT_QUARTER = '2025Q4'
+const QUARTERS = [
+  '2024Q1', '2024Q2', '2024Q3', '2024Q4',
+  '2025Q1', '2025Q4',
+]
 
 export default function App() {
   const [purpose, setPurpose] = useState<FlowPurpose | null>(null)
@@ -101,11 +105,12 @@ export default function App() {
         flowStrength={flowStrength}
         onStrengthChange={setFlowStrength}
         selectedQuarter={selectedQuarter}
+        quarters={QUARTERS}
         onQuarterChange={setSelectedQuarter}
         topN={topN}
         scopeLabel={SCOPE_LABEL}
         usingMockData={usingMockData}
-        selectedTypes={selectedTypes}
+        nodes={nodes}
         selectedNode={selectedNode}
         stats={{
           totalVolume: flowData.totalVolume,
@@ -113,6 +118,7 @@ export default function App() {
           topInflow: flowData.topInflow,
           topOutflow: flowData.topOutflow,
         }}
+        purposeTotals={flowData.purposeTotals}
         isPlaying={isPlaying}
         speed={speed}
         onPlay={play}
@@ -120,7 +126,7 @@ export default function App() {
         onToggleSpeed={toggleSpeed}
         selectedDistricts={selectedDistricts}
         onToggleDistrict={handleToggleDistrict}
-        onToggleType={handleToggleType}
+        onSelectNode={setSelectedNode}
       />
     </div>
   )

@@ -15,6 +15,9 @@ class CommerceProperties(BaseModel):
     comm_type: str | None = None           # Week 4 클린업 예정 — commerce_type 미러
     gri_score: float | None
     flow_volume: int | None
+    net_flow: float | None = None
+    degree_centrality: float | None = None
+    close_rate: float | None = None
     dominant_origin: str | None
     analysis_note: str | None
     centroid_lng: float | None = None

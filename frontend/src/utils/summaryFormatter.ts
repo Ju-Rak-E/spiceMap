@@ -13,7 +13,7 @@ export function buildSummaryText(
   purpose: FlowPurpose | null,
   hour: number,
   topN: number,
-  selectedTypes: Set<CommerceType>,
+  _selectedTypes: Set<CommerceType>,
   nodes: CommerceNode[],
 ): string {
   if (nodes.length === 0) return ''

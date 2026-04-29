@@ -303,4 +303,34 @@ describe('normalizeBackendFlows', () => {
     expect(result?.[0].targetCoord).toEqual([126.929, 37.484])
     expect(result?.[0].purpose).toBe('여가')
   })
+
+  it('좌표가 없는 일부 행은 건너뛰고 나머지 흐름은 유지한다', () => {
+    const result = normalizeBackendFlows({
+      quarter: '2025Q4',
+      total_flows: 2,
+      flows: [
+        {
+          origin_adm_cd: 'BAD',
+          origin_adm_nm: null,
+          dest_adm_cd: 'SKIP',
+          dest_adm_nm: null,
+          trip_count: 9999,
+          move_purpose: 7,
+        },
+        {
+          origin_adm_cd: '11680640',
+          origin_adm_nm: '역삼1동',
+          dest_adm_cd: '11680580',
+          dest_adm_nm: '삼성1동',
+          trip_count: 1000,
+          move_purpose: 7,
+          sourceCoord: [127.036, 37.5],
+          targetCoord: [127.063, 37.514],
+        },
+      ],
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result?.[0].id).toBe('11680640-11680580')
+  })
 })

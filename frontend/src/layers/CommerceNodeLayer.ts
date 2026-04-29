@@ -24,20 +24,16 @@ function getColor(node: CommerceNode, isHighlight: boolean): [number, number, nu
 }
 
 export function getGriBorderColor(
-  griScore: number,
+  _griScore: number,
   isSelected: boolean,
 ): [number, number, number, number] {
-  if (isSelected) return [236, 239, 241, 255]
-  if (griScore >= 70) return [239, 83, 80, 255]
-  if (griScore >= 40) return [255, 167, 38, 255]
-  return [236, 239, 241, 80]
+  if (isSelected) return [123, 208, 141, 255]
+  return [0, 0, 0, 0]
 }
 
-export function getGriBorderWidth(griScore: number, isSelected: boolean): number {
+export function getGriBorderWidth(_griScore: number, isSelected: boolean): number {
   if (isSelected) return 90
-  if (griScore >= 70) return 90
-  if (griScore >= 40) return 60
-  return 20
+  return 0
 }
 
 export function createCommerceNodeLayer(

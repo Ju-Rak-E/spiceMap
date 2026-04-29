@@ -1,8 +1,9 @@
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceNode } from '../types/commerce'
-import { useGriHistory } from '../hooks/useGriHistory'
+import { useGriHistory, type GriPoint } from '../hooks/useGriHistory'
 import { formatQuarter } from '../utils/quarter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
+import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
 import TrendChart from './TrendChart'
 
 interface CommerceDetailPanelProps {
@@ -142,6 +143,20 @@ function netFlowColor(v: number): string {
   return v >= 0 ? '#43A047' : '#EF5350'
 }
 
+function getLatestRiskDelta(series: GriPoint[]): number | null {
+  if (series.length < 2) return null
+  const latest = series[series.length - 1]
+  const previous = series[series.length - 2]
+  return latest.gri - previous.gri
+}
+
+function deltaColor(delta: number | null): string | undefined {
+  if (delta == null) return undefined
+  if (delta > 0) return '#EF5350'
+  if (delta < 0) return '#43A047'
+  return '#ECEFF1'
+}
+
 export default function CommerceDetailPanel({
   node,
   quarter,
@@ -176,6 +191,7 @@ export default function CommerceDetailPanel({
   const colorToken = COMMERCE_COLORS[node.type]
   const startup = deriveStartupSummary(node)
   const icon = TYPE_ICON[node.type] ?? 'type'
+  const riskDelta = getLatestRiskDelta(series)
 
   return (
     <div style={S.overlay}>
@@ -223,7 +239,7 @@ export default function CommerceDetailPanel({
           <div style={S.kpiCard}>
             <div style={S.kpiLabel}>고객 흐름</div>
             <div style={S.kpiValue(netFlowColor(node.netFlow))}>{startup.flowLabel}</div>
-            <div style={S.sourceLabel}>순유입 {node.netFlow >= 0 ? '+' : ''}{node.netFlow}</div>
+            <div style={S.sourceLabel}>{`순유입 ${formatSignedFixed2(node.netFlow)}`}</div>
           </div>
           <div style={S.kpiCard}>
             <div style={S.kpiLabel}>폐업률</div>
@@ -234,8 +250,26 @@ export default function CommerceDetailPanel({
           </div>
           <div style={S.kpiCard}>
             <div style={S.kpiLabel}>상권 위험도</div>
-            <div style={S.kpiValue(colorToken.fill)}>{node.griScore}</div>
+            <div style={S.kpiValue(colorToken.fill)}>{formatFixed2(node.griScore)}</div>
             <div style={S.sourceLabel}>GRI 기반 보조 지표</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style={S.sectionTitle}>전 분기 대비</div>
+        <div style={S.kpiGrid}>
+          <div style={S.kpiCard}>
+            <div style={S.kpiLabel}>상권 위험도 변화</div>
+            <div style={S.kpiValue(deltaColor(riskDelta))}>
+              {riskDelta == null ? '-' : formatSignedFixed2(riskDelta)}
+            </div>
+            <div style={S.sourceLabel}>GRI 최근 2개 분기 기준</div>
+          </div>
+          <div style={S.kpiCard}>
+            <div style={S.kpiLabel}>순유입 변화</div>
+            <div style={S.kpiValue()}>준비중</div>
+            <div style={S.sourceLabel}>분기별 OD 합산 API 연결 예정</div>
           </div>
         </div>
       </div>

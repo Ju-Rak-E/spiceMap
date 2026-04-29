@@ -76,8 +76,11 @@ export interface FlowStats {
   topOutflow: string | null
 }
 
+export type PurposeVolumeMap = Record<FlowPurpose, number>
+
 export interface UseFlowDataReturn extends FlowStats {
   flows: ODFlow[]
+  purposeTotals: PurposeVolumeMap
   isLoading: boolean
   error: string | null
 }
@@ -102,7 +105,7 @@ export function normalizeBackendFlows(response: BackendOdFlowsResponse): ODFlow[
   for (const flow of response.flows) {
     const sourceCoord = flow.sourceCoord ?? flow.source_coord
     const targetCoord = flow.targetCoord ?? flow.target_coord
-    if (!sourceCoord || !targetCoord) return null
+    if (!sourceCoord || !targetCoord) continue
     flows.push({
       id: `${flow.origin_adm_cd}-${flow.dest_adm_cd}`,
       sourceId: flow.origin_adm_nm ?? flow.origin_adm_cd,
@@ -114,7 +117,7 @@ export function normalizeBackendFlows(response: BackendOdFlowsResponse): ODFlow[
     })
   }
 
-  return flows
+  return flows.length > 0 ? flows : null
 }
 
 export function filterFlows(flows: ODFlow[], filters: FlowFilters): ODFlow[] {
@@ -136,6 +139,21 @@ export function filterFlows(flows: ODFlow[], filters: FlowFilters): ODFlow[] {
   }
 
   return result
+}
+
+export function computePurposeTotals(flows: ODFlow[], hour?: number): PurposeVolumeMap {
+  const totals = {} as PurposeVolumeMap
+  for (const purpose of VALID_PURPOSES) {
+    totals[purpose as FlowPurpose] = 0
+  }
+
+  for (const flow of flows) {
+    if (!VALID_PURPOSES.has(flow.purpose)) continue
+    const scale = hour === undefined ? 1 : getHourScale(flow.purpose, hour)
+    totals[flow.purpose] += Math.round(flow.volume * scale)
+  }
+
+  return totals
 }
 
 export function computeStats(flows: ODFlow[]): FlowStats {
@@ -209,6 +227,7 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
 
   const flows = filterFlows(allFlows, filters)
   const stats = computeStats(flows)
+  const purposeTotals = computePurposeTotals(allFlows, filters.hour)
 
-  return { flows, isLoading, error, ...stats }
+  return { flows, purposeTotals, isLoading, error, ...stats }
 }

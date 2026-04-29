@@ -28,15 +28,6 @@ vi.mock('../hooks/useGriHistory', () => ({
   }),
 }))
 
-vi.mock('../hooks/usePolicyInsights', () => ({
-  usePolicyInsights: () => ({
-    insights: [],
-    insight: null,
-    isLoading: false,
-    error: null,
-  }),
-}))
-
 afterEach(() => {
   cleanup()
 })
@@ -51,19 +42,19 @@ describe('CommerceDetailPanel', () => {
     expect(screen.getByText('역삼 먹자골목')).toBeTruthy()
   })
 
-  it('GRI 점수가 표시된다', () => {
+  it('상권 위험도 점수가 표시된다', () => {
     renderPanel()
-    expect(screen.getAllByText('82').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('82.00').length).toBeGreaterThan(0)
   })
 
-  it('상권 유형 라벨이 표시된다', () => {
+  it('창업 적합도 라벨이 표시된다', () => {
     renderPanel()
-    expect(screen.getAllByText('흡수형_과열').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('비추천').length).toBeGreaterThan(0)
   })
 
   it('순유입 값이 표시된다', () => {
     renderPanel()
-    expect(screen.getAllByText('+1200').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/1200/).length).toBeGreaterThan(0)
   })
 
   it('닫기 버튼 클릭 시 onClose가 호출된다', async () => {
@@ -78,8 +69,8 @@ describe('CommerceDetailPanel', () => {
     expect(document.querySelector('svg')).toBeTruthy()
   })
 
-  it('정책 카드가 없으면 빈 상태를 표시한다', () => {
+  it('업종 힌트가 표시된다', () => {
     renderPanel()
-    expect(screen.getAllByText('발동된 정책 없음').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('업종 힌트').length).toBeGreaterThan(0)
   })
 })

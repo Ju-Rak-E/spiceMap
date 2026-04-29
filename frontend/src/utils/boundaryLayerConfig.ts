@@ -1,6 +1,7 @@
 import { MAP_THEME, type MapTheme } from '../styles/tokens'
+import type { ExpressionSpecification } from 'maplibre-gl'
 
-type MaplibreExpression = unknown[]
+type MaplibreExpression = ExpressionSpecification
 
 export interface BoundaryPaintConfig {
   line: {
@@ -45,3 +46,11 @@ export const FILL_OPACITY_ZOOM_EXPR: MaplibreExpression = [
   10, 0.15,
   14, 0.25,
 ]
+
+export function getFillOpacityZoomExpr(opacity: number): MaplibreExpression {
+  return [
+    'interpolate', ['linear'], ['zoom'],
+    10, 0.15 * opacity,
+    14, 0.25 * opacity,
+  ]
+}

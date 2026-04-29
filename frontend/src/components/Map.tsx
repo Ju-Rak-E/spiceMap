@@ -15,6 +15,7 @@ import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
+import { formatSignedFixed2 } from '../utils/numberFormat'
 
 const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
   version: 8,
@@ -34,6 +35,7 @@ const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/
 const ANIMATION_SPEED = 0.00025
 const BASE_VOLUME = 10000
 const HOVER_CARD_WIDTH = 220 // estimated from minWidth:180 + padding + badge
+const DECK_LAYER_MIN_ZOOM = 11
 
 interface MapProps {
   theme?: MapTheme
@@ -80,9 +82,14 @@ export default function Map({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
-  const zoomRef = useRef(11)
+  const zoomRef = useRef(DECK_LAYER_MIN_ZOOM)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
+  const [detailPanelOpen, setDetailPanelOpen] = useState(true)
+
+  useEffect(() => {
+    if (selectedNode) setDetailPanelOpen(true)
+  }, [selectedNode?.id])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -104,7 +111,9 @@ export default function Map({
     overlayRef.current = overlay
 
     map.on('zoom', () => {
-      zoomRef.current = map.getZoom()
+      const z = map.getZoom()
+      zoomRef.current = z
+      if (z < DECK_LAYER_MIN_ZOOM) setHoveredNode(null)
     })
 
     map.once('load', () => {
@@ -150,9 +159,10 @@ export default function Map({
                   setHoveredNode(null)
                 }
               },
-              (info: PickingInfo<CommerceNode>) => {
-                onSelectNode?.(info.object ?? null)
-              },
+          (info: PickingInfo<CommerceNode>) => {
+            onSelectNode?.(info.object ?? null)
+            if (info.object) setDetailPanelOpen(true)
+          },
               selectedNode?.id ?? null,
             ),
           ]
@@ -320,7 +330,7 @@ export default function Map({
               <div>
                 <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 1 }}>순유입</div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: netFlowColor }}>
-                  {node.netFlow >= 0 ? '+' : ''}{node.netFlow}
+                  {formatSignedFixed2(node.netFlow)}
                 </div>
               </div>
             </div>
@@ -351,12 +361,38 @@ export default function Map({
         />
       )}
 
-      <CommerceDetailPanel
-        node={selectedNode ?? null}
-        quarter={selectedQuarter}
-        usingMockData={usingMockData}
-        onClose={() => onSelectNode?.(null)}
-      />
+      {selectedNode && !detailPanelOpen && (
+        <button
+          type="button"
+          onClick={() => setDetailPanelOpen(true)}
+          style={{
+            position: 'absolute',
+            left: 16,
+            top: 64,
+            zIndex: 12,
+            border: `1px solid ${colors.panelBorder}`,
+            borderRadius: 999,
+            background: 'rgba(16,22,29,0.94)',
+            color: colors.panelText,
+            padding: '9px 12px',
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.28)',
+          }}
+        >
+          상권 분석 열기
+        </button>
+      )}
+
+      {detailPanelOpen && (
+        <CommerceDetailPanel
+          node={selectedNode ?? null}
+          quarter={selectedQuarter}
+          usingMockData={usingMockData}
+          onClose={() => setDetailPanelOpen(false)}
+        />
+      )}
 
       {/* 목 데이터 배너 */}
       {usingMockData && (

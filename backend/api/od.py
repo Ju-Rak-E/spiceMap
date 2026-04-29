@@ -49,9 +49,12 @@ def od_flows(
         LEFT JOIN admin_boundary ab_o ON ab_o.adm_cd = oa.origin_adm_cd
         LEFT JOIN admin_boundary ab_d ON ab_d.adm_cd = oa.dest_adm_cd
         WHERE oa.year_quarter = :quarter
+          AND oa.origin_adm_cd <> oa.dest_adm_cd
           AND (:gu IS NULL
                OR ab_o.gu_nm = :gu
                OR ab_d.gu_nm = :gu)
+          AND ab_o.geom IS NOT NULL
+          AND ab_d.geom IS NOT NULL
         GROUP BY
             oa.origin_adm_cd, ab_o.adm_nm, ab_o.geom,
             oa.dest_adm_cd, ab_d.adm_nm, ab_d.geom,

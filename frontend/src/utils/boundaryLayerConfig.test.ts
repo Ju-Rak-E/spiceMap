@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { MAP_THEME } from '../styles/tokens'
-import { getBoundaryPaintConfig } from './boundaryLayerConfig'
+import { getBoundaryPaintConfig, getFillOpacityZoomExpr } from './boundaryLayerConfig'
 
 describe('getBoundaryPaintConfig', () => {
   describe('light 테마', () => {
@@ -46,6 +46,14 @@ describe('getBoundaryPaintConfig', () => {
     it('하이라이트 두께가 고정 숫자여야 한다', () => {
       const config = getBoundaryPaintConfig('light')
       expect(typeof config.highlight['line-width']).toBe('number')
+    })
+
+    it('fill opacity zoom 표현식은 zoom이 최상위 interpolate 입력이어야 한다', () => {
+      const expr = getFillOpacityZoomExpr(0.2)
+      expect(expr[0]).toBe('interpolate')
+      expect(expr[2]).toEqual(['zoom'])
+      expect(expr[4]).toBeCloseTo(0.03)
+      expect(expr[6]).toBeCloseTo(0.05)
     })
   })
 })

@@ -67,18 +67,34 @@ describe('featuresToNodes', () => {
   })
 
   describe('필드 매핑', () => {
-    it('comm_cd → id, comm_nm → name으로 매핑한다', () => {
+    it('comm_cd → id, comm_nm → display name으로 매핑한다', () => {
       const [node] = featuresToNodes([makeFeature()])
       expect(node.id).toBe('GN001')
       expect(node.name).toBe('테스트상권')
     })
 
-    it('flow_volume을 netFlow로 매핑한다', () => {
+    it('net_flow를 netFlow로 매핑한다', () => {
       const feature = makeFeature({
-        properties: { ...makeFeature().properties, flow_volume: 3500 },
+        properties: { ...makeFeature().properties, net_flow: -3500 },
       })
       const [node] = featuresToNodes([feature])
-      expect(node.netFlow).toBe(3500)
+      expect(node.netFlow).toBe(-3500)
+    })
+
+    it('랜드마크형 상권명은 일대 표현을 붙인다', () => {
+      const feature = makeFeature({
+        properties: { ...makeFeature().properties, comm_nm: '당곡중학교' },
+      })
+      const [node] = featuresToNodes([feature])
+      expect(node.name).toBe('당곡중학교 일대')
+    })
+
+    it('상권 성격이 명확한 이름은 일대 표현을 중복하지 않는다', () => {
+      const feature = makeFeature({
+        properties: { ...makeFeature().properties, comm_nm: '강남 마이스 관광특구' },
+      })
+      const [node] = featuresToNodes([feature])
+      expect(node.name).toBe('강남 마이스 관광특구')
     })
 
     it('gri_score를 griScore로 매핑한다', () => {
@@ -89,9 +105,9 @@ describe('featuresToNodes', () => {
       expect(node.griScore).toBe(72.4)
     })
 
-    it('flow_volume이 null이면 netFlow를 0으로 폴백한다', () => {
+    it('net_flow가 null이면 netFlow를 0으로 폴백한다', () => {
       const feature = makeFeature({
-        properties: { ...makeFeature().properties, flow_volume: null },
+        properties: { ...makeFeature().properties, net_flow: null },
       })
       const [node] = featuresToNodes([feature])
       expect(node.netFlow).toBe(0)
