@@ -64,7 +64,7 @@ cd frontend && npm run dev                        # 프론트엔드
 
 - **Week 2 (4/15~4/21)**: 완료.
 - **Week 3 (4/22~4/28)**: 완료. API 5종, Module A/B/D/E, run_analysis 파이프라인, closure_rate spatial join, admin_boundary 백필, type-map gu 필터, Dev-B 상세패널·타임라인·자치구필터.
-- **Week 4 (4/29~5/5)**: 시작. H2/H3 검증 + 흐름 단절 레이어 + 베이스라인 비교 + 색각 검토.
+- **Week 4 (4/29~5/5)**: 진행 중 (Day 2). Module C(시계열 갭)/flow_barriers/H1/H3/분류기 v1.1/프론트 Tier 1 완료. H2/베이스라인(B1) 비교/검증 패널 잔여.
 - **이월 블로커**: 원본 `od_flows`만 Dev-A 로컬 (집계본으로 우회). admin/commerce boundary 모두 Supabase 적재 완료.
 
 ## 원칙
