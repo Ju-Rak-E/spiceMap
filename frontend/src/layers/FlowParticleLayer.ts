@@ -39,8 +39,8 @@ export function getFlowParticleRadius(
 export function getFlowParticlePixelBounds(zoom: number): { min: number; max: number } {
   const scale = getZoomParticleRadiusScale(zoom)
   return {
-    min: clamp(1.5 + scale * 1.5, 1.5, 3),
-    max: clamp(6 + scale * 8, 6, 14),
+    min: 1.5 + scale * 1.5,
+    max: 6 + scale * 8,
   }
 }
 

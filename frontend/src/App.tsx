@@ -74,6 +74,7 @@ export default function App() {
           hour={hour}
           purpose={purpose}
           topN={topN}
+          flowStrength={flowStrength}
           scopeLabel={SCOPE_LABEL}
           dataStatusLabel={usingMockData ? '캐시 데이터' : 'API 연결'}
           selectedQuarter={selectedQuarter}
