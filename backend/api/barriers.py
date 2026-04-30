@@ -35,17 +35,30 @@ def barriers(
     if cached:
         return cached
 
+    # commerce_boundary는 1,650행으로 소규모 → CTE로 centroid 1회 선계산.
+    # Dev-B 점선 레이어가 좌표를 직접 사용할 수 있도록 from/to centroid 포함.
     sql = text("""
+        WITH cb AS (
+            SELECT comm_cd, comm_nm, geom,
+                   ST_X(ST_Centroid(geom)) AS lng,
+                   ST_Y(ST_Centroid(geom)) AS lat
+            FROM commerce_boundary
+            WHERE geom IS NOT NULL
+        )
         SELECT
             fb.from_comm_cd,
             cb_f.comm_nm AS from_comm_nm,
+            cb_f.lng     AS from_centroid_lng,
+            cb_f.lat     AS from_centroid_lat,
             fb.to_comm_cd,
             cb_t.comm_nm AS to_comm_nm,
+            cb_t.lng     AS to_centroid_lng,
+            cb_t.lat     AS to_centroid_lat,
             fb.barrier_score,
             fb.barrier_type
         FROM flow_barriers fb
-        LEFT JOIN commerce_boundary cb_f ON cb_f.comm_cd = fb.from_comm_cd
-        LEFT JOIN commerce_boundary cb_t ON cb_t.comm_cd = fb.to_comm_cd
+        LEFT JOIN cb cb_f ON cb_f.comm_cd = fb.from_comm_cd
+        LEFT JOIN cb cb_t ON cb_t.comm_cd = fb.to_comm_cd
         LEFT JOIN LATERAL (
             SELECT gu_nm
             FROM admin_boundary
@@ -69,8 +82,12 @@ def barriers(
         BarrierItem(
             from_comm_cd=row.from_comm_cd,
             from_comm_nm=row.from_comm_nm,
+            from_centroid_lng=row.from_centroid_lng,
+            from_centroid_lat=row.from_centroid_lat,
             to_comm_cd=row.to_comm_cd,
             to_comm_nm=row.to_comm_nm,
+            to_centroid_lng=row.to_centroid_lng,
+            to_centroid_lat=row.to_centroid_lat,
             barrier_score=row.barrier_score,
             barrier_type=row.barrier_type,
         )

@@ -5,8 +5,12 @@ from pydantic import BaseModel
 class BarrierItem(BaseModel):
     from_comm_cd: str
     from_comm_nm: str | None = None
+    from_centroid_lng: float | None = None
+    from_centroid_lat: float | None = None
     to_comm_cd: str
     to_comm_nm: str | None = None
+    to_centroid_lng: float | None = None
+    to_centroid_lat: float | None = None
     barrier_score: float
     barrier_type: str | None = None
 
