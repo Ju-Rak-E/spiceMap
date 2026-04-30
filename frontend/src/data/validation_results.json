@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-04-30",
+  "quarter": "2025Q4",
+  "previous_quarter": "2025Q3",
+  "cards": [
+    {
+      "id": "H1",
+      "title": "H1 — 순유입↑ → 매출↑",
+      "headline": "통계적 유의 (효과 약함)",
+      "metric_primary": "r = 0.106",
+      "metric_secondary": "p = 2.83 × 10⁻⁵",
+      "sample_size": "n = 1,565",
+      "summary": "Module A net_flow과 매출의 양의 상관. p<0.05로 유의하나 효과 크기 약함 (상권 규모/업종 mix 등 교란 변수 큼).",
+      "criterion": "임계 r ≥ 0.5 — FAIL (방향성은 지지)",
+      "source": "docs/verification_h1_h3_results.md §H1"
+    },
+    {
+      "id": "H3",
+      "title": "H3 — Q3 GRI 고위험 → Q4 폐업률 상승",
+      "headline": "방향성 매우 강함",
+      "metric_primary": "gap = 0.746%p",
+      "metric_secondary": "p ≈ 5 × 10⁻³⁶",
+      "sample_size": "top n=330 / bottom n=1,320",
+      "summary": "Q3 GRI 상위 20% 상권의 Q4 평균 폐업률 0.800% vs 하위 80% 0.055% (14.5배 격차). 매우 강한 통계 유의.",
+      "criterion": "임계 gap ≥ 2.0%p — FAIL (자치구 평균 매핑 한계)",
+      "source": "docs/verification_h1_h3_results.md §H3"
+    },
+    {
+      "id": "B1",
+      "title": "B1 — OA-15576 상권변화지표 대비",
+      "headline": "Jaccard 0.58 — 차별화",
+      "metric_primary": "Jaccard = 0.58",
+      "metric_secondary": "추가 식별 14건",
+      "sample_size": "공식 지표 vs Module E priority_score",
+      "summary": "서울시 공식 상권변화지표(OA-15576)가 식별한 위험 상권과 우리 모델의 priority_score Top-N을 비교. 우리 모델이 14건 추가로 위험 상권 식별.",
+      "criterion": "임계 Jaccard ≥ 0.5 — PASS",
+      "source": "docs/strategy_d13.md §C (B1 정적 다운로드)"
+    },
+    {
+      "id": "B3",
+      "title": "B3 — 기존 매출 추세 모델 대비",
+      "headline": "Jaccard 0.151 — 본질적 차별",
+      "metric_primary": "Jaccard = 0.151",
+      "metric_secondary": "추가 위험 식별 231건",
+      "sample_size": "기존 모델 vs 우리 모델",
+      "summary": "기존 매출 추세 모델은 매출이 안정적인 강남 압구정·청담을 위험으로 잡지 못함. 우리 모델은 흐름 단절 + GRI 결합으로 231개 추가 위험 상권 식별.",
+      "criterion": "차별화 신호 — PASS",
+      "source": "docs/baseline_b3_comparison.md"
+    }
+  ]
+}

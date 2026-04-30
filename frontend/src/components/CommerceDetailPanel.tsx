@@ -1,10 +1,22 @@
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceNode } from '../types/commerce'
 import { useGriHistory, type GriPoint } from '../hooks/useGriHistory'
+import { usePolicyInsights, type PolicyInsight } from '../hooks/usePolicyInsights'
 import { formatQuarter } from '../utils/quarter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
 import TrendChart from './TrendChart'
+import PolicyCard from './PolicyCard'
+
+// docs/hero_shot_scenario.md §1-2: Hero shot에서 R4 카드(현장 조사+금융 지원)를 첫 번째로 강조.
+const HERO_HIGHLIGHT_RULE = 'R4'
+
+function sortPolicyInsightsHeroFirst(insights: PolicyInsight[]): PolicyInsight[] {
+  const heroIdx = insights.findIndex((insight) => insight.ruleId === HERO_HIGHLIGHT_RULE)
+  if (heroIdx <= 0) return insights
+  const hero = insights[heroIdx]
+  return [hero, ...insights.slice(0, heroIdx), ...insights.slice(heroIdx + 1)]
+}
 
 interface CommerceDetailPanelProps {
   node: CommerceNode | null
@@ -192,6 +204,8 @@ export default function CommerceDetailPanel({
   const startup = deriveStartupSummary(node)
   const icon = TYPE_ICON[node.type] ?? 'type'
   const riskDelta = getLatestRiskDelta(series)
+  const policyResult = usePolicyInsights(node.id, quarter, node.type)
+  const policyInsights = sortPolicyInsightsHeroFirst(policyResult.insights)
 
   return (
     <div style={S.overlay}>
@@ -290,6 +304,26 @@ export default function CommerceDetailPanel({
             ))}
           </ul>
         </div>
+      </div>
+
+      <div>
+        <div style={S.sectionTitle}>정책 추천 카드</div>
+        {policyResult.isLoading && <div style={S.loadingText}>정책 정보를 불러오는 중...</div>}
+        {policyResult.error && <div style={S.errorText}>{policyResult.error}</div>}
+        {!policyResult.isLoading && !policyResult.error && policyInsights.length === 0 && (
+          <div style={S.emptyText}>이 상권에 매칭된 정책 추천이 없습니다.</div>
+        )}
+        {policyInsights.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {policyInsights.map((insight, idx) => (
+              <PolicyCard
+                key={`${insight.nodeId}-${insight.ruleId ?? idx}`}
+                insight={insight}
+                highlight={idx === 0 && insight.ruleId === HERO_HIGHLIGHT_RULE}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

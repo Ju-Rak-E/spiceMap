@@ -78,7 +78,7 @@ interface CardProps {
   primary: string
   secondary: string
   accent: string
-  colors: typeof MAP_THEME['dark']
+  colors: typeof MAP_THEME['dark'] | typeof MAP_THEME['light']
   title: string
 }
 

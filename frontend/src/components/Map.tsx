@@ -6,7 +6,7 @@ import type { PickingInfo } from '@deck.gl/core'
 import { MAP_THEME, COMMERCE_COLORS, type MapTheme } from '../styles/tokens'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
-import { createCommerceNodeLayers } from '../layers/CommerceNodeLayer'
+import { createCommerceNodeLayers, createHeroPulseLayer } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
@@ -73,6 +73,8 @@ interface MapProps {
   selectedDistricts?: Set<string>
   selectedNode?: CommerceNode | null
   onSelectNode?: (node: CommerceNode | null) => void
+  // docs/hero_shot_scenario.md §1-2: ?hero=1 진입 시 신림(gw_001)을 펄싱으로 강조.
+  heroNodeId?: string | null
 }
 
 interface HoveredNode {
@@ -105,11 +107,13 @@ export default function Map({
   selectedDistricts,
   selectedNode = null,
   onSelectNode,
+  heroNodeId = null,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
+  const heroPulseRef = useRef(0)
   const zoomRef = useRef(11)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
@@ -223,6 +227,7 @@ export default function Map({
     const totalVolume = flows.reduce((sum, f) => sum + f.volume, 0)
     const speedScale = Math.max(0.3, Math.min(2.0, Math.sqrt(totalVolume / BASE_VOLUME)))
     progressRef.current = (progressRef.current + delta * ANIMATION_SPEED * speedScale) % 1
+    heroPulseRef.current += delta
 
     if (!overlayRef.current) return
 
@@ -254,10 +259,19 @@ export default function Map({
         )
       : []
 
+    const heroNode = heroNodeId ? nodes.find((n) => n.id === heroNodeId) ?? null : null
+    const heroPulseLayer = createHeroPulseLayer(
+      heroNode ? { node: heroNode, elapsedMs: heroPulseRef.current } : null,
+    )
+
     overlayRef.current.setProps({
-      layers: [...flowLayers, ...commerceLayers],
+      layers: [
+        ...flowLayers,
+        ...commerceLayers,
+        ...(heroPulseLayer ? [heroPulseLayer] : []),
+      ],
     })
-  }, [flows, nodes, onSelectNode, selectedNode?.id, showFlows])
+  }, [flows, nodes, onSelectNode, selectedNode?.id, showFlows, heroNodeId])
 
   useAnimationFrame(handleFrame)
 

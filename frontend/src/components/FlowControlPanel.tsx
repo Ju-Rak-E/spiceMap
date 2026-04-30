@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useState, useCallback, useEffect, useRef, type CSSProperties } from 'react'
 import type { FlowPurpose, FlowStats, PurposeVolumeMap } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { COMMERCE_COLORS, MAP_THEME } from '../styles/tokens'
@@ -487,15 +487,43 @@ export default function FlowControlPanel({
   const totalPurposeVolume = Object.values(purposeTotals).reduce((sum, value) => sum + value, 0)
   const selectedPurposeVolume = purpose ? purposeTotals[purpose] ?? 0 : totalPurposeVolume
 
-  function handleCsvDownload() {
-    if (usingMockData) {
-      downloadCsvDemo(nodes, selectedQuarter)
-    } else {
-      downloadCsvApi(selectedQuarter).catch((err: unknown) => {
-        console.error('CSV 다운로드 오류:', err)
-      })
+  // docs/hero_shot_scenario.md §1-3: CSV 다운로드 시 toast로 결과 피드백.
+  const [csvToast, setCsvToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null)
+  const toastTimerRef = useRef<number | null>(null)
+
+  const showToast = useCallback((message: string, tone: 'success' | 'error') => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current)
     }
-  }
+    setCsvToast({ message, tone })
+    toastTimerRef.current = window.setTimeout(() => setCsvToast(null), 3000)
+  }, [])
+
+  useEffect(() => () => {
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current)
+    }
+  }, [])
+
+  const handleCsvDownload = useCallback(() => {
+    const recommendedCount = priorityNodes.length
+    const successMsg = `추천 상권 ${recommendedCount}건 + 정책 R4~R7 한 줄 요약 다운로드`
+    if (usingMockData) {
+      try {
+        downloadCsvDemo(nodes, selectedQuarter)
+        showToast(successMsg, 'success')
+      } catch {
+        showToast('CSV 다운로드 실패 (캐시 모드)', 'error')
+      }
+      return
+    }
+    downloadCsvApi(selectedQuarter)
+      .then(() => showToast(successMsg, 'success'))
+      .catch((err: unknown) => {
+        const detail = err instanceof Error ? err.message : '알 수 없는 오류'
+        showToast(`CSV 다운로드 실패: ${detail}`, 'error')
+      })
+  }, [nodes, priorityNodes.length, selectedQuarter, showToast, usingMockData])
 
   return (
     <aside style={S.panel}>
@@ -532,9 +560,33 @@ export default function FlowControlPanel({
             ))}
           </div>
         )}
-        <button type="button" style={S.csvButton} onClick={handleCsvDownload}>
+        <button
+          type="button"
+          style={S.csvButton}
+          onClick={handleCsvDownload}
+          data-testid="hero-csv-export"
+        >
           추천 상권 CSV 다운로드
         </button>
+        {csvToast && (
+          <div
+            role="status"
+            aria-live="polite"
+            data-testid="csv-toast"
+            style={{
+              marginTop: 6,
+              padding: '8px 10px',
+              borderRadius: 6,
+              fontSize: 11,
+              lineHeight: 1.45,
+              border: `1px solid ${csvToast.tone === 'success' ? '#7BD08D55' : '#EF535055'}`,
+              background: csvToast.tone === 'success' ? '#7BD08D11' : '#EF535011',
+              color: csvToast.tone === 'success' ? '#7BD08D' : '#EF5350',
+            }}
+          >
+            {csvToast.message}
+          </div>
+        )}
       </section>
 
       <section style={S.section}>
