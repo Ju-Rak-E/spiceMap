@@ -2,16 +2,17 @@
 GET /api/commerce/type-map  — 상권 폴리곤 + 분석 결과 (GeoJSON)
 GET /api/gri/history        — 상권 GRI 분기별 시계열
 """
-import json
-
 from fastapi import APIRouter, Depends, HTTPException, Query
-from redis.exceptions import RedisError
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from backend.api.cache_utils import (
+    cache_get, cache_set_with_fallback, demo_response,
+    get_fallback, load_demo,
+)
 from backend.api.deps import get_session, get_cache
-from backend.db import CACHE_TTL
+from backend.config import settings
 from backend.schemas.commerce import TypeMapResponse, GriHistoryResponse, GriPoint
 
 router = APIRouter()
@@ -28,19 +29,18 @@ def type_map(
     cache=Depends(get_cache),
 ):
     cache_key = f"type-map:{gu or 'all'}:{quarter}"
-    try:
-        cached = cache.get(cache_key)
-        if cached:
-            return json.loads(cached)
-    except RedisError:
-        pass
 
-    # gu 필터: admin_boundary.gu_nm 대신 comm_type 기반 자치구 필터는
-    # commerce_boundary에 직접 자치구 정보가 없어 od_flows 경유 어려움.
-    # 현재는 전체 반환 후 프론트에서 필터하는 방식을 쓰거나,
-    # 추후 comm_cd 앞자리로 자치구 매핑 테이블 추가 필요.
-    # MVP에서는 gu 파라미터는 받되 현재 무시하고 전체 반환.
-    # Current behavior: no-gu requests skip the spatial join; gu requests use it.
+    if settings.demo_mode:
+        snap = load_demo(cache_key)
+        if snap:
+            return demo_response(snap, is_demo=True)
+        raise HTTPException(status_code=503, detail="데모 스냅샷 없음. generate_demo_snapshot 실행 필요.")
+
+    cached = cache_get(cache, cache_key)
+    if cached:
+        return cached
+
+    # gu 필터: admin_boundary.gu_nm 기준 PostGIS lateral join
     if gu:
         sql = text("""
             SELECT
@@ -100,8 +100,11 @@ def type_map(
         """)
     try:
         rows = db.execute(sql, {"quarter": quarter, "gu": gu}).fetchall()
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=503, detail="Database unavailable for /api/commerce/type-map") from exc
+    except SQLAlchemyError:
+        fallback = get_fallback(cache, cache_key)
+        if fallback:
+            return demo_response(fallback)
+        raise HTTPException(status_code=503, detail="Database unavailable for /api/commerce/type-map")
 
     features = [
         {
@@ -113,7 +116,7 @@ def type_map(
                 "gu_nm": row.gu_nm,
                 "commerce_type": row.commerce_type,
                 "source_comm_type": row.source_comm_type,
-                "comm_type": row.commerce_type,  # Week 4 클린업 예정 미러
+                "comm_type": row.commerce_type,
                 "gri_score": row.gri_score,
                 "flow_volume": row.flow_volume,
                 "close_rate": row.closure_rate,
@@ -130,16 +133,14 @@ def type_map(
         for row in rows
     ]
 
+    import json
     result = {
         "type": "FeatureCollection",
         "quarter": quarter,
         "total": len(features),
         "features": features,
     }
-    try:
-        cache.setex(cache_key, CACHE_TTL, json.dumps(result, ensure_ascii=False))
-    except RedisError:
-        pass
+    cache_set_with_fallback(cache, cache_key, json.dumps(result, ensure_ascii=False))
     return result
 
 
@@ -152,22 +153,25 @@ def gri_history(
     db: Session = Depends(get_session),
     cache=Depends(get_cache),
 ):
+    import json
     cache_key = f"gri-history:{comm_cd}"
-    try:
-        cached = cache.get(cache_key)
-        if cached:
-            return json.loads(cached)
-    except RedisError:
-        pass
 
-    # 상권 기본 정보
+    if settings.demo_mode:
+        snap = load_demo(cache_key)
+        if snap:
+            return demo_response(snap, is_demo=True)
+        raise HTTPException(status_code=503, detail="데모 스냅샷 없음. generate_demo_snapshot 실행 필요.")
+
+    cached = cache_get(cache, cache_key)
+    if cached:
+        return cached
+
     try:
         name_row = db.execute(
             text("SELECT comm_nm FROM commerce_boundary WHERE comm_cd = :cd"),
             {"cd": comm_cd},
         ).fetchone()
 
-    # GRI 시계열
         rows = db.execute(
             text("""
                 SELECT year_quarter, gri_score, flow_volume
@@ -177,8 +181,11 @@ def gri_history(
             """),
             {"cd": comm_cd},
         ).fetchall()
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=503, detail="Database unavailable for /api/gri/history") from exc
+    except SQLAlchemyError:
+        fallback = get_fallback(cache, cache_key)
+        if fallback:
+            return demo_response(fallback)
+        raise HTTPException(status_code=503, detail="Database unavailable for /api/gri/history")
 
     result = {
         "comm_cd": comm_cd,
@@ -192,8 +199,5 @@ def gri_history(
             for row in rows
         ],
     }
-    try:
-        cache.setex(cache_key, CACHE_TTL, json.dumps(result, ensure_ascii=False))
-    except RedisError:
-        pass
+    cache_set_with_fallback(cache, cache_key, json.dumps(result, ensure_ascii=False))
     return result

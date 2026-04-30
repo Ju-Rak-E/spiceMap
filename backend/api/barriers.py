@@ -1,12 +1,15 @@
 """GET /api/barriers — 흐름 단절 구간 목록."""
-import json
-
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from backend.api.cache_utils import (
+    cache_get, cache_set_with_fallback, demo_response,
+    get_fallback, load_demo,
+)
 from backend.api.deps import get_session, get_cache
-from backend.db import CACHE_TTL
+from backend.config import settings
 from backend.schemas.barriers import BarrierItem, BarriersResponse
 
 router = APIRouter()
@@ -21,9 +24,16 @@ def barriers(
     cache=Depends(get_cache),
 ):
     cache_key = f"barriers:{quarter}:{gu or 'all'}:{min_score}"
-    cached = cache.get(cache_key)
+
+    if settings.demo_mode:
+        snap = load_demo(cache_key)
+        if snap:
+            return demo_response(snap, is_demo=True)
+        raise HTTPException(status_code=503, detail="데모 스냅샷 없음. generate_demo_snapshot 실행 필요.")
+
+    cached = cache_get(cache, cache_key)
     if cached:
-        return json.loads(cached)
+        return cached
 
     sql = text("""
         SELECT
@@ -47,7 +57,13 @@ def barriers(
           AND (:gu IS NULL OR ab.gu_nm = :gu)
         ORDER BY fb.barrier_score DESC
     """)
-    rows = db.execute(sql, {"quarter": quarter, "gu": gu, "min_score": min_score}).fetchall()
+    try:
+        rows = db.execute(sql, {"quarter": quarter, "gu": gu, "min_score": min_score}).fetchall()
+    except SQLAlchemyError:
+        fallback = get_fallback(cache, cache_key)
+        if fallback:
+            return demo_response(fallback)
+        raise HTTPException(status_code=503, detail="Database unavailable for /api/barriers")
 
     items = [
         BarrierItem(
@@ -62,5 +78,5 @@ def barriers(
     ]
 
     result = BarriersResponse(quarter=quarter, total=len(items), barriers=items)
-    cache.setex(cache_key, CACHE_TTL, result.model_dump_json())
+    cache_set_with_fallback(cache, cache_key, result.model_dump_json())
     return result

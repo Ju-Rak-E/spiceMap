@@ -83,7 +83,7 @@ class OdFlowAggregated(Base):
     )
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    year_quarter = Column(String(6), nullable=False, comment="YYYYQ# (예: 2026Q1)")
+    year_quarter = Column(String(7), nullable=False, comment="YYYYQ# (예: 2025Q4)")
     origin_adm_cd = Column(String(10), nullable=False, comment="출발 행정동 코드")
     dest_adm_cd = Column(String(10), nullable=False, comment="도착 행정동 코드")
     move_purpose = Column(Integer, nullable=True, comment="이동 목적 코드 (NULL 허용)")

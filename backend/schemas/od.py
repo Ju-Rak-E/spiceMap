@@ -19,3 +19,5 @@ class OdFlowsResponse(BaseModel):
     quarter: str
     total_flows: int
     flows: list[FlowItem]
+    from_cache: bool = False
+    cache_warning: str | None = None

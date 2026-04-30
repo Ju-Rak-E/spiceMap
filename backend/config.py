@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379"
 
+    # Demo / Replay mode
+    demo_mode: bool = False
+
     @property
     def database_url(self) -> str:
         base = (

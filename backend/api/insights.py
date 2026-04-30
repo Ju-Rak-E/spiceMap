@@ -2,13 +2,16 @@
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from redis.exceptions import RedisError
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from backend.api.cache_utils import (
+    cache_get, cache_set_with_fallback, demo_response,
+    get_fallback, load_demo,
+)
 from backend.api.deps import get_session, get_cache
-from backend.db import CACHE_TTL
+from backend.config import settings
 from backend.schemas.insights import PolicyCard, PolicyCardsResponse
 
 router = APIRouter()
@@ -28,12 +31,16 @@ def policy_insights(
         f"insights-policy:{quarter}:{gu or 'all'}:"
         f"{comm_cd or 'all'}:{min_priority}:{severity or 'all'}"
     )
-    try:
-        cached = cache.get(cache_key)
-        if cached:
-            return json.loads(cached)
-    except RedisError:
-        pass
+
+    if settings.demo_mode:
+        snap = load_demo(cache_key)
+        if snap:
+            return demo_response(snap, is_demo=True)
+        raise HTTPException(status_code=503, detail="데모 스냅샷 없음. generate_demo_snapshot 실행 필요.")
+
+    cached = cache_get(cache, cache_key)
+    if cached:
+        return cached
 
     sql = text("""
         SELECT
@@ -81,8 +88,11 @@ def policy_insights(
                 "min_priority": min_priority,
             },
         ).fetchall()
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=503, detail="Database unavailable for /api/insights/policy") from exc
+    except SQLAlchemyError:
+        fallback = get_fallback(cache, cache_key)
+        if fallback:
+            return demo_response(fallback)
+        raise HTTPException(status_code=503, detail="Database unavailable for /api/insights/policy")
 
     cards = [
         PolicyCard(
@@ -104,8 +114,5 @@ def policy_insights(
         generation_mode="rule_based",
         cards=cards,
     )
-    try:
-        cache.setex(cache_key, CACHE_TTL, result.model_dump_json())
-    except RedisError:
-        pass
+    cache_set_with_fallback(cache, cache_key, result.model_dump_json())
     return result
