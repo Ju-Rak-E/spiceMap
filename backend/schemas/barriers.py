@@ -15,3 +15,5 @@ class BarriersResponse(BaseModel):
     quarter: str
     total: int
     barriers: list[BarrierItem]
+    from_cache: bool = False
+    cache_warning: str | None = None

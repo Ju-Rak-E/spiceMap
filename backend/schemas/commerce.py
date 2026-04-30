@@ -38,6 +38,8 @@ class TypeMapResponse(BaseModel):
     quarter: str
     total: int
     features: list[Feature]
+    from_cache: bool = False
+    cache_warning: str | None = None
 
 
 class GriPoint(BaseModel):
@@ -50,3 +52,5 @@ class GriHistoryResponse(BaseModel):
     comm_cd: str
     comm_nm: str | None
     history: list[GriPoint]
+    from_cache: bool = False
+    cache_warning: str | None = None
