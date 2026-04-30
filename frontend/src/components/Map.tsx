@@ -15,6 +15,7 @@ import type { CommerceNode } from '../types/commerce'
 import { getNodeInterpretation } from '../utils/summaryFormatter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatSignedFixed2 } from '../utils/numberFormat'
+import { getFlowProgressIncrement } from '../utils/flowAnimation'
 import {
   buildDistrictCommerceClusters,
   buildDongCommerceClusters,
@@ -37,8 +38,6 @@ const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
 
 const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
-const ANIMATION_SPEED = 0.00025
-const BASE_VOLUME = 10000
 const HOVER_CARD_WIDTH = 220
 const DISTRICT_ZOOM = 10.5
 const DONG_ZOOM = 12.5
@@ -65,6 +64,7 @@ interface MapProps {
   hour: number
   purpose: FlowPurpose | null
   topN: number
+  flowStrength: number
   scopeLabel: string
   dataStatusLabel: string
   selectedQuarter: string
@@ -97,6 +97,7 @@ export default function Map({
   hour,
   purpose,
   topN,
+  flowStrength,
   scopeLabel,
   dataStatusLabel,
   selectedQuarter,
@@ -111,11 +112,15 @@ export default function Map({
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
   const zoomRef = useRef(11)
+  const zoomStageRef = useRef<ZoomStage>(getZoomStage(11))
+  const interactionActiveRef = useRef(false)
+  const viewportRafRef = useRef<number>(0)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
   const [closedDetailNodeId, setClosedDetailNodeId] = useState<string | null>(null)
   const [zoom, setZoom] = useState(11)
-  const [viewportTick, setViewportTick] = useState(0)
+  const [viewportVersion, setViewportVersion] = useState(0)
+  const [isViewportInteracting, setIsViewportInteracting] = useState(false)
   const [boundaries, setBoundaries] = useState<AdminBoundaryCollection | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
@@ -142,32 +147,71 @@ export default function Map({
     map.addControl(overlay)
     overlayRef.current = overlay
 
-    let viewFrame: number | null = null
-    const syncView = () => {
-      if (viewFrame !== null) return
-      viewFrame = window.requestAnimationFrame(() => {
-        viewFrame = null
-        const z = map.getZoom()
-        zoomRef.current = z
+    const syncZoomRef = () => {
+      const z = map.getZoom()
+      zoomRef.current = z
+      return z
+    }
+
+    const syncZoomStage = (z: number, force = false) => {
+      const nextStage = getZoomStage(z)
+      if (force || nextStage !== zoomStageRef.current) {
+        zoomStageRef.current = nextStage
         setZoom(z)
-        setViewportTick(prev => prev + 1)
-        if (z < CANDIDATE_ZOOM) setHoveredNode(null)
+      }
+      if (z < CANDIDATE_ZOOM) setHoveredNode(null)
+    }
+
+    const updateViewportPosition = () => {
+      cancelAnimationFrame(viewportRafRef.current)
+      viewportRafRef.current = requestAnimationFrame(() => {
+        setViewportVersion(prev => prev + 1)
       })
     }
 
-    map.on('zoom', syncView)
-    map.on('move', syncView)
+    const handleMove = () => {
+      syncZoomRef()
+    }
+
+    const handleZoom = () => {
+      syncZoomStage(syncZoomRef())
+    }
+
+    const handleInteractionStart = () => {
+      interactionActiveRef.current = true
+      setIsViewportInteracting(true)
+      setHoveredNode(null)
+    }
+
+    const handleInteractionEnd = () => {
+      interactionActiveRef.current = false
+      setIsViewportInteracting(false)
+      syncZoomStage(syncZoomRef())
+      updateViewportPosition()
+    }
+
+    map.on('move', handleMove)
+    map.on('zoom', handleZoom)
+    map.on('movestart', handleInteractionStart)
+    map.on('zoomstart', handleInteractionStart)
+    map.on('moveend', handleInteractionEnd)
+    map.on('zoomend', handleInteractionEnd)
 
     map.once('load', () => {
       mapRef.current = map
-      syncView()
+      syncZoomStage(syncZoomRef(), true)
+      updateViewportPosition()
       setMapInstance(map)
     })
 
     return () => {
-      if (viewFrame !== null) window.cancelAnimationFrame(viewFrame)
-      map.off('zoom', syncView)
-      map.off('move', syncView)
+      map.off('move', handleMove)
+      map.off('zoom', handleZoom)
+      map.off('movestart', handleInteractionStart)
+      map.off('zoomstart', handleInteractionStart)
+      map.off('moveend', handleInteractionEnd)
+      map.off('zoomend', handleInteractionEnd)
+      cancelAnimationFrame(viewportRafRef.current)
       overlayRef.current = null
       map.remove()
       mapRef.current = null
@@ -219,45 +263,68 @@ export default function Map({
     }
   }, [])
 
-  const handleFrame = useCallback((delta: number) => {
-    const totalVolume = flows.reduce((sum, f) => sum + f.volume, 0)
-    const speedScale = Math.max(0.3, Math.min(2.0, Math.sqrt(totalVolume / BASE_VOLUME)))
-    progressRef.current = (progressRef.current + delta * ANIMATION_SPEED * speedScale) % 1
+  const handleNodeHover = useCallback((info: PickingInfo<CommerceNode>) => {
+    if (info.object) {
+      setHoveredNode({ node: info.object, x: info.x, y: info.y })
+    } else {
+      setHoveredNode(null)
+    }
+  }, [])
 
-    if (!overlayRef.current) return
+  const handleNodeClick = useCallback((info: PickingInfo<CommerceNode>) => {
+    onSelectNode?.(info.object ?? null)
+    if (info.object) {
+      setClosedDetailNodeId(null)
+      setSelectedClusterId(null)
+    }
+  }, [onSelectNode])
 
-    const flowLayers = showFlows
-      ? [
-          createODFlowLayer(flows, null),
-          createFlowParticleLayer(flows, progressRef.current, null),
-        ]
-      : []
-
-    const commerceLayers = nodes.length > 0 && zoomRef.current >= CANDIDATE_ZOOM
+  const colors = MAP_THEME[theme]
+  const zoomStage = getZoomStage(zoom)
+  const staticFlowLayer = useMemo(
+    () => showFlows ? createODFlowLayer(flows, null) : null,
+    [flows, showFlows],
+  )
+  const commerceLayers = useMemo(
+    () => nodes.length > 0 && zoomStage === 'candidate'
       ? createCommerceNodeLayers(
           nodes,
-          (info: PickingInfo<CommerceNode>) => {
-            if (info.object) {
-              setHoveredNode({ node: info.object, x: info.x, y: info.y })
-            } else {
-              setHoveredNode(null)
-            }
-          },
-          (info: PickingInfo<CommerceNode>) => {
-            onSelectNode?.(info.object ?? null)
-            if (info.object) {
-              setClosedDetailNodeId(null)
-              setSelectedClusterId(null)
-            }
-          },
+          handleNodeHover,
+          handleNodeClick,
           selectedNode?.id ?? null,
         )
-      : []
+      : [],
+    [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage],
+  )
+  const baseDeckLayers = useMemo(
+    () => [
+      ...(staticFlowLayer ? [staticFlowLayer] : []),
+      ...commerceLayers,
+    ],
+    [commerceLayers, staticFlowLayer],
+  )
+
+  useEffect(() => {
+    overlayRef.current?.setProps({ layers: baseDeckLayers })
+  }, [baseDeckLayers, mapInstance])
+
+  const handleFrame = useCallback((delta: number) => {
+    if (!overlayRef.current || !showFlows || interactionActiveRef.current) return
+
+    progressRef.current = (progressRef.current + getFlowProgressIncrement(delta)) % 1
 
     overlayRef.current.setProps({
-      layers: [...flowLayers, ...commerceLayers],
+      layers: [
+        ...baseDeckLayers,
+        createFlowParticleLayer(
+          flows,
+          progressRef.current,
+          null,
+          { zoom: zoomRef.current, flowStrength },
+        ),
+      ],
     })
-  }, [flows, nodes, onSelectNode, selectedNode?.id, showFlows])
+  }, [baseDeckLayers, flowStrength, flows, showFlows])
 
   useAnimationFrame(handleFrame)
 
@@ -273,8 +340,6 @@ export default function Map({
     })
   }, [])
 
-  const colors = MAP_THEME[theme]
-  const zoomStage = getZoomStage(zoom)
   const districtClusters = useMemo(() => buildDistrictCommerceClusters(nodes), [nodes])
   const dongClusters = useMemo(() => buildDongCommerceClusters(nodes, boundaries), [nodes, boundaries])
   const clusters = useMemo(() => {
@@ -282,7 +347,7 @@ export default function Map({
     if (zoomStage === 'dong') return dongClusters
     return []
   }, [districtClusters, dongClusters, zoomStage])
-  const showClusters = clusters.length > 0
+  const showClusters = !isViewportInteracting && clusters.length > 0
   const selectedCluster = useMemo(
     () => clusters.find((cluster) => cluster.id === selectedClusterId) ?? null,
     [clusters, selectedClusterId],
@@ -299,7 +364,7 @@ export default function Map({
   )
 
   const clusterPositions = useMemo((): ClusterPositionMap => {
-    void viewportTick
+    void viewportVersion
     if (!mapInstance || containerSize.width === 0 || containerSize.height === 0) return {}
     const next: ClusterPositionMap = {}
     for (const cluster of clusters) {
@@ -314,7 +379,7 @@ export default function Map({
       }
     }
     return next
-  }, [clusters, containerSize.height, containerSize.width, mapInstance, viewportTick])
+  }, [clusters, containerSize.height, containerSize.width, mapInstance, viewportVersion])
 
   function getClusterColor(cluster: DongCommerceCluster) {
     if (cluster.tone === 'recommended') return '#43A047'
