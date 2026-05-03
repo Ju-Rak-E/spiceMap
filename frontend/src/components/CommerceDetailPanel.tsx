@@ -216,7 +216,7 @@ export default function CommerceDetailPanel({
           </span>
         </div>
         <div style={{ marginTop: 8, fontSize: 11, color: '#90A4AE' }}>
-          {formatQuarter(quarter)} · {usingMockData ? '캐시 데이터' : 'API 연결'} · 판단 신뢰도 {startup.dataConfidenceLabel}
+          {formatQuarter(quarter)} · {usingMockData ? '캐시 데이터 (API 미연결)' : 'API 연결'} · 판단 신뢰도 {startup.dataConfidenceLabel}
         </div>
       </div>
 
@@ -275,8 +275,8 @@ export default function CommerceDetailPanel({
           </div>
           <div style={S.kpiCard}>
             <div style={S.kpiLabel}>순유입 변화</div>
-            <div style={S.kpiValue()}>준비중</div>
-            <div style={S.sourceLabel}>분기별 OD 합산 API 연결 예정</div>
+            <div style={S.kpiValue()}>—</div>
+            <div style={S.sourceLabel}>OD 분기 합산 적재 대기 (Dev-A)</div>
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { COMMERCE_COLORS, MAP_THEME } from '../styles/tokens'
 import { formatQuarter } from '../utils/quarter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
+import { useToast } from './ToastContext'
 
 const PURPOSE_OPTIONS: Array<{ value: FlowPurpose; label: string; peak: string }> = [
   { value: '출근', label: '출근', peak: '오전 피크' },
@@ -486,15 +487,32 @@ export default function FlowControlPanel({
   const priorityNodes = getPriorityNodes(nodes)
   const totalPurposeVolume = Object.values(purposeTotals).reduce((sum, value) => sum + value, 0)
   const selectedPurposeVolume = purpose ? purposeTotals[purpose] ?? 0 : totalPurposeVolume
+  const toast = useToast()
 
   function handleCsvDownload() {
-    if (usingMockData) {
-      downloadCsvDemo(nodes, selectedQuarter)
-    } else {
-      downloadCsvApi(selectedQuarter).catch((err: unknown) => {
-        console.error('CSV 다운로드 오류:', err)
-      })
+    if (priorityNodes.length === 0) {
+      toast.info('현재 조건에서 다운로드할 추천 상권이 없습니다')
+      return
     }
+    if (usingMockData) {
+      try {
+        downloadCsvDemo(nodes, selectedQuarter)
+        toast.success(`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드 완료`)
+      } catch (err) {
+        console.error('CSV 다운로드 오류:', err)
+        toast.error('CSV 생성에 실패했습니다')
+      }
+      return
+    }
+    downloadCsvApi(selectedQuarter)
+      .then(() => {
+        toast.success(`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드 완료`)
+      })
+      .catch((err: unknown) => {
+        console.error('CSV 다운로드 오류:', err)
+        const reason = err instanceof Error ? err.message : 'API 응답 오류'
+        toast.error(`CSV 다운로드 실패: ${reason}`)
+      })
   }
 
   return (

@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
+import ToastViewport from './components/Toast'
+import { ToastProvider } from './components/ToastContext'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
@@ -59,60 +61,63 @@ export default function App() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-        <Map
-          theme="dark"
-          flows={flowData.flows}
-          nodes={nodes}
-          usingMockData={usingMockData}
-          hour={hour}
+    <ToastProvider>
+      <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+        <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+          <Map
+            theme="dark"
+            flows={flowData.flows}
+            nodes={nodes}
+            usingMockData={usingMockData}
+            hour={hour}
+            purpose={purpose}
+            topN={topN}
+            scopeLabel={SCOPE_LABEL}
+            dataStatusLabel={usingMockData ? '캐시 데이터' : 'API 연결'}
+            selectedQuarter={selectedQuarter}
+            boundaryOpacity={BOUNDARY_OPACITY}
+            showFlows={showFlows}
+            selectedDistricts={selectedDistricts}
+            selectedNode={selectedNode}
+            onSelectNode={setSelectedNode}
+          />
+        </div>
+
+        <FlowControlPanel
           purpose={purpose}
+          onPurposeChange={setPurpose}
+          hour={hour}
+          onHourChange={setHour}
+          flowStrength={flowStrength}
+          onStrengthChange={setFlowStrength}
+          selectedQuarter={selectedQuarter}
+          quarters={QUARTERS}
+          onQuarterChange={setSelectedQuarter}
           topN={topN}
           scopeLabel={SCOPE_LABEL}
-          dataStatusLabel={usingMockData ? '캐시 데이터' : 'API 연결'}
-          selectedQuarter={selectedQuarter}
-          boundaryOpacity={BOUNDARY_OPACITY}
-          showFlows={showFlows}
-          selectedDistricts={selectedDistricts}
+          usingMockData={usingMockData}
+          nodes={nodes}
           selectedNode={selectedNode}
+          stats={{
+            totalVolume: flowData.totalVolume,
+            activeCount: flowData.activeCount,
+            topInflow: flowData.topInflow,
+            topOutflow: flowData.topOutflow,
+          }}
+          purposeTotals={flowData.purposeTotals}
+          isPlaying={isPlaying}
+          speed={speed}
+          showFlows={showFlows}
+          onPlay={play}
+          onPause={pause}
+          onToggleSpeed={toggleSpeed}
+          onToggleFlows={() => setShowFlows(prev => !prev)}
+          selectedDistricts={selectedDistricts}
+          onToggleDistrict={handleToggleDistrict}
           onSelectNode={setSelectedNode}
         />
       </div>
-
-      <FlowControlPanel
-        purpose={purpose}
-        onPurposeChange={setPurpose}
-        hour={hour}
-        onHourChange={setHour}
-        flowStrength={flowStrength}
-        onStrengthChange={setFlowStrength}
-        selectedQuarter={selectedQuarter}
-        quarters={QUARTERS}
-        onQuarterChange={setSelectedQuarter}
-        topN={topN}
-        scopeLabel={SCOPE_LABEL}
-        usingMockData={usingMockData}
-        nodes={nodes}
-        selectedNode={selectedNode}
-        stats={{
-          totalVolume: flowData.totalVolume,
-          activeCount: flowData.activeCount,
-          topInflow: flowData.topInflow,
-          topOutflow: flowData.topOutflow,
-        }}
-        purposeTotals={flowData.purposeTotals}
-        isPlaying={isPlaying}
-        speed={speed}
-        showFlows={showFlows}
-        onPlay={play}
-        onPause={pause}
-        onToggleSpeed={toggleSpeed}
-        onToggleFlows={() => setShowFlows(prev => !prev)}
-        selectedDistricts={selectedDistricts}
-        onToggleDistrict={handleToggleDistrict}
-        onSelectNode={setSelectedNode}
-      />
-    </div>
+      <ToastViewport />
+    </ToastProvider>
   )
 }

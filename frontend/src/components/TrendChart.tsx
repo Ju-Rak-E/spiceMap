@@ -97,7 +97,7 @@ export default function TrendChart({ series, width = 240, height = 110 }: TrendC
   if (series.length === 0) {
     return (
       <div style={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 11, color: '#546E7A' }}>데이터 없음</span>
+        <span style={{ fontSize: 11, color: '#546E7A' }}>이 분기 GRI 시계열 데이터가 아직 없습니다</span>
       </div>
     )
   }
