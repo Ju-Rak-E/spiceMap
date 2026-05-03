@@ -1,4 +1,5 @@
 import type { CommerceNode } from '../types/commerce'
+import { clamp } from './math'
 
 type StartupCommerceNode = CommerceNode & {
   sourceCommType?: string | null
@@ -23,10 +24,6 @@ export interface StartupSummary {
   flowLabel: string
   dataConfidence: StartupDataConfidence
   dataConfidenceLabel: string
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
 }
 
 function includesAny(value: string, keywords: string[]): boolean {

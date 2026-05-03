@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-04-29
+> 최종 갱신: 2026-04-30 (Week 4 Day 2)
 
 ---
 
@@ -94,6 +94,11 @@
 - [x] `/api/insights/policy` 어댑터 — **PR #19** `policy_cards` SELECT → `PolicyCard` Pydantic 응답 (3 tests pass)
 - [x] `/api/commerce/type-map` 응답에 신규 5컬럼 노출 — **2026-04-29** (`commerce_type, priority_score, net_flow, degree_centrality, closure_rate`, 4 tests pass)
 - [x] PR 2: Supabase 이전 — **2026-04-29** `.env.example` 이미 Supabase Session Pooler 기본값, 에스컬레이션 메시지 집계본 공유 방향으로 교체 (`docs/dev_a_escalation_draft.md`)
+- [x] closure_rate spatial join 정밀화 — **2026-04-29 PR #23** signgu_cd 기반(adm_cd 앞 5자리), PostGIS LATERAL ST_Contains, fallback 휴리스틱 유지. Supabase 검증: 1,650 commerces 매핑 + 178 closure 결합
+- [x] admin_boundary.gu_nm 백필 + 자동 도출 — **2026-04-29 PR #24** Supabase 425/425 자치구 채워짐, `load_spatial.py`에 `SEOUL_SIGUNGU_CD_TO_NM` 추가로 향후 재적재 자동화. type-map gu 필터 정상 작동(강남 104·관악 74)
+- [x] 수상 전략 + 실용성 강화 플랜(D-13) — **2026-04-29 PR #22** `docs/strategy_d13.md`. 핵심 의사결정 5건 + 13일 일정 + 평가축 매핑
+- [x] 2025Q3 od_flows_aggregated 적재 — **2026-04-29** 서울 OA-22300 일별 ZIP 92일(7/1~9/30) 자동 다운로드 + MVP 필터 + 분기 집계 + psycopg2 `execute_values` 업로드. 인코딩 fallback(cp949→utf-8), 5일마다 rolling 컴팩트+체크포인트로 메모리 35MB 제한. 결과 183,506행 (median 256.4, max 3,059,390, total 415M)
+- [x] 2025Q4 od_flows_aggregated 재적재 — **2026-04-29** Q3 적재 후 검증에서 Q4 `trip_count_sum` 단위 불일치 발견(median 3.5 vs Q3 256). 동일 파이프라인으로 92일(10/1~12/31) 재처리 + `ON CONFLICT DO UPDATE` 덮어쓰기. 결과 182,971행 (median 256.8, max 2,898,398, total 405M). Q3·Q4 비율 0.94~1.05로 동등 척도 확보 → trend_penalty/H2/H3/Hero shot 모두 활성
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
 
@@ -112,10 +117,15 @@
 - [ ] 접근성 검토 (색각 이상 시뮬레이션) + 수정
 
 ### Dev-C
-- [ ] H2 검증: 흐름 단절 → 폐업 정합도
-- [ ] H3 검증: GRI 고위험 → 다음 분기 임대료/프랜차이즈 방향성
-- [ ] 베이스라인 B1~B3 vs 제안 모델 성능 비교 표
-- [ ] 검증 결과 패널 콘텐츠 작성 (상관계수·방향성 일치 수치)
+- [x] Module C 시계열 갭 알고리즘 + flow_barriers 적재 — **2026-04-30 PR #29** Module C 풀 구현 대체. `compute_flow_gaps(od_q3, od_q4, mapping, threshold=0.5)` 18 tests. Supabase Q4 200건 적재 (decline 0.587~1.000)
+- [x] commerce_type 분류기 v1.1 임계 조정 — **2026-04-30 PR #31** unclassified 902→687(-13.1%p), 방출형 0→117 / 안정형 1→98 신규 분류
+- [x] commerce_sales 2025Q3 적재 + run_analysis Q3 실행 — **2026-04-30** Q3 commerce_analysis 1650 + policy_cards 419 적재 (trend_penalty/H3 활성)
+- [x] H1 검증 실데이터 — **2026-04-30 PR #30** Q4 net_flow vs Q4 sales Pearson **r=0.106 / p=2.83e-05 / n=1565** (방향 ✓ 효과 약함, FAIL r<0.5)
+- [x] H3 검증 실데이터 — **2026-04-30 PR #30** Q3 GRI 상위 20% Q4 폐업률 vs 하위 80% **gap=0.75pp / p=5.26e-36 / n=1650** (방향 ✓ 절대 격차 작음, FAIL gap<2.0pp). 한계: closure_rate 자치구 단위 매핑 → 분산 부족
+- [ ] H2 검증: flow_barriers 단절 강도 → 폐업률 상관 (Q4 flow_barriers 200 + Q4 closure 활용)
+- [ ] 베이스라인 B1 (OA-15576) vs 제안 priority_score 비교 — Jaccard / Spearman
+- [ ] 검증 결과 패널 콘텐츠 작성 (H1/H3 결과 + 베이스라인)
+- [x] 프론트 Tier 1 — **2026-04-30 PR #32** 가치 명제 헤더 2단 + MVP 강남·관악 자동 줌 (center [127.0, 37.49], zoom 11.5)
 
 **주차 완료 기준**: 3분 발표 시나리오 1회 시연 통과, H1~H3 수치 확정.
 

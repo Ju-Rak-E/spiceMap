@@ -1,6 +1,7 @@
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
+import InsightStrip from './components/InsightStrip'
 import ToastViewport from './components/Toast'
 import { ToastProvider } from './components/ToastContext'
 import { useCommerceData } from './hooks/useCommerceData'
@@ -9,6 +10,7 @@ import { useTimelineControl } from './hooks/useTimelineControl'
 import { useViewportMode } from './hooks/useViewportMode'
 import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
+import { countCriticalCommerces } from './utils/insightMetrics'
 import type { CommerceNode } from './types/commerce'
 import './App.css'
 
@@ -19,6 +21,11 @@ const STRENGTH_TO_TOP_N: Record<number, number> = {
 const BOUNDARY_OPACITY = 0.08
 const SCOPE_LABEL = '강남구·관악구 창업 시범'
 const DEFAULT_QUARTER = '2025Q4'
+// docs/verification_h1_h3_results.md 의 1차 실데이터 결과 (Supabase 2026-04-30 기준).
+// 후속: 백엔드 /api/verification 엔드포인트 추가 후 동적으로 갱신.
+const VERIFICATION_H1_R = 0.106
+const VERIFICATION_H1_P = 2.83e-5
+const POLICY_CARD_COUNT_Q4 = 414
 const QUARTERS = [
   '2024Q1', '2024Q2', '2024Q3', '2024Q4',
   '2025Q1', '2025Q4',
@@ -68,6 +75,7 @@ export default function App() {
     const previous = computeKpi(compareNodes, compareFlowData.totalVolume)
     return computeKpiDelta(current, previous)
   }, [compareEnabled, nodes, compareNodes, flowData.totalVolume, compareFlowData.totalVolume])
+  const criticalCount = useMemo(() => countCriticalCommerces(nodes), [nodes])
 
   useEffect(() => {
     if (!selectedNode) return
@@ -108,6 +116,7 @@ export default function App() {
             hour={hour}
             purpose={purpose}
             topN={topN}
+            flowStrength={flowStrength}
             scopeLabel={SCOPE_LABEL}
             dataStatusLabel={usingMockData ? '캐시 데이터' : 'API 연결'}
             selectedQuarter={selectedQuarter}
@@ -160,6 +169,14 @@ export default function App() {
           onToggleCompare={() => setCompareMode((prev) => !prev)}
           compact={viewportMode.isTablet}
           stacked={viewportMode.isNarrow}
+        />
+        <InsightStrip
+          theme="dark"
+          h1R={usingMockData ? null : VERIFICATION_H1_R}
+          h1P={usingMockData ? null : VERIFICATION_H1_P}
+          policyCardCount={POLICY_CARD_COUNT_Q4}
+          criticalCommerceCount={criticalCount}
+          quarter={selectedQuarter}
         />
       </div>
       <ToastViewport />

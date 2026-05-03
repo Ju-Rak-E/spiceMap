@@ -21,10 +21,14 @@ REQUIRED_COLUMNS = {
 }
 
 # 경계값 상수 (숫자 매직 방지)
-HOT_GRI_MIN = 60.0          # 흡수형_과열: GRI ≥ 60
-GROWTH_GRI_MAX = 40.0       # 흡수형_성장: GRI < 40
-DECAY_CLOSURE_MIN = 5.0     # 방출형_침체: 폐업률 ≥ 5
-STABLE_GRI_MAX = 40.0       # 안정형: GRI < 40
+# v1.1 (2026-04-30): 강남·관악 1,650 commerces 분포 분석 결과 임계 재조정.
+#   - 평균 GRI 50.03, std 28.88 (분포 mid-spread 폭 큼)
+#   - 자치구 단위 closure_rate 평균: 강남 1.798%, 관악 0.000% (5%는 비현실적)
+#   v1.0 임계로는 unclassified 54.7% (902/1650) 발생. v1.1로 조정.
+HOT_GRI_MIN = 50.0          # 흡수형_과열: GRI ≥ 50 (60 → 50, R5 정상 발동)
+GROWTH_GRI_MAX = 40.0       # 흡수형_성장: GRI < 40 (유지)
+DECAY_CLOSURE_MIN = 1.5     # 방출형_침체: 폐업률 ≥ 1.5% (5 → 1.5, 자치구 평균 reflect)
+STABLE_GRI_MAX = 50.0       # 안정형: GRI < 50 (40 → 50, 분포 median reflect)
 
 
 def _percentile(series: pd.Series, q: float) -> float:

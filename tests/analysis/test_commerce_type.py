@@ -21,8 +21,9 @@ def mixed_types_df() -> pd.DataFrame:
             {"commerce_code": "GROW",   "net_flow":  1800.0, "gri_score": 30.0, "degree_centrality": 0.7, "closure_rate": 1.5},
             # 순유출 하위(P25-), 폐업률 7% → 방출형_침체
             {"commerce_code": "DECAY",  "net_flow": -1500.0, "gri_score": 85.0, "degree_centrality": 0.3, "closure_rate": 7.0},
-            # net_flow 중간, centrality 하위 → 고립형_단절
-            {"commerce_code": "ISOL",   "net_flow":    50.0, "gri_score": 60.0, "degree_centrality": 0.05, "closure_rate": 3.0},
+            # net_flow 중간, centrality 하위, closure 낮음 → 고립형_단절
+            # v1.1 임계 (DECAY_CLOSURE_MIN=1.5)에서 방출형으로 잡히지 않도록 closure < 1.5
+            {"commerce_code": "ISOL",   "net_flow":    50.0, "gri_score": 60.0, "degree_centrality": 0.05, "closure_rate": 1.0},
             # 중간 flow (P25 < abs < P75), 저GRI → 안정형
             {"commerce_code": "STABLE", "net_flow":   700.0, "gri_score": 25.0, "degree_centrality": 0.5, "closure_rate": 1.0},
             # 경계값 (중간 GRI → 안정형 미해당, 중앙 centrality → 고립형 미해당) → unclassified

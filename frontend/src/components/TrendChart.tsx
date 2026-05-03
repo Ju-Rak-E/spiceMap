@@ -96,8 +96,9 @@ export default function TrendChart({ series, width = 240, height = 110 }: TrendC
 
   if (series.length === 0) {
     return (
-      <div style={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 11, color: '#546E7A' }}>이 분기 GRI 시계열 데이터가 아직 없습니다</span>
+      <div style={{ width, height, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        <span style={{ fontSize: 11, color: '#90A4AE', fontWeight: 600 }}>분기 시계열 미보유</span>
+        <span style={{ fontSize: 9, color: '#546E7A' }}>이 상권은 단일 분기(2025Q4)만 분석 적재됨</span>
       </div>
     )
   }
