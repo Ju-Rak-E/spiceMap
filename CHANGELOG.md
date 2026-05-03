@@ -7,7 +7,19 @@
 
 ## [Unreleased] — D-8 (2026-05-04)
 
-### feature/d9-validation-coverage 작업 (7 커밋, 28 파일 +2,8XX/-7)
+### feature/d9-validation-coverage 작업 (10 커밋)
+
+#### Added — 메타·v2 (커밋 8~10)
+
+- `CHANGELOG.md` (Keep a Changelog 형식, [Unreleased] D-8)
+- `docs/PR_DRAFT.md` — 머지 전략 옵션 A (PR-1 hero-shot-precision + PR-2 validation-coverage 분리) / 옵션 B (단일 PR)
+- `docs/v2_backlog.md` — 발표 후 P0~P5 작업 30 항목 + 우선순위 매트릭스 + v1.1 patch 후보 3건
+- `frontend/src/components/ValidationView.test.tsx` — 5 카드 렌더·헤더·onClose·출처 검증 [8 tests]
+- `frontend/src/components/PolicyCard.test.tsx` — highlight 토글·R4 fadeIn·priority 아이콘·rule_based 라벨·outline 색상 [10 tests]
+- `scripts/preflight_check.py` 점검 항목 +5 (csv_schema / PR_DRAFT / v2_backlog / CHANGELOG / run_validation_all)
+- 글로벌 메모리: `project_d9_validation_coverage.md` + `reference_validation_run_commands.md` + `MEMORY.md` (`~/.claude/projects/-Users-pang-Desktop-personal-spiceMap/memory/`)
+
+### feature/d9-validation-coverage 작업 (1~7 커밋)
 
 #### Added — 검증 커버리지
 
@@ -59,12 +71,12 @@
 
 - `frontend/src/components/InsightStrip.tsx` — `CardProps.colors` 타입을 `MAP_THEME['dark'] | MAP_THEME['light']` union 으로 확장 (light theme 빌드 차단 사전 버그).
 
-### 회귀 검증
+### 회귀 검증 (D-8 최종)
 
-- backend pytest: 248 통과 (W3 머지 시점 203 → +45 신규)
-- frontend vitest: 178 통과 유지
+- backend pytest: **248 통과** (W3 머지 시점 203 → +45 신규)
+- frontend vitest: **196 통과** (시작 178 → +18: ValidationView 8 + PolicyCard 10)
 - frontend build: 2.0 MB / gzip 562 KB
-- preflight: 26/26 ALL PASS
+- preflight: **30/30 ALL PASS**
 
 ### 사용자 잔여 (자동화 불가)
 
