@@ -6,6 +6,7 @@ import { ToastProvider } from './components/ToastContext'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
+import { useViewportMode } from './hooks/useViewportMode'
 import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import type { CommerceNode } from './types/commerce'
@@ -35,6 +36,7 @@ export default function App() {
   )
   const [selectedQuarter, setSelectedQuarter] = useState(DEFAULT_QUARTER)
   const [compareMode, setCompareMode] = useState(false)
+  const viewportMode = useViewportMode()
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
@@ -88,8 +90,16 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div style={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: viewportMode.isNarrow ? 'column' : 'row',
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ flex: 1, position: 'relative', minWidth: 0, minHeight: viewportMode.isNarrow ? 420 : 0 }}>
           <Map
             theme="dark"
             flows={flowData.flows}
@@ -148,6 +158,8 @@ export default function App() {
           compareQuarter={previousQuarter}
           kpiDelta={kpiDelta}
           onToggleCompare={() => setCompareMode((prev) => !prev)}
+          compact={viewportMode.isTablet}
+          stacked={viewportMode.isNarrow}
         />
       </div>
       <ToastViewport />
