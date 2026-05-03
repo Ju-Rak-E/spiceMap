@@ -5,6 +5,8 @@ import { COMMERCE_COLORS, MAP_THEME } from '../styles/tokens'
 import { formatQuarter } from '../utils/quarter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
+import { deltaTone, formatDelta, type QuarterKpiDelta } from '../utils/quarterDelta'
+import { useToast } from './ToastContext'
 
 const PURPOSE_OPTIONS: Array<{ value: FlowPurpose; label: string; peak: string }> = [
   { value: '출근', label: '출근', peak: '오전 피크' },
@@ -45,13 +47,21 @@ interface FlowControlPanelProps {
   isPlaying: boolean
   speed: 1 | 2 | 4
   showFlows: boolean
+  showBarriers: boolean
   onPlay: () => void
   onPause: () => void
   onToggleSpeed: () => void
   onToggleFlows: () => void
+  onToggleBarriers: () => void
   selectedDistricts: Set<string>
   onToggleDistrict: (d: string) => void
   onSelectNode: (node: CommerceNode) => void
+  compareMode: boolean
+  compareQuarter: string | null
+  kpiDelta: QuarterKpiDelta | null
+  onToggleCompare: () => void
+  compact?: boolean
+  stacked?: boolean
 }
 
 function formatVolume(value: number): string {
@@ -79,17 +89,53 @@ function getPriorityNodes(nodes: CommerceNode[]): CommerceNode[] {
     .slice(0, 5)
 }
 
+function getDeltaColor(value: number, betterWhen: 'higher' | 'lower' = 'higher'): string {
+  const tone = deltaTone(value, betterWhen)
+  if (tone === 'up') return '#A5D6A7'
+  if (tone === 'down') return '#EF9A9A'
+  return COLORS.mutedText
+}
+
+function csvCell(value: string | number | null | undefined): string {
+  const text = value == null ? '' : String(value)
+  return `"${text.replaceAll('"', '""')}"`
+}
+
 function downloadCsvDemo(nodes: CommerceNode[], quarter: string): void {
-  const header = '상권명,자치구,창업적합도,상권성격,고객흐름,상권위험도,분기'
+  const header = [
+    '상권ID',
+    '상권명',
+    '자치구',
+    '분기',
+    '상권유형',
+    '창업적합도',
+    '판단',
+    '순유입',
+    '연결중심성',
+    '상권위험도',
+    '폐업률',
+  ]
   const rows = nodes
     .filter((n) => deriveStartupSummary(n).fitLevel === 'recommended')
     .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
     .map((n) => {
       const summary = deriveStartupSummary(n)
-      return `${n.name},${n.district},${summary.fitScore},${summary.characterLabel},${summary.flowLabel},${formatFixed2(n.griScore)},${quarter}`
+      return [
+        n.id,
+        n.name,
+        n.district,
+        quarter,
+        summary.characterLabel,
+        summary.fitScore,
+        summary.fitLabel,
+        formatSignedFixed2(n.netFlow),
+        formatFixed2(n.degreeCentrality),
+        formatFixed2(n.griScore),
+        n.closeRate != null ? `${n.closeRate.toFixed(1)}%` : '',
+      ].map(csvCell).join(',')
     })
-  const csv = [header, ...rows].join('\n')
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const csv = [header.map(csvCell).join(','), ...rows].join('\r\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -115,21 +161,21 @@ async function downloadCsvApi(quarter: string): Promise<void> {
 }
 
 const S = {
-  panel: {
-    width: 320,
-    minWidth: 320,
-    height: '100%',
+  panel: (compact: boolean, stacked: boolean): CSSProperties => ({
+    width: stacked ? '100%' : compact ? 292 : 320,
+    minWidth: stacked ? 0 : compact ? 292 : 320,
+    height: stacked ? '44vh' : '100%',
     background: COLORS.panelBg,
     borderLeft: `1px solid ${COLORS.panelBorder}`,
     display: 'flex',
     flexDirection: 'column',
     overflowY: 'auto',
-    padding: '18px 16px',
-    gap: 18,
+    padding: compact ? '14px 12px' : '18px 16px',
+    gap: compact ? 14 : 18,
     boxSizing: 'border-box',
     color: COLORS.panelText,
     fontFamily: 'system-ui, sans-serif',
-  } satisfies CSSProperties,
+  }),
   header: {
     paddingBottom: 12,
     borderBottom: `1px solid ${COLORS.panelBorder}`,
@@ -256,6 +302,35 @@ const S = {
     fontSize: 18,
     fontWeight: 700,
     color: COLORS.panelText,
+  } satisfies CSSProperties,
+  compareHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 9,
+  } satisfies CSSProperties,
+  deltaGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8,
+    marginTop: 10,
+  } satisfies CSSProperties,
+  deltaCard: {
+    background: COLORS.panelSurface,
+    borderRadius: 8,
+    border: `1px solid ${COLORS.panelBorder}`,
+    padding: '9px 10px',
+  } satisfies CSSProperties,
+  deltaValue: {
+    fontSize: 13,
+    fontWeight: 800,
+    marginTop: 3,
+  } satisfies CSSProperties,
+  deltaMeta: {
+    fontSize: 10,
+    color: COLORS.mutedText,
+    marginTop: 2,
   } satisfies CSSProperties,
   detailCard: {
     background: COLORS.panelSurface,
@@ -474,31 +549,56 @@ export default function FlowControlPanel({
   isPlaying,
   speed,
   showFlows,
+  showBarriers,
   onPlay,
   onPause,
   onToggleSpeed,
   onToggleFlows,
+  onToggleBarriers,
   selectedDistricts,
   onToggleDistrict,
   onSelectNode,
+  compareMode,
+  compareQuarter,
+  kpiDelta,
+  onToggleCompare,
+  compact = false,
+  stacked = false,
 }: FlowControlPanelProps) {
   const densityLabel = DENSITY_LABELS[flowStrength] ?? '보통'
   const priorityNodes = getPriorityNodes(nodes)
   const totalPurposeVolume = Object.values(purposeTotals).reduce((sum, value) => sum + value, 0)
   const selectedPurposeVolume = purpose ? purposeTotals[purpose] ?? 0 : totalPurposeVolume
+  const toast = useToast()
 
   function handleCsvDownload() {
-    if (usingMockData) {
-      downloadCsvDemo(nodes, selectedQuarter)
-    } else {
-      downloadCsvApi(selectedQuarter).catch((err: unknown) => {
-        console.error('CSV 다운로드 오류:', err)
-      })
+    if (priorityNodes.length === 0) {
+      toast.info('현재 조건에서 다운로드할 추천 상권이 없습니다')
+      return
     }
+    if (usingMockData) {
+      try {
+        downloadCsvDemo(nodes, selectedQuarter)
+        toast.success(`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드 완료`)
+      } catch (err) {
+        console.error('CSV 다운로드 오류:', err)
+        toast.error('CSV 생성에 실패했습니다')
+      }
+      return
+    }
+    downloadCsvApi(selectedQuarter)
+      .then(() => {
+        toast.success(`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드 완료`)
+      })
+      .catch((err: unknown) => {
+        console.error('CSV 다운로드 오류:', err)
+        const reason = err instanceof Error ? err.message : 'API 응답 오류'
+        toast.error(`CSV 다운로드 실패: ${reason}`)
+      })
   }
 
   return (
-    <aside style={S.panel}>
+    <aside style={S.panel(compact, stacked)}>
       <div style={S.header}>
         <div style={S.title}>창업 상권 탐색</div>
         <div style={S.subtitle}>
@@ -532,7 +632,12 @@ export default function FlowControlPanel({
             ))}
           </div>
         )}
-        <button type="button" style={S.csvButton} onClick={handleCsvDownload}>
+        <button
+          type="button"
+          style={S.csvButton}
+          onClick={handleCsvDownload}
+          aria-label={`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드`}
+        >
           추천 상권 CSV 다운로드
         </button>
       </section>
@@ -552,6 +657,7 @@ export default function FlowControlPanel({
                   style={S.quarterButton(active)}
                   onClick={() => onQuarterChange(quarter)}
                   aria-pressed={active}
+                  aria-label={`${formatQuarter(quarter)} 데이터 보기`}
                 >
                   {formatQuarter(quarter)}
                 </button>
@@ -569,6 +675,7 @@ export default function FlowControlPanel({
               style={S.purposeBtn(purpose === null)}
               onClick={() => onPurposeChange(null)}
               aria-pressed={purpose === null}
+              aria-label={`전체 이동 목적 선택, 총 ${formatVolume(totalPurposeVolume)}`}
             >
               <span style={S.purposeMain}>
                 <span>전체</span>
@@ -590,6 +697,7 @@ export default function FlowControlPanel({
                     if (!disabled) onPurposeChange(active ? null : option.value)
                   }}
                   aria-pressed={active}
+                  aria-label={`${option.label} 이동 목적 선택, ${formatVolume(volume)}`}
                 >
                   <span style={S.purposeMain}>
                     <span>{option.label}</span>
@@ -617,6 +725,7 @@ export default function FlowControlPanel({
               value={hour}
               onChange={(e) => onHourChange(Number(e.target.value))}
               style={S.slider}
+              aria-label="시간대 선택"
             />
             <span style={S.sliderValue}>{formatHourLabel(hour)}</span>
           </div>
@@ -633,6 +742,7 @@ export default function FlowControlPanel({
               value={flowStrength}
               onChange={(e) => onStrengthChange(Number(e.target.value))}
               style={S.slider}
+              aria-label="가시화 밀도 선택"
             />
             <span style={S.sliderValue}>{densityLabel}</span>
           </div>
@@ -642,6 +752,31 @@ export default function FlowControlPanel({
 
       <section style={S.section}>
         <div style={S.sectionTitle}>고객 흐름 요약</div>
+        <div style={S.compareHeader}>
+          <div>
+            <div style={S.label}>분기 비교</div>
+            <div style={S.subLabel}>
+              {compareQuarter
+                ? `${formatQuarter(compareQuarter)} 대비 KPI 변화`
+                : '이전 분기가 없어 비교할 수 없습니다.'}
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={compareMode}
+            aria-label="이전 분기 KPI 비교 표시 전환"
+            onClick={onToggleCompare}
+            disabled={!compareQuarter}
+            style={{
+              ...S.switchTrack(compareMode),
+              opacity: compareQuarter ? 1 : 0.45,
+              cursor: compareQuarter ? 'pointer' : 'not-allowed',
+            }}
+          >
+            <span style={S.switchThumb(compareMode)} />
+          </button>
+        </div>
         <div style={S.statsGrid}>
           <div style={S.statCard}>
             <div style={S.statLabel}>총 유동량</div>
@@ -664,6 +799,38 @@ export default function FlowControlPanel({
             </div>
           </div>
         </div>
+        {compareMode && kpiDelta && (
+          <div style={S.deltaGrid}>
+            <div style={S.deltaCard}>
+              <div style={S.statLabel}>총 유동량</div>
+              <div style={{ ...S.deltaValue, color: getDeltaColor(kpiDelta.delta.totalVolume) }}>
+                {formatDelta(kpiDelta.delta.totalVolume, 0)}
+              </div>
+              <div style={S.deltaMeta}>현재 {formatVolume(kpiDelta.current.totalVolume)}</div>
+            </div>
+            <div style={S.deltaCard}>
+              <div style={S.statLabel}>평균 GRI</div>
+              <div style={{ ...S.deltaValue, color: getDeltaColor(kpiDelta.delta.avgGri, 'lower') }}>
+                {formatDelta(kpiDelta.delta.avgGri, 1)}
+              </div>
+              <div style={S.deltaMeta}>현재 {kpiDelta.current.avgGri.toFixed(1)}</div>
+            </div>
+            <div style={S.deltaCard}>
+              <div style={S.statLabel}>상권 수</div>
+              <div style={{ ...S.deltaValue, color: getDeltaColor(kpiDelta.delta.commerceCount) }}>
+                {formatDelta(kpiDelta.delta.commerceCount, 0)}
+              </div>
+              <div style={S.deltaMeta}>현재 {kpiDelta.current.commerceCount.toLocaleString()}개</div>
+            </div>
+            <div style={S.deltaCard}>
+              <div style={S.statLabel}>추천 상권</div>
+              <div style={{ ...S.deltaValue, color: getDeltaColor(kpiDelta.delta.recommendedCount) }}>
+                {formatDelta(kpiDelta.delta.recommendedCount, 0)}
+              </div>
+              <div style={S.deltaMeta}>현재 {kpiDelta.current.recommendedCount.toLocaleString()}개</div>
+            </div>
+          </div>
+        )}
       </section>
 
       <section style={S.section}>
@@ -697,6 +864,19 @@ export default function FlowControlPanel({
             <span style={S.switchThumb(showFlows)} />
           </button>
         </div>
+        <div style={S.switchRow}>
+          <span style={S.switchLabel}>흐름 단절 표시</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showBarriers}
+            onClick={onToggleBarriers}
+            aria-label="흐름 단절 레이어 표시 전환"
+            style={S.switchTrack(showBarriers)}
+          >
+            <span style={S.switchThumb(showBarriers)} />
+          </button>
+        </div>
         <div style={S.subLabel}>
           {isPlaying
             ? `${speed}배속으로 시간 축이 자동 재생 중입니다.`
@@ -714,6 +894,8 @@ export default function FlowControlPanel({
                 key={district}
                 style={S.pillButton(active, '#42A5F5')}
                 onClick={() => onToggleDistrict(district)}
+                aria-pressed={active}
+                aria-label={`${district} 자치구 필터 ${active ? '해제' : '선택'}`}
               >
                 <span>{district}</span>
               </button>

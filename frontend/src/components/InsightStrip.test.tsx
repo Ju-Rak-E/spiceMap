@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, it, expect } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
-import InsightStrip, { countCriticalCommerces } from './InsightStrip'
+import InsightStrip from './InsightStrip'
 import type { CommerceNode } from '../types/commerce'
+import { countCriticalCommerces } from '../utils/insightMetrics'
 
 function makeNode(overrides: Partial<CommerceNode>): CommerceNode {
   return {
@@ -79,7 +80,7 @@ describe('countCriticalCommerces', () => {
   })
 
   it('treats null/undefined gri as 0', () => {
-    const nodes = [makeNode({ griScore: undefined as any })]
+    const nodes = [makeNode({ griScore: undefined as unknown as number })]
     expect(countCriticalCommerces(nodes)).toBe(0)
   })
 })

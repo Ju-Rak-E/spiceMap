@@ -30,6 +30,8 @@ def _row(**overrides):
         comm_cd="3110053",
         comm_nm="신림 골목상권",
         gu_nm="관악구",
+        adm_cd="1162010100",
+        adm_nm="신림동",
         source_comm_type="골목상권",  # PR #20: cb.comm_type 원천 보존
         geometry={"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
         centroid_lng=126.93,
@@ -65,6 +67,8 @@ class TestTypeMapNewColumns:
         assert props["net_flow"] == 3200.0
         assert props["degree_centrality"] == 0.65
         assert props["closure_rate"] == 8.1
+        assert props["adm_cd"] == "1162010100"
+        assert props["adm_nm"] == "신림동"
 
         app.dependency_overrides.clear()
 

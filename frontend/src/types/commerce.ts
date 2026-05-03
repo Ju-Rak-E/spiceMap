@@ -7,6 +7,7 @@ export interface CommerceNode {
   type: CommerceType
   sourceCommType?: string | null  // 서울시 원본 상권 구분
   district: string               // 자치구명 (예: '강남구')
+  admKey?: string                // 행정동 식별자 — OD flow sourceId/targetId와 매칭 (mock: '강남구_역삼동' 형식, API: adm_cd 또는 adm_nm)
   netFlow: number                // 순유입 (양수=유입, 음수=유출)
   degreeCentrality: number       // 0~1
   griScore: number               // 0~100
@@ -18,6 +19,8 @@ export interface CommerceFeatureProperties {
   comm_cd: string
   comm_nm: string
   gu_nm?: string | null
+  adm_cd?: string | null
+  adm_nm?: string | null
   commerce_type?: string | null
   source_comm_type?: string | null
   comm_type: string | null
@@ -101,6 +104,7 @@ export function featuresToNodes(features: CommerceFeature[]): CommerceNode[] {
       type: resolveType(f.properties.commerce_type ?? f.properties.comm_type ?? null),
       sourceCommType: f.properties.source_comm_type ?? f.properties.comm_type ?? null,
       district: f.properties.gu_nm ?? '',
+      admKey: f.properties.adm_cd ?? f.properties.adm_nm ?? undefined,
       netFlow: f.properties.net_flow ?? 0,
       degreeCentrality: f.properties.degree_centrality ?? 0,
       griScore: f.properties.gri_score ?? 0,

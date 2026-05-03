@@ -9,6 +9,9 @@ class BarrierItem(BaseModel):
     to_comm_nm: str | None = None
     barrier_score: float
     barrier_type: str | None = None
+    sourceCoord: tuple[float, float] | None = None
+    targetCoord: tuple[float, float] | None = None
+    affected_volume: int | None = None
 
 
 class BarriersResponse(BaseModel):
