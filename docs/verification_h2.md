@@ -112,7 +112,7 @@ python -m scripts.run_validation_h2_b1 \
 
 ### 7-3. 결과 반영
 
-산출된 `validation_2025Q4.json` 의 H2 결과를 `frontend/src/data/validation_results.json` 의 H2 카드 metric_primary, sample_size, criterion 필드에 수동 반영. ValidationView 가 자동 렌더링.
+산출된 `validation_2025Q4.json` 의 H2 결과를 `frontend/src/data/validation_results.json` 의 H2 카드 metric_primary, sample_size, criterion 필드에 수동 반영. ValidationView 가 자동 렌더링하고, 동일 fixture 를 backend `GET /api/insights/validation` (`backend/api/validation.py`) 도 그대로 응답한다 — 단일 소스 정책.
 
 예시 (실측 후 갱신):
 

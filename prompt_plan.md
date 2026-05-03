@@ -126,7 +126,7 @@
 - [x] H2 검증 함수 구현 — **2026-05-03** `backend/analysis/verification_h2.py` (`aggregate_barrier_intensity` + `compute_h2_alignment`, Pearson/Spearman, 임계 r ≥ 0.3 + p < 0.05). 10 tests pass. 실데이터 산출은 `scripts/run_validation_h2_b1.py --quarter 2025Q4` 실행 필요
 - [x] 베이스라인 B1 코드 구현 — **2026-05-03** `backend/analysis/baseline_b1.py` (`load_change_index_csv` utf-8/utf-8-sig/cp949 자동 + `compute_b1_baseline` 상권쇠퇴 binary + `compare_priority_to_b1` Jaccard). 15 tests pass. 정적 CSV 절차 `data/baselines/README.md`. 기존 산출(Jaccard 0.58, 14건) 재현 가능
 - [x] 베이스라인 B3 (기존 매출 추세 모델) — **PR #36** Jaccard 0.151 (PASS, 추가 위험 231건)
-- [x] 검증 결과 패널 콘텐츠 작성 — **2026-05-03 b763b20** `ValidationView` 4카드 (H1 r=0.106 / H3 gap=0.746%p / B1 J=0.58 / B3 J=0.151), `/api/insights/validation` + 정적 fallback `frontend/src/data/validation_results.json`
+- [x] 검증 결과 패널 콘텐츠 작성 — **2026-05-03 b763b20+88adc9f** `ValidationView` 5카드 (H1 r=0.106 / H2 함수+카드 / H3 gap=0.746%p / B1 J=0.58 / B3 J=0.151) + 백엔드 `GET /api/insights/validation` (`backend/api/validation.py`, 5 tests, env override 가능). 단일 소스 `frontend/src/data/validation_results.json` — backend 가 동일 파일 응답
 - [x] 프론트 Tier 1 — **2026-04-30 PR #32** 가치 명제 헤더 2단 + MVP 강남·관악 자동 줌 (center [127.0, 37.49], zoom 11.5)
 
 **주차 완료 기준**: 3분 발표 시나리오 1회 시연 통과, H1~H3 수치 확정.

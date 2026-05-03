@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import staticResults from '../data/validation_results.json'
 
 // docs/hero_shot_scenario.md §1-4: 검증 보고 탭 — H1/H3/H2 + B1/B3 5카드.
-// 백엔드 /api/insights/validation 미연결 시 정적 JSON fallback.
+// 백엔드 GET /api/insights/validation 이 동일 fixture 를 응답 (backend/api/validation.py).
+// VITE_API_BASE_URL 미설정 또는 fetch 실패 시 정적 JSON fallback.
 // 카드 grid는 auto-fit minmax(320px, 1fr) — 카드 수가 늘어도 자동 적응.
 
 export interface ValidationCard {
