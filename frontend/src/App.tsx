@@ -27,6 +27,7 @@ export default function App() {
   const [hour, setHour] = useState(14)
   const [flowStrength, setFlowStrength] = useState(3)
   const [showFlows, setShowFlows] = useState(true)
+  const [showBarriers, setShowBarriers] = useState(false)
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(
     () => new Set(['강남구', '관악구']),
@@ -77,6 +78,7 @@ export default function App() {
             selectedQuarter={selectedQuarter}
             boundaryOpacity={BOUNDARY_OPACITY}
             showFlows={showFlows}
+            showBarriers={showBarriers}
             selectedDistricts={selectedDistricts}
             selectedNode={selectedNode}
             onSelectNode={setSelectedNode}
@@ -108,10 +110,12 @@ export default function App() {
           isPlaying={isPlaying}
           speed={speed}
           showFlows={showFlows}
+          showBarriers={showBarriers}
           onPlay={play}
           onPause={pause}
           onToggleSpeed={toggleSpeed}
           onToggleFlows={() => setShowFlows(prev => !prev)}
+          onToggleBarriers={() => setShowBarriers(prev => !prev)}
           selectedDistricts={selectedDistricts}
           onToggleDistrict={handleToggleDistrict}
           onSelectNode={setSelectedNode}

@@ -9,7 +9,9 @@ import CommerceDetailPanel from './CommerceDetailPanel'
 import { createCommerceNodeLayers } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
+import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
+import { useBarriers, type Barrier } from '../hooks/useBarriers'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
@@ -71,6 +73,7 @@ interface MapProps {
   selectedQuarter: string
   boundaryOpacity?: number
   showFlows?: boolean
+  showBarriers?: boolean
   selectedDistricts?: Set<string>
   selectedNode?: CommerceNode | null
   onSelectNode?: (node: CommerceNode | null) => void
@@ -78,6 +81,12 @@ interface MapProps {
 
 interface HoveredNode {
   node: CommerceNode
+  x: number
+  y: number
+}
+
+interface HoveredBarrier {
+  barrier: Barrier
   x: number
   y: number
 }
@@ -103,6 +112,7 @@ export default function Map({
   selectedQuarter,
   boundaryOpacity = 0.2,
   showFlows = true,
+  showBarriers = false,
   selectedDistricts,
   selectedNode = null,
   onSelectNode,
@@ -114,7 +124,9 @@ export default function Map({
   const zoomRef = useRef(11)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
+  const [hoveredBarrier, setHoveredBarrier] = useState<HoveredBarrier | null>(null)
   const [closedDetailNodeId, setClosedDetailNodeId] = useState<string | null>(null)
+  const { barriers } = useBarriers(selectedQuarter)
   const [zoom, setZoom] = useState(11)
   const [viewportTick, setViewportTick] = useState(0)
   const [boundaries, setBoundaries] = useState<AdminBoundaryCollection | null>(null)
@@ -232,7 +244,6 @@ export default function Map({
           createFlowParticleLayer(flows, progressRef.current, selectedFlowKey),
         ]
       : []
-
     const commerceLayers = nodes.length > 0 && zoomRef.current >= CANDIDATE_ZOOM
       ? createCommerceNodeLayers(
           nodes,
@@ -255,9 +266,9 @@ export default function Map({
       : []
 
     overlayRef.current.setProps({
-      layers: [...flowLayers, ...commerceLayers],
+      layers: [...flowLayers, ...barrierLayers, ...commerceLayers],
     })
-  }, [flows, nodes, onSelectNode, selectedNode?.admKey, selectedNode?.id, showFlows])
+  }, [barriers, flows, nodes, onSelectNode, selectedNode?.admKey, selectedNode?.id, showBarriers, showFlows])
 
   useAnimationFrame(handleFrame)
 
@@ -651,6 +662,96 @@ export default function Map({
           </div>
         )
       })()}
+
+      {hoveredBarrier && (() => {
+        const { barrier, x, y } = hoveredBarrier
+        const containerWidth = containerSize.width || window.innerWidth
+        const cardWidth = 240
+        const rawLeft = x + 14 + cardWidth > containerWidth ? x - 14 - cardWidth : x + 14
+        const cardLeft = Math.max(0, rawLeft)
+        const severityColor =
+          barrier.severity === 'high' ? '#EF5350'
+          : barrier.severity === 'medium' ? '#FFA726'
+          : '#FFD54F'
+        const severityLabel =
+          barrier.severity === 'high' ? '심각'
+          : barrier.severity === 'medium' ? '주의' : '경미'
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: cardLeft,
+              top: y - 12,
+              background: colors.panelBg,
+              color: colors.panelText,
+              border: `1px solid ${severityColor}`,
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 12,
+              pointerEvents: 'none',
+              zIndex: 11,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              width: cardWidth,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+              <span style={{ fontWeight: 700, fontSize: 13 }}>흐름 단절</span>
+              <span
+                style={{
+                  background: `${severityColor}22`,
+                  color: severityColor,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  borderRadius: 4,
+                  padding: '2px 6px',
+                }}
+              >
+                {severityLabel}
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: colors.secondaryText, lineHeight: 1.5, marginBottom: 6 }}>
+              {barrier.sourceName} → {barrier.targetName}
+            </div>
+            {barrier.type && (
+              <div style={{ fontSize: 11, color: colors.panelText, lineHeight: 1.4, marginBottom: 6 }}>
+                {barrier.type}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: colors.mutedText }}>
+              <span>영향 흐름량 {barrier.affectedVolume.toLocaleString()}</span>
+              <span>점수 {barrier.score.toFixed(2)}</span>
+            </div>
+          </div>
+        )
+      })()}
+
+      {hoveredBarrier && (
+        <div
+          style={{
+            position: 'absolute',
+            left: Math.max(0, hoveredBarrier.x + 14),
+            top: Math.max(56, hoveredBarrier.y - 12),
+            background: colors.panelBg,
+            color: colors.panelText,
+            border: '1px solid #FFAB40',
+            borderRadius: 8,
+            padding: '9px 12px',
+            fontSize: 12,
+            pointerEvents: 'none',
+            zIndex: 11,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
+            maxWidth: 260,
+          }}
+        >
+          <div style={{ fontWeight: 800, marginBottom: 5 }}>흐름 단절 후보</div>
+          <div style={{ color: colors.secondaryText, lineHeight: 1.45 }}>
+            {hoveredBarrier.barrier.sourceName} → {hoveredBarrier.barrier.targetName}
+          </div>
+          <div style={{ marginTop: 5, color: '#FFCC80', fontWeight: 700 }}>
+            단절 강도 {(hoveredBarrier.barrier.score * 100).toFixed(0)}%
+          </div>
+        </div>
+      )}
 
       {selectedNode && !detailPanelOpen && (
         <button

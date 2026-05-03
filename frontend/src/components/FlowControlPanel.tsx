@@ -46,10 +46,12 @@ interface FlowControlPanelProps {
   isPlaying: boolean
   speed: 1 | 2 | 4
   showFlows: boolean
+  showBarriers: boolean
   onPlay: () => void
   onPause: () => void
   onToggleSpeed: () => void
   onToggleFlows: () => void
+  onToggleBarriers: () => void
   selectedDistricts: Set<string>
   onToggleDistrict: (d: string) => void
   onSelectNode: (node: CommerceNode) => void
@@ -475,10 +477,12 @@ export default function FlowControlPanel({
   isPlaying,
   speed,
   showFlows,
+  showBarriers,
   onPlay,
   onPause,
   onToggleSpeed,
   onToggleFlows,
+  onToggleBarriers,
   selectedDistricts,
   onToggleDistrict,
   onSelectNode,
@@ -723,6 +727,19 @@ export default function FlowControlPanel({
             style={S.switchTrack(showFlows)}
           >
             <span style={S.switchThumb(showFlows)} />
+          </button>
+        </div>
+        <div style={S.switchRow}>
+          <span style={S.switchLabel}>흐름 단절 표시</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showBarriers}
+            onClick={onToggleBarriers}
+            aria-label="흐름 단절 레이어 표시 전환"
+            style={S.switchTrack(showBarriers)}
+          >
+            <span style={S.switchThumb(showBarriers)} />
           </button>
         </div>
         <div style={S.subLabel}>
