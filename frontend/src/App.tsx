@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
 import ToastViewport from './components/Toast'
@@ -7,6 +7,7 @@ import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
 import { filterNodesByDistrict } from './utils/filters'
+import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import type { CommerceNode } from './types/commerce'
 import './App.css'
 
@@ -33,14 +34,38 @@ export default function App() {
     () => new Set(['강남구', '관악구']),
   )
   const [selectedQuarter, setSelectedQuarter] = useState(DEFAULT_QUARTER)
+  const [compareMode, setCompareMode] = useState(false)
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
+  const previousQuarter = useMemo(
+    () => getPreviousQuarter(selectedQuarter, QUARTERS),
+    [selectedQuarter],
+  )
+
   const { nodes: rawNodes, usingMockData } = useCommerceData(selectedQuarter, selectedDistricts)
   const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour, quarter: selectedQuarter })
 
+  const compareEnabled = compareMode && previousQuarter !== null
+  const compareQuarter = compareEnabled ? previousQuarter : selectedQuarter
+  const { nodes: rawCompareNodes } = useCommerceData(compareQuarter, selectedDistricts)
+  const compareFlowData = useFlowData({
+    purpose: purpose ?? undefined,
+    topN,
+    hour,
+    quarter: compareQuarter,
+  })
+
   const nodes = filterNodesByDistrict(rawNodes, selectedDistricts)
+  const compareNodes = filterNodesByDistrict(rawCompareNodes, selectedDistricts)
+
+  const kpiDelta = useMemo(() => {
+    if (!compareEnabled) return null
+    const current = computeKpi(nodes, flowData.totalVolume)
+    const previous = computeKpi(compareNodes, compareFlowData.totalVolume)
+    return computeKpiDelta(current, previous)
+  }, [compareEnabled, nodes, compareNodes, flowData.totalVolume, compareFlowData.totalVolume])
 
   useEffect(() => {
     if (!selectedNode) return
@@ -119,6 +144,10 @@ export default function App() {
           selectedDistricts={selectedDistricts}
           onToggleDistrict={handleToggleDistrict}
           onSelectNode={setSelectedNode}
+          compareMode={compareMode}
+          compareQuarter={previousQuarter}
+          kpiDelta={kpiDelta}
+          onToggleCompare={() => setCompareMode((prev) => !prev)}
         />
       </div>
       <ToastViewport />

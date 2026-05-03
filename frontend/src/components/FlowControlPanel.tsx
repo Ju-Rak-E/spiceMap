@@ -5,6 +5,7 @@ import { COMMERCE_COLORS, MAP_THEME } from '../styles/tokens'
 import { formatQuarter } from '../utils/quarter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
+import { deltaTone, formatDelta, type QuarterKpiDelta } from '../utils/quarterDelta'
 import { useToast } from './ToastContext'
 
 const PURPOSE_OPTIONS: Array<{ value: FlowPurpose; label: string; peak: string }> = [
@@ -55,6 +56,10 @@ interface FlowControlPanelProps {
   selectedDistricts: Set<string>
   onToggleDistrict: (d: string) => void
   onSelectNode: (node: CommerceNode) => void
+  compareMode: boolean
+  compareQuarter: string | null
+  kpiDelta: QuarterKpiDelta | null
+  onToggleCompare: () => void
 }
 
 function formatVolume(value: number): string {
@@ -80,6 +85,13 @@ function getPriorityNodes(nodes: CommerceNode[]): CommerceNode[] {
     .filter((n) => deriveStartupSummary(n).fitLevel === 'recommended')
     .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
     .slice(0, 5)
+}
+
+function getDeltaColor(value: number, betterWhen: 'higher' | 'lower' = 'higher'): string {
+  const tone = deltaTone(value, betterWhen)
+  if (tone === 'up') return '#A5D6A7'
+  if (tone === 'down') return '#EF9A9A'
+  return COLORS.mutedText
 }
 
 function downloadCsvDemo(nodes: CommerceNode[], quarter: string): void {
@@ -259,6 +271,35 @@ const S = {
     fontSize: 18,
     fontWeight: 700,
     color: COLORS.panelText,
+  } satisfies CSSProperties,
+  compareHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 9,
+  } satisfies CSSProperties,
+  deltaGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8,
+    marginTop: 10,
+  } satisfies CSSProperties,
+  deltaCard: {
+    background: COLORS.panelSurface,
+    borderRadius: 8,
+    border: `1px solid ${COLORS.panelBorder}`,
+    padding: '9px 10px',
+  } satisfies CSSProperties,
+  deltaValue: {
+    fontSize: 13,
+    fontWeight: 800,
+    marginTop: 3,
+  } satisfies CSSProperties,
+  deltaMeta: {
+    fontSize: 10,
+    color: COLORS.mutedText,
+    marginTop: 2,
   } satisfies CSSProperties,
   detailCard: {
     background: COLORS.panelSurface,
@@ -486,6 +527,10 @@ export default function FlowControlPanel({
   selectedDistricts,
   onToggleDistrict,
   onSelectNode,
+  compareMode,
+  compareQuarter,
+  kpiDelta,
+  onToggleCompare,
 }: FlowControlPanelProps) {
   const densityLabel = DENSITY_LABELS[flowStrength] ?? '보통'
   const priorityNodes = getPriorityNodes(nodes)
@@ -532,6 +577,85 @@ export default function FlowControlPanel({
           <span style={S.statusTag}>{usingMockData ? '캐시 데이터' : 'API 연결'}</span>
           {selectedNode && <span style={S.statusTag}>선택: {selectedNode.name}</span>}
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={compareMode}
+            onClick={onToggleCompare}
+            disabled={compareQuarter === null}
+            aria-label={compareQuarter === null
+              ? '직전 분기 데이터가 없어 비교 모드를 사용할 수 없습니다'
+              : `직전 분기(${formatQuarter(compareQuarter)})와 비교 ${compareMode ? '해제' : '시작'}`}
+            style={{
+              background: compareMode ? '#1565C0' : 'rgba(21,29,38,0.92)',
+              color: compareMode ? '#FFF' : '#B0BEC5',
+              border: `1px solid ${compareMode ? '#42A5F5' : '#37474F'}`,
+              borderRadius: 999,
+              padding: '4px 10px',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: compareQuarter === null ? 'not-allowed' : 'pointer',
+              opacity: compareQuarter === null ? 0.5 : 1,
+            }}
+          >
+            {compareMode ? '비교 모드 ON' : '직전 분기 비교'}
+          </button>
+          {compareMode && compareQuarter && (
+            <span style={{ fontSize: 11, color: '#90A4AE' }}>
+              vs {formatQuarter(compareQuarter)}
+            </span>
+          )}
+        </div>
+        {compareMode && kpiDelta && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: 6,
+              marginTop: 10,
+            }}
+          >
+            {[
+              {
+                label: '총 흐름량',
+                value: formatDelta(kpiDelta.delta.totalVolume, 0),
+                tone: deltaTone(kpiDelta.delta.totalVolume, 'higher'),
+              },
+              {
+                label: 'GRI 평균',
+                value: formatDelta(kpiDelta.delta.avgGri, 1),
+                tone: deltaTone(kpiDelta.delta.avgGri, 'lower'),
+              },
+              {
+                label: '상권 수',
+                value: formatDelta(kpiDelta.delta.commerceCount, 0),
+                tone: deltaTone(kpiDelta.delta.commerceCount, 'higher'),
+              },
+              {
+                label: '추천 상권',
+                value: formatDelta(kpiDelta.delta.recommendedCount, 0),
+                tone: deltaTone(kpiDelta.delta.recommendedCount, 'higher'),
+              },
+            ].map((chip) => {
+              const color = chip.tone === 'up' ? '#66BB6A' : chip.tone === 'down' ? '#EF5350' : '#B0BEC5'
+              return (
+                <div
+                  key={chip.label}
+                  style={{
+                    background: 'rgba(21,29,38,0.92)',
+                    border: `1px solid ${color}55`,
+                    borderRadius: 6,
+                    padding: '6px 8px',
+                  }}
+                >
+                  <div style={{ fontSize: 10, color: '#78909C', marginBottom: 2 }}>{chip.label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color }}>{chip.value}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       <section style={S.section}>
@@ -674,6 +798,31 @@ export default function FlowControlPanel({
 
       <section style={S.section}>
         <div style={S.sectionTitle}>고객 흐름 요약</div>
+        <div style={S.compareHeader}>
+          <div>
+            <div style={S.label}>분기 비교</div>
+            <div style={S.subLabel}>
+              {compareQuarter
+                ? `${formatQuarter(compareQuarter)} 대비 KPI 변화`
+                : '이전 분기가 없어 비교할 수 없습니다.'}
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={compareMode}
+            aria-label="이전 분기 KPI 비교 표시 전환"
+            onClick={onToggleCompare}
+            disabled={!compareQuarter}
+            style={{
+              ...S.switchTrack(compareMode),
+              opacity: compareQuarter ? 1 : 0.45,
+              cursor: compareQuarter ? 'pointer' : 'not-allowed',
+            }}
+          >
+            <span style={S.switchThumb(compareMode)} />
+          </button>
+        </div>
         <div style={S.statsGrid}>
           <div style={S.statCard}>
             <div style={S.statLabel}>총 유동량</div>
@@ -696,6 +845,38 @@ export default function FlowControlPanel({
             </div>
           </div>
         </div>
+        {compareMode && kpiDelta && (
+          <div style={S.deltaGrid}>
+            <div style={S.deltaCard}>
+              <div style={S.statLabel}>총 유동량</div>
+              <div style={{ ...S.deltaValue, color: getDeltaColor(kpiDelta.delta.totalVolume) }}>
+                {formatDelta(kpiDelta.delta.totalVolume, 0)}
+              </div>
+              <div style={S.deltaMeta}>현재 {formatVolume(kpiDelta.current.totalVolume)}</div>
+            </div>
+            <div style={S.deltaCard}>
+              <div style={S.statLabel}>평균 GRI</div>
+              <div style={{ ...S.deltaValue, color: getDeltaColor(kpiDelta.delta.avgGri, 'lower') }}>
+                {formatDelta(kpiDelta.delta.avgGri, 1)}
+              </div>
+              <div style={S.deltaMeta}>현재 {kpiDelta.current.avgGri.toFixed(1)}</div>
+            </div>
+            <div style={S.deltaCard}>
+              <div style={S.statLabel}>상권 수</div>
+              <div style={{ ...S.deltaValue, color: getDeltaColor(kpiDelta.delta.commerceCount) }}>
+                {formatDelta(kpiDelta.delta.commerceCount, 0)}
+              </div>
+              <div style={S.deltaMeta}>현재 {kpiDelta.current.commerceCount.toLocaleString()}개</div>
+            </div>
+            <div style={S.deltaCard}>
+              <div style={S.statLabel}>추천 상권</div>
+              <div style={{ ...S.deltaValue, color: getDeltaColor(kpiDelta.delta.recommendedCount) }}>
+                {formatDelta(kpiDelta.delta.recommendedCount, 0)}
+              </div>
+              <div style={S.deltaMeta}>현재 {kpiDelta.current.recommendedCount.toLocaleString()}개</div>
+            </div>
+          </div>
+        )}
       </section>
 
       <section style={S.section}>
