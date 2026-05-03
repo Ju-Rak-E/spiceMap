@@ -86,8 +86,7 @@ async function fetchBarriers(quarter: string): Promise<Barrier[]> {
     const res = await fetch(`${BASE_URL}/api/barriers?${params.toString()}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = (await res.json()) as BackendBarriersResponse
-    const normalized = normalizeBackendBarriers(data)
-    return normalized.length > 0 ? normalized : fetchMockBarriers()
+    return normalizeBackendBarriers(data)
   } catch {
     return fetchMockBarriers()
   }

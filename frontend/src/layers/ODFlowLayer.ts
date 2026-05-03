@@ -7,7 +7,7 @@ const MIN_WIDTH = 1.5
 const MAX_UNSELECTED_WIDTH = 8
 const MAX_VOLUME = 10000
 
-// selectedId는 CommerceNode.admKey (행정동 식별자) — flow.sourceId/targetId(adm_nm 또는 adm_cd)와 매칭.
+// selectedId는 CommerceNode.admKey (행정동 코드) — flow.sourceId/targetId(adm_cd)와 매칭.
 // 매칭 안 되는 경우 graceful: 강조 없이 기본 alpha 유지.
 export function getFlowAlpha(flow: ODFlow, selectedId: string | null): number {
   if (selectedId === null) return 140

@@ -47,6 +47,8 @@ def type_map(
                 cb.comm_cd,
                 cb.comm_nm,
                 ab.gu_nm,
+                ab.adm_cd,
+                ab.adm_nm,
                 ca.commerce_type          AS commerce_type,
                 cb.comm_type              AS source_comm_type,
                 ST_AsGeoJSON(cb.geom)::json AS geometry,
@@ -62,7 +64,7 @@ def type_map(
                 ca.analysis_note
             FROM commerce_boundary cb
             LEFT JOIN LATERAL (
-                SELECT gu_nm
+                SELECT adm_cd, adm_nm, gu_nm
                 FROM admin_boundary
                 WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
                 LIMIT 1
@@ -78,7 +80,9 @@ def type_map(
             SELECT
                 cb.comm_cd,
                 cb.comm_nm,
-                NULL::text               AS gu_nm,
+                ab.gu_nm,
+                ab.adm_cd,
+                ab.adm_nm,
                 ca.commerce_type          AS commerce_type,
                 cb.comm_type              AS source_comm_type,
                 ST_AsGeoJSON(cb.geom)::json AS geometry,
@@ -93,6 +97,12 @@ def type_map(
                 ca.dominant_origin,
                 ca.analysis_note
             FROM commerce_boundary cb
+            LEFT JOIN LATERAL (
+                SELECT adm_cd, adm_nm, gu_nm
+                FROM admin_boundary
+                WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
+                LIMIT 1
+            ) ab ON TRUE
             LEFT JOIN commerce_analysis ca
                 ON cb.comm_cd = ca.comm_cd
                 AND ca.year_quarter = :quarter
@@ -111,6 +121,8 @@ def type_map(
                 "comm_cd": row.comm_cd,
                 "comm_nm": row.comm_nm,
                 "gu_nm": row.gu_nm,
+                "adm_cd": row.adm_cd,
+                "adm_nm": row.adm_nm,
                 "commerce_type": row.commerce_type,
                 "source_comm_type": row.source_comm_type,
                 "comm_type": row.commerce_type,  # Week 4 클린업 예정 미러

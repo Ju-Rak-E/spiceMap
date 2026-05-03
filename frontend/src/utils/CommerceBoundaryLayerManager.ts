@@ -12,10 +12,11 @@ const SELECTED_COLOR = '#7BD08D'
 type BoundaryData = NonNullable<maplibregl.GeoJSONSourceSpecification['data']>
 
 function buildSelectedFilter(selectedId: string | null): maplibregl.FilterSpecification {
+  const ids = selectedId ? [selectedId] : []
   return [
-    'in',
-    ['get', 'comm_id'],
-    ['literal', selectedId ? [selectedId] : []],
+    'any',
+    ['in', ['get', 'comm_id'], ['literal', ids]],
+    ['in', ['get', 'comm_cd'], ['literal', ids]],
   ]
 }
 

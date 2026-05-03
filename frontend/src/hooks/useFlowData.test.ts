@@ -257,8 +257,8 @@ describe('normalizeBackendFlows', () => {
 
     expect(result).toEqual([{
       id: '11680640-11620695',
-      sourceId: '역삼1동',
-      targetId: '신림동',
+      sourceId: '11680640',
+      targetId: '11620695',
       sourceCoord: [127.036, 37.5],
       targetCoord: [126.929, 37.484],
       volume: 1234,

@@ -32,7 +32,11 @@ def barriers(
             fb.to_comm_cd,
             cb_t.comm_nm AS to_comm_nm,
             fb.barrier_score,
-            fb.barrier_type
+            fb.barrier_type,
+            ST_X(ST_PointOnSurface(cb_f.geom)) AS source_lng,
+            ST_Y(ST_PointOnSurface(cb_f.geom)) AS source_lat,
+            ST_X(ST_PointOnSurface(cb_t.geom)) AS target_lng,
+            ST_Y(ST_PointOnSurface(cb_t.geom)) AS target_lat
         FROM flow_barriers fb
         LEFT JOIN commerce_boundary cb_f ON cb_f.comm_cd = fb.from_comm_cd
         LEFT JOIN commerce_boundary cb_t ON cb_t.comm_cd = fb.to_comm_cd
@@ -57,6 +61,17 @@ def barriers(
             to_comm_nm=row.to_comm_nm,
             barrier_score=row.barrier_score,
             barrier_type=row.barrier_type,
+            sourceCoord=(
+                (float(row.source_lng), float(row.source_lat))
+                if row.source_lng is not None and row.source_lat is not None
+                else None
+            ),
+            targetCoord=(
+                (float(row.target_lng), float(row.target_lat))
+                if row.target_lng is not None and row.target_lat is not None
+                else None
+            ),
+            affected_volume=round(float(row.barrier_score or 0) * 10000),
         )
         for row in rows
     ]

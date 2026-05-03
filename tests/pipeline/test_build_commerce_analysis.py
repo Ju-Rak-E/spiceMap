@@ -8,6 +8,7 @@ from backend.pipeline.build_commerce_analysis import (
     build_analysis_frame,
     compute_closure_by_signgu,
     compute_inflow_summary,
+    dataframe_to_db_records,
     quarter_to_source_code,
 )
 
@@ -98,3 +99,21 @@ def test_build_analysis_frame_marks_rows_without_flow_as_unclassified():
     assert out[out["comm_cd"] == "C3"].iloc[0]["commerce_type"] == COMMERCE_TYPE_UNCLASSIFIED
     assert out[out["comm_cd"] == "C3"].iloc[0]["analysis_note"] == "no_flow_metrics"
     assert out[out["comm_cd"] == "C1"].iloc[0]["gri_score"] is not None
+
+
+def test_dataframe_to_db_records_converts_nan_to_none():
+    rows = pd.DataFrame(
+        [
+            {
+                "year_quarter": "2025Q4",
+                "comm_cd": "C3",
+                "gri_score": float("nan"),
+                "net_flow": float("nan"),
+            }
+        ]
+    )
+
+    [record] = dataframe_to_db_records(rows)
+
+    assert record["gri_score"] is None
+    assert record["net_flow"] is None

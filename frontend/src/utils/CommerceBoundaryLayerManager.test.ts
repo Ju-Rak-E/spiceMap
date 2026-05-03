@@ -76,7 +76,11 @@ describe('CommerceBoundaryLayerManager', () => {
 
     manager.setSelectedId('gw_003')
 
-    const expectedFilter = ['in', ['get', 'comm_id'], ['literal', ['gw_003']]]
+    const expectedFilter = [
+      'any',
+      ['in', ['get', 'comm_id'], ['literal', ['gw_003']]],
+      ['in', ['get', 'comm_cd'], ['literal', ['gw_003']]],
+    ]
     expect(map.setFilter).toHaveBeenCalledWith(SELECTED_FILL_LAYER_ID, expectedFilter)
     expect(map.setFilter).toHaveBeenCalledWith(SELECTED_LINE_LAYER_ID, expectedFilter)
   })

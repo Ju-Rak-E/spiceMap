@@ -26,6 +26,8 @@ def _fake_row_base(**overrides):
         comm_cd="3110053",
         comm_nm="sample commerce",
         gu_nm="Gwanak-gu",
+        adm_cd="1162010100",
+        adm_nm="Sillim-dong",
         source_comm_type="alley",
         geometry={
             "type": "Polygon",
