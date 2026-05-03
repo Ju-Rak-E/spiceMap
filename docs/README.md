@@ -78,7 +78,9 @@
 
 | 문서 | 설명 |
 |------|------|
-| [dev_a_escalation_draft.md](dev_a_escalation_draft.md) | Dev-A 블로커 해제 요청 메시지 초안 |
+| [dev_a_escalation_draft.md](dev_a_escalation_draft.md) | Dev-A 블로커 해제 요청 메시지 초안 (D-9 patch 포함) |
+| [team_report_dev_a_d8.md](team_report_dev_a_d8.md) | Dev-A D-8 진행 보고 (적재 완료 + 협의 3건) |
+| [team_report_dev_b_d8.md](team_report_dev_b_d8.md) | Dev-B D-8 진행 보고 (Hero shot + 배포 + 잔여 작업) |
 
 ## 브레인스토밍
 
