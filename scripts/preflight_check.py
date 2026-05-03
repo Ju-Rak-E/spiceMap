@@ -139,6 +139,7 @@ def check_critical_docs() -> list[CheckResult]:
         check_file_exists(docs / "PR_DRAFT.md", "PR 초안"),
         check_file_exists(docs / "v2_backlog.md", "v2 백로그"),
         check_file_exists(REPO_ROOT / "CHANGELOG.md", "CHANGELOG"),
+        check_file_exists(REPO_ROOT / "README.md", "프로젝트 루트 README"),
     ]
 
 
