@@ -140,14 +140,25 @@ export interface HeroPulseTarget {
   elapsedMs: number
 }
 
+export interface HeroPulseFrame {
+  phase: number
+  radius: number
+  alpha: number
+}
+
+export function computeHeroPulseFrame(elapsedMs: number): HeroPulseFrame {
+  const phase = (elapsedMs % HERO_PULSE_PERIOD_MS) / HERO_PULSE_PERIOD_MS
+  const radius = HERO_PULSE_BASE_RADIUS + phase * (HERO_PULSE_MAX_RADIUS - HERO_PULSE_BASE_RADIUS)
+  const alpha = (1 - phase) * HERO_PULSE_MAX_OPACITY * 255
+  return { phase, radius, alpha }
+}
+
 export function createHeroPulseLayer(
   target: HeroPulseTarget | null,
 ): ScatterplotLayer<CommerceNode> | null {
   if (!target) return null
   const { node, elapsedMs } = target
-  const phase = (elapsedMs % HERO_PULSE_PERIOD_MS) / HERO_PULSE_PERIOD_MS
-  const radius = HERO_PULSE_BASE_RADIUS + phase * (HERO_PULSE_MAX_RADIUS - HERO_PULSE_BASE_RADIUS)
-  const alpha = (1 - phase) * HERO_PULSE_MAX_OPACITY * 255
+  const { radius, alpha } = computeHeroPulseFrame(elapsedMs)
   return new ScatterplotLayer<CommerceNode>({
     id: 'commerce-hero-pulse',
     data: [node],

@@ -90,6 +90,31 @@ A. 절대 아니다. (CLAUDE.md 원칙 + FR-12)
 
 A. **권고 도구이지 결정 도구가 아니다** — 카드 라벨이 "rule_based" 임을 명시. 최종 정책 결정권은 자치구 경제과에 있다. spiceMap 은 분기 동향 모니터링 + 우선순위 정렬 도구.
 
+## F-pre. 운영/이관
+
+### Q11-pre. "API 스펙은 어디서 보나요?"
+
+A. 두 채널 제공.
+1. 정적 export: [`docs/api_openapi.json`](api_openapi.json) (FastAPI 8 경로, dev 환경 없이 검토 가능). 갱신 명령: `python -m scripts.export_openapi`.
+2. 라이브: 백엔드 가동 시 `GET /docs` (Swagger UI) + `GET /redoc` (Redoc) 자동 노출.
+
+### Q12-pre. "한 분기 데이터 갱신 절차는?"
+
+A. 4 단계 (D-day 기준 약 30 분).
+1. 원본 적재: `python -m backend.pipeline.collect_commerce_sales --quarter 2025Q4` 등 (분기별).
+2. 분석 INSERT: `python -m backend.pipeline.run_analysis --quarter 2025Q4 --previous 2025Q3` (commerce_analysis + policy_cards).
+3. 검증 산출: `python -m scripts.run_validation_all --quarter 2025Q4 --previous 2025Q3 --b1-csv data/baselines/seoul_change_index_2025Q4.csv` (H1·H2·H3·B1 한 번에).
+4. 시연 안전 점검: `python -m scripts.preflight_check --mode files` (31 항목).
+
+자세한 명령: [`README.md` 검증 섹션](../README.md) 참조.
+
+### Q13-pre. "발표 후 다음 작업 계획은?"
+
+A. [`docs/v2_backlog.md`](v2_backlog.md) 30 항목 우선순위 매트릭스.
+- v1.1 patch (D+1 ~ D+7): H2 실측 갱신 / B1 정적 CSV 재현 / closure_rate 상권 단위 직접 적재.
+- P1 (분기 단위): Module C 풀 구현 / R1·R2·R3·R8 활성 / LLM 정책 카드.
+- P3 (반기): MVP 강남·관악 → 서울 25 자치구 확장.
+
 ## F. 기술 스택 / 확장성
 
 ### Q12. "지도 로딩 5초 / 클릭 1초 NFR 어떻게 보장했는가?"
