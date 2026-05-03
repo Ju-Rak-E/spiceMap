@@ -532,7 +532,12 @@ export default function FlowControlPanel({
             ))}
           </div>
         )}
-        <button type="button" style={S.csvButton} onClick={handleCsvDownload}>
+        <button
+          type="button"
+          style={S.csvButton}
+          onClick={handleCsvDownload}
+          aria-label={`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드`}
+        >
           추천 상권 CSV 다운로드
         </button>
       </section>
@@ -552,6 +557,7 @@ export default function FlowControlPanel({
                   style={S.quarterButton(active)}
                   onClick={() => onQuarterChange(quarter)}
                   aria-pressed={active}
+                  aria-label={`${formatQuarter(quarter)} 데이터 보기`}
                 >
                   {formatQuarter(quarter)}
                 </button>
@@ -569,6 +575,7 @@ export default function FlowControlPanel({
               style={S.purposeBtn(purpose === null)}
               onClick={() => onPurposeChange(null)}
               aria-pressed={purpose === null}
+              aria-label={`전체 이동 목적 선택, 총 ${formatVolume(totalPurposeVolume)}`}
             >
               <span style={S.purposeMain}>
                 <span>전체</span>
@@ -590,6 +597,7 @@ export default function FlowControlPanel({
                     if (!disabled) onPurposeChange(active ? null : option.value)
                   }}
                   aria-pressed={active}
+                  aria-label={`${option.label} 이동 목적 선택, ${formatVolume(volume)}`}
                 >
                   <span style={S.purposeMain}>
                     <span>{option.label}</span>
@@ -617,6 +625,7 @@ export default function FlowControlPanel({
               value={hour}
               onChange={(e) => onHourChange(Number(e.target.value))}
               style={S.slider}
+              aria-label="시간대 선택"
             />
             <span style={S.sliderValue}>{formatHourLabel(hour)}</span>
           </div>
@@ -633,6 +642,7 @@ export default function FlowControlPanel({
               value={flowStrength}
               onChange={(e) => onStrengthChange(Number(e.target.value))}
               style={S.slider}
+              aria-label="가시화 밀도 선택"
             />
             <span style={S.sliderValue}>{densityLabel}</span>
           </div>
@@ -714,6 +724,8 @@ export default function FlowControlPanel({
                 key={district}
                 style={S.pillButton(active, '#42A5F5')}
                 onClick={() => onToggleDistrict(district)}
+                aria-pressed={active}
+                aria-label={`${district} 자치구 필터 ${active ? '해제' : '선택'}`}
               >
                 <span>{district}</span>
               </button>
