@@ -70,6 +70,9 @@
 | [deployment_guide.md](deployment_guide.md) | 발표/심사용 웹 데모 배포 (Vercel/Netlify 정적 + 풀 옵션) |
 | [api_openapi.json](api_openapi.json) | FastAPI app.openapi() 정적 export (8 경로, scripts/export_openapi.py) |
 | [csv_schema.md](csv_schema.md) | `/api/export/csv` 9 컬럼 스키마 + 활용 시나리오 |
+| [v2_backlog.md](v2_backlog.md) | 발표 후 v2 작업 P0~P5 (30 항목, 우선순위 매트릭스) |
+| [PR_DRAFT.md](PR_DRAFT.md) | PR 본문 템플릿 (옵션 A/B 머지 전략) |
+| [../CHANGELOG.md](../CHANGELOG.md) | Keep a Changelog 형식 변경 이력 |
 
 ## 작업 이력 / 에스컬레이션
 

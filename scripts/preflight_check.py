@@ -137,6 +137,7 @@ def check_critical_docs() -> list[CheckResult]:
         check_file_exists(docs / "policy_report_gwanak_sillim.md", "정책 리포트 관악"),
         check_file_exists(docs / "csv_schema.md", "CSV export 스키마"),
         check_file_exists(docs / "PR_DRAFT.md", "PR 초안"),
+        check_file_exists(docs / "v2_backlog.md", "v2 백로그"),
         check_file_exists(REPO_ROOT / "CHANGELOG.md", "CHANGELOG"),
     ]
 
