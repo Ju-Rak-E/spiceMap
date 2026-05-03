@@ -28,56 +28,52 @@ function buildNode(overrides: Partial<CommerceNode> = {}): CommerceNode {
 }
 
 describe('commerce node outline style', () => {
-  it('hides outlines for unselected nodes regardless of GRI', () => {
-    expect(getGriBorderColor(80, false)).toEqual([0, 0, 0, 0])
-    expect(getGriBorderColor(45, false)).toEqual([0, 0, 0, 0])
-    expect(getGriBorderWidth(80, false)).toBe(0)
-    expect(getGriBorderWidth(20, false)).toBe(0)
+  it('uses red outline for GRI 70 and above', () => {
+    expect(getGriBorderColor(80, false)).toEqual([239, 83, 80, 255])
+    expect(getGriBorderWidth(80, false)).toBe(3)
+  })
+
+  it('uses orange outline for GRI 40 to 69', () => {
+    expect(getGriBorderColor(45, false)).toEqual([255, 167, 38, 255])
+    expect(getGriBorderWidth(45, false)).toBe(2)
+  })
+
+  it('uses light outline for GRI below 40', () => {
+    expect(getGriBorderColor(20, false)).toEqual([236, 239, 241, 170])
+    expect(getGriBorderWidth(20, false)).toBe(1)
   })
 
   it('shows one consistent outline for the selected node', () => {
-    expect(getGriBorderColor(90, true)).toEqual([123, 208, 141, 255])
-    expect(getGriBorderWidth(10, true)).toBe(3)
+    expect(getGriBorderColor(90, true)).toEqual([255, 255, 255, 255])
+    expect(getGriBorderWidth(10, true)).toBe(4)
   })
 })
 
-describe('candidate node fill color (by startup fit)', () => {
-  it('recommended nodes use startup recommendation green', () => {
-    const node = buildNode({ griScore: 20, netFlow: 200, degreeCentrality: 0.5, closeRate: 3 })
-    const [r, g, b] = hexToRgb('#43A047')
+describe('candidate node fill color (by commerce type)', () => {
+  it('candidate nodes use commerce type fill color', () => {
+    const node = buildNode({ type: '흡수형_과열', griScore: 20, netFlow: 200, degreeCentrality: 0.5, closeRate: 3 })
+    const [r, g, b] = hexToRgb(COMMERCE_COLORS.흡수형_과열.fill)
     expect(getCandidateFillColor(node, false)).toEqual([r, g, b, 230])
   })
 
-  it('caution nodes use startup caution orange', () => {
-    const node = buildNode({ griScore: 50, netFlow: 50, degreeCentrality: 0.3, closeRate: 5 })
-    const [r, g, b] = hexToRgb('#FB8C00')
-    expect(getCandidateFillColor(node, false)).toEqual([r, g, b, 200])
-  })
-
-  it('not recommended nodes use startup risk red', () => {
-    const node = buildNode({ griScore: 80, netFlow: -50, degreeCentrality: 0.1, closeRate: 12 })
-    const [r, g, b] = hexToRgb('#E53935')
-    expect(getCandidateFillColor(node, false)).toEqual([r, g, b, 170])
-  })
-
   it('selected nodes always use alpha 255', () => {
-    const node = buildNode({ griScore: 80, netFlow: -50, degreeCentrality: 0.1, closeRate: 12 })
-    const [r, g, b] = hexToRgb('#E53935')
+    const node = buildNode({ type: '방출형_침체', griScore: 80, netFlow: -50, degreeCentrality: 0.1, closeRate: 12 })
+    const [r, g, b] = hexToRgb(COMMERCE_COLORS.방출형_침체.fill)
     expect(getCandidateFillColor(node, true)).toEqual([r, g, b, 255])
   })
 })
 
-describe('context node fill color (by startup fit)', () => {
-  it('uses startup fit color with low alpha 105', () => {
-    const node = buildNode({ griScore: 20, netFlow: 200, degreeCentrality: 0.5, closeRate: 3 })
-    const [r, g, b] = hexToRgb('#43A047')
-    expect(getContextFillColor(node)).toEqual([r, g, b, 105])
+describe('context node fill color (by commerce type)', () => {
+  it('uses commerce type fill color with low alpha 90', () => {
+    const node = buildNode({ type: '흡수형_성장', griScore: 20, netFlow: 200, degreeCentrality: 0.5, closeRate: 3 })
+    const [r, g, b] = hexToRgb(COMMERCE_COLORS.흡수형_성장.fill)
+    expect(getContextFillColor(node)).toEqual([r, g, b, 90])
   })
 
-  it('preserves startup judgment distinction in context layer', () => {
-    const recommended = getContextFillColor(buildNode({ griScore: 20, netFlow: 200, degreeCentrality: 0.5, closeRate: 3 }))
-    const notRecommended = getContextFillColor(buildNode({ griScore: 80, netFlow: -50, degreeCentrality: 0.1, closeRate: 12 }))
-    expect(recommended).not.toEqual(notRecommended)
+  it('preserves commerce type distinction in context layer', () => {
+    const hot = getContextFillColor(buildNode({ type: '흡수형_과열', griScore: 20, netFlow: 200, degreeCentrality: 0.5, closeRate: 3 }))
+    const isolated = getContextFillColor(buildNode({ type: '고립형_단절', griScore: 20, netFlow: 200, degreeCentrality: 0.5, closeRate: 3 }))
+    expect(hot).not.toEqual(isolated)
   })
 })
 

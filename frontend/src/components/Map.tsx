@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
-import { MAP_THEME, COMMERCE_COLORS, type MapTheme } from '../styles/tokens'
+import { MAP_THEME, COMMERCE_COLORS, type CommerceType, type MapTheme } from '../styles/tokens'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
 import { createCommerceNodeLayers } from '../layers/CommerceNodeLayer'
@@ -12,7 +12,7 @@ import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
-import { getNodeInterpretation } from '../utils/summaryFormatter'
+import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatSignedFixed2 } from '../utils/numberFormat'
 import {
@@ -47,6 +47,7 @@ const DISTRICT_CODES: Record<string, string> = {
   '강남구': '1123',
   '관악구': '1121',
 }
+const ALL_COMMERCE_TYPES = new Set(Object.keys(COMMERCE_COLORS) as CommerceType[])
 
 type ZoomStage = 'city' | 'district' | 'dong' | 'candidate'
 
@@ -224,10 +225,11 @@ export default function Map({
 
     if (!overlayRef.current) return
 
+    const selectedFlowKey = selectedNode?.admKey ?? null
     const flowLayers = showFlows
       ? [
-          createODFlowLayer(flows, null),
-          createFlowParticleLayer(flows, progressRef.current, null),
+          createODFlowLayer(flows, selectedFlowKey),
+          createFlowParticleLayer(flows, progressRef.current, selectedFlowKey),
         ]
       : []
 
@@ -255,7 +257,7 @@ export default function Map({
     overlayRef.current.setProps({
       layers: [...flowLayers, ...commerceLayers],
     })
-  }, [flows, nodes, onSelectNode, selectedNode?.id, showFlows])
+  }, [flows, nodes, onSelectNode, selectedNode?.admKey, selectedNode?.id, showFlows])
 
   useAnimationFrame(handleFrame)
 
@@ -285,9 +287,7 @@ export default function Map({
     () => clusters.find((cluster) => cluster.id === selectedClusterId) ?? null,
     [clusters, selectedClusterId],
   )
-  const summaryText = nodes.length > 0
-    ? `선택 자치구 상권 ${nodes.length.toLocaleString()}개 · 자치구 ${districtClusters.length.toLocaleString()}개 · 행정동 ${dongClusters.length.toLocaleString()}개 · ${hour}시 ${purpose ?? '전체'} 상위 ${topN}개 흐름`
-    : ''
+  const summaryText = buildSummaryText(purpose, hour, topN, ALL_COMMERCE_TYPES, nodes)
   const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
   const selectedDistrictCodes = useMemo(
     () => [...(selectedDistricts ?? new Set<string>())]

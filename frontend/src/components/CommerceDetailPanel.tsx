@@ -1,10 +1,12 @@
 import { COMMERCE_COLORS } from '../styles/tokens'
 import type { CommerceNode } from '../types/commerce'
 import { useGriHistory, type GriPoint } from '../hooks/useGriHistory'
+import { usePolicyInsights } from '../hooks/usePolicyInsights'
 import { formatQuarter } from '../utils/quarter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
 import TrendChart from './TrendChart'
+import PolicyCard from './PolicyCard'
 
 interface CommerceDetailPanelProps {
   node: CommerceNode | null
@@ -165,6 +167,11 @@ export default function CommerceDetailPanel({
 }: CommerceDetailPanelProps) {
   const nodeId = node?.id ?? null
   const { series, isLoading, error } = useGriHistory(nodeId, quarter)
+  const { insight, isLoading: policyLoading, error: policyError } = usePolicyInsights(
+    nodeId,
+    quarter,
+    node?.type ?? null,
+  )
   if (!node) {
     return (
       <div
@@ -291,6 +298,18 @@ export default function CommerceDetailPanel({
           </ul>
         </div>
       </div>
+
+      {node.type !== '미분류' && (
+        <div>
+          <div style={S.sectionTitle}>정책 추천</div>
+          {policyLoading && <div style={S.loadingText}>정책 추천을 불러오는 중...</div>}
+          {policyError && <div style={S.errorText}>{policyError}</div>}
+          {!policyLoading && !policyError && insight && <PolicyCard insight={insight} />}
+          {!policyLoading && !policyError && !insight && (
+            <div style={S.emptyText}>현재 분기 정책 추천 카드가 없습니다.</div>
+          )}
+        </div>
+      )}
 
       <div>
         <div style={S.sectionTitle}>업종 힌트</div>

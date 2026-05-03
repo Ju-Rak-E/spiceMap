@@ -26,7 +26,9 @@ export default function App() {
   const [flowStrength, setFlowStrength] = useState(3)
   const [showFlows, setShowFlows] = useState(true)
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
-  const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(new Set())
+  const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(
+    () => new Set(['강남구', '관악구']),
+  )
   const [selectedQuarter, setSelectedQuarter] = useState(DEFAULT_QUARTER)
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
