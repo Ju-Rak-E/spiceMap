@@ -123,8 +123,9 @@
 - [x] commerce_sales 2025Q3 적재 + run_analysis Q3 실행 — **2026-04-30** Q3 commerce_analysis 1650 + policy_cards 419 적재 (trend_penalty/H3 활성)
 - [x] H1 검증 실데이터 — **2026-04-30 PR #30** Q4 net_flow vs Q4 sales Pearson **r=0.106 / p=2.83e-05 / n=1565** (방향 ✓ 효과 약함, FAIL r<0.5)
 - [x] H3 검증 실데이터 — **2026-04-30 PR #30** Q3 GRI 상위 20% Q4 폐업률 vs 하위 80% **gap=0.75pp / p=5.26e-36 / n=1650** (방향 ✓ 절대 격차 작음, FAIL gap<2.0pp). 한계: closure_rate 자치구 단위 매핑 → 분산 부족
-- [ ] H2 검증: flow_barriers 단절 강도 → 폐업률 상관 (Q4 flow_barriers 200 + Q4 closure 활용)
-- [x] 베이스라인 B1 (OA-15576) vs 제안 priority_score 비교 — **2026-04-30** Jaccard 0.58 (PASS, 추가 식별 14건). B3(기존 매출 추세 모델) 비교 PR #36에서 Jaccard 0.151 (PASS, 추가 위험 231건) 동반 완료
+- [x] H2 검증 함수 구현 — **2026-05-03** `backend/analysis/verification_h2.py` (`aggregate_barrier_intensity` + `compute_h2_alignment`, Pearson/Spearman, 임계 r ≥ 0.3 + p < 0.05). 10 tests pass. 실데이터 산출은 `scripts/run_validation_h2_b1.py --quarter 2025Q4` 실행 필요
+- [x] 베이스라인 B1 코드 구현 — **2026-05-03** `backend/analysis/baseline_b1.py` (`load_change_index_csv` utf-8/utf-8-sig/cp949 자동 + `compute_b1_baseline` 상권쇠퇴 binary + `compare_priority_to_b1` Jaccard). 15 tests pass. 정적 CSV 절차 `data/baselines/README.md`. 기존 산출(Jaccard 0.58, 14건) 재현 가능
+- [x] 베이스라인 B3 (기존 매출 추세 모델) — **PR #36** Jaccard 0.151 (PASS, 추가 위험 231건)
 - [x] 검증 결과 패널 콘텐츠 작성 — **2026-05-03 b763b20** `ValidationView` 4카드 (H1 r=0.106 / H3 gap=0.746%p / B1 J=0.58 / B3 J=0.151), `/api/insights/validation` + 정적 fallback `frontend/src/data/validation_results.json`
 - [x] 프론트 Tier 1 — **2026-04-30 PR #32** 가치 명제 헤더 2단 + MVP 강남·관악 자동 줌 (center [127.0, 37.49], zoom 11.5)
 

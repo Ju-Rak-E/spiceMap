@@ -26,15 +26,26 @@
       "source": "docs/verification_h1_h3_results.md §H3"
     },
     {
+      "id": "H2",
+      "title": "H2 — 흐름 단절 강도 → 폐업률 상관",
+      "headline": "산출 함수 구현 완료",
+      "metric_primary": "Pearson r — 산출 대기",
+      "metric_secondary": "Q4 flow_barriers 200 + Q4 closure_rate",
+      "sample_size": "n — 실데이터 실행 시 갱신",
+      "summary": "Module C 시계열 갭이 산출한 flow_barriers 의 barrier_intensity(상권별 max) 와 closure_rate Pearson/Spearman. 함수: backend/analysis/verification_h2.py · 임계 r ≥ 0.3, p < 0.05.",
+      "criterion": "임계 r ≥ 0.3 + p < 0.05 — 실데이터 실행 후 자동 갱신",
+      "source": "backend/analysis/verification_h2.py + tests/analysis/test_verification_h2.py"
+    },
+    {
       "id": "B1",
       "title": "B1 — OA-15576 상권변화지표 대비",
       "headline": "Jaccard 0.58 — 차별화",
       "metric_primary": "Jaccard = 0.58",
       "metric_secondary": "추가 식별 14건",
       "sample_size": "공식 지표 vs Module E priority_score",
-      "summary": "서울시 공식 상권변화지표(OA-15576)가 식별한 위험 상권과 우리 모델의 priority_score Top-N을 비교. 우리 모델이 14건 추가로 위험 상권 식별.",
-      "criterion": "임계 Jaccard ≥ 0.5 — PASS",
-      "source": "docs/strategy_d13.md §C (B1 정적 다운로드)"
+      "summary": "서울시 공식 상권변화지표(OA-15576)가 식별한 위험 상권과 우리 모델의 priority_score Top-N을 비교. 우리 모델이 14건 추가로 위험 상권 식별. 임계 Jaccard ≥ 0.5.",
+      "criterion": "임계 Jaccard ≥ 0.5 — PASS (참값 재현 절차: data/baselines/README.md)",
+      "source": "backend/analysis/baseline_b1.py + tests/analysis/test_baseline_b1.py"
     },
     {
       "id": "B3",

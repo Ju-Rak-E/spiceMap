@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import staticResults from '../data/validation_results.json'
 
-// docs/hero_shot_scenario.md §1-4: 검증 보고 탭 — H1/H3/B1/B3 4카드.
+// docs/hero_shot_scenario.md §1-4: 검증 보고 탭 — H1/H3/H2 + B1/B3 5카드.
 // 백엔드 /api/insights/validation 미연결 시 정적 JSON fallback.
+// 카드 grid는 auto-fit minmax(320px, 1fr) — 카드 수가 늘어도 자동 적응.
 
 export interface ValidationCard {
   id: string
@@ -122,7 +123,7 @@ export default function ValidationView({ onClose }: ValidationViewProps) {
         <div>
           <div style={S.title}>검증 보고</div>
           <div style={S.subtitle}>
-            가설 H1·H3 + 베이스라인 B1·B3 — {results.quarter} 기준 ({results.generated_at})
+            가설 H1·H2·H3 + 베이스라인 B1·B3 — {results.quarter} 기준 ({results.generated_at})
           </div>
         </div>
         <button type="button" style={S.closeBtn} onClick={onClose}>
