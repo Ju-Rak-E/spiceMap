@@ -16,7 +16,8 @@ Dev-B는 React 기반 인터랙티브 지도 앱 전담.
 - D3.js (추세 그래프, 시계열 차트)
 
 ## 디렉토리 구조
-`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, FlowControlPanel, CommerceLegend, CommerceDetailPanel, TrendChart, PolicyCard)
+`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, FlowControlPanel, CommerceLegend, CommerceDetailPanel, TrendChart, PolicyCard, ValidationView, InsightStrip)
+`frontend/src/data/` 정적 fixture (validation_results.json — H1/H3/B1/B3 검증 결과)
 `frontend/src/layers/` Deck.gl 레이어 정의 (CommerceNodeLayer, ODFlowLayer, FlowParticleLayer)
 `frontend/src/hooks/` 데이터 페칭 훅 (useCommerceData, useFlowData, useGriHistory, usePolicyInsights, useTimelineControl, useAnimationFrame)
 `frontend/src/styles/` 디자인 토큰 (색상 팔레트 — COMMERCE_COLORS에 description 필드 포함)
@@ -92,6 +93,12 @@ OD 렌더링: 자치구 top-N 흐름만 표시 (전체 아님)
 - [ ] 색각 이상 시뮬레이션 통과
 - [ ] 태블릿 반응형 확인 (패널 접기/펼치기)
 - [ ] 지도 로딩 5초 이내 측정 완료
+
+## Hero shot 시연 모드 (3분 발표 동선)
+- URL `?hero=1` → `HERO_NODE_ID='gw_001'`(신림) 펄싱 halo (`createHeroPulseLayer`, 1.5s loop, 전 zoom 가시)
+- 단축키: `1` 인트로 / `2` 펄싱+패널 / `3` CSV export / `4` 검증 탭(map↔validation 토글)
+- R4 정책카드 강조 (`PolicyCard.highlight` — 노란 outline + fadeIn 300ms, `CommerceDetailPanel`에서 R4 우선 정렬)
+- 회귀 안전: `?hero=1` 미사용 시 일반 동작 동일. `docs/hero_shot_scenario.md` 시간축이 단일 진실 문서.
 
 ## 주의 사항
 - 정책 추천 카드에 "규칙 기반 | 생성형 AI 미사용" 라벨 명시 (FR-07)

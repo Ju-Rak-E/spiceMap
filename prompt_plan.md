@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-04-30 (Week 4 Day 2)
+> 최종 갱신: 2026-05-03 (Week 4 Day 5)
 
 ---
 
@@ -115,6 +115,7 @@
 - [ ] 흐름 단절 레이어 토글 (점선 강조 + 툴팁)
 - [ ] 분기 비교 뷰 (두 핸들 슬라이더 → 나란히 비교)
 - [ ] 접근성 검토 (색각 이상 시뮬레이션) + 수정
+- [x] Hero shot 시연 동선 정밀화 — **2026-05-03 b763b20** PR1 펄싱+R4 강조 (`createHeroPulseLayer` 1.5s halo, `?hero=1` 시 전 zoom 가시 / `CommerceDetailPanel` 정책카드 R4 우선 정렬 / `PolicyCard.highlight` 노란 outline + fadeIn 300ms) + PR2 CSV toast 피드백(`FlowControlPanel`) + 검증 탭(`ValidationView` H1/H3/B1/B3 4카드, `/api/insights/validation` + 정적 fallback `frontend/src/data/validation_results.json`) + `?hero=1` 토글 + `HERO_NODE_ID='gw_001'`(신림) + 단축키 1~4. `docs/hero_shot_scenario.md` 시간축 1:1 정렬, `docs/hero_shot_assets/README.md` 자산 인벤토리. InsightStrip light theme fix(0d8feda). 178 vitest 통과, npm run build 성공.
 
 ### Dev-C
 - [x] Module C 시계열 갭 알고리즘 + flow_barriers 적재 — **2026-04-30 PR #29** Module C 풀 구현 대체. `compute_flow_gaps(od_q3, od_q4, mapping, threshold=0.5)` 18 tests. Supabase Q4 200건 적재 (decline 0.587~1.000)
@@ -123,8 +124,8 @@
 - [x] H1 검증 실데이터 — **2026-04-30 PR #30** Q4 net_flow vs Q4 sales Pearson **r=0.106 / p=2.83e-05 / n=1565** (방향 ✓ 효과 약함, FAIL r<0.5)
 - [x] H3 검증 실데이터 — **2026-04-30 PR #30** Q3 GRI 상위 20% Q4 폐업률 vs 하위 80% **gap=0.75pp / p=5.26e-36 / n=1650** (방향 ✓ 절대 격차 작음, FAIL gap<2.0pp). 한계: closure_rate 자치구 단위 매핑 → 분산 부족
 - [ ] H2 검증: flow_barriers 단절 강도 → 폐업률 상관 (Q4 flow_barriers 200 + Q4 closure 활용)
-- [ ] 베이스라인 B1 (OA-15576) vs 제안 priority_score 비교 — Jaccard / Spearman
-- [ ] 검증 결과 패널 콘텐츠 작성 (H1/H3 결과 + 베이스라인)
+- [x] 베이스라인 B1 (OA-15576) vs 제안 priority_score 비교 — **2026-04-30** Jaccard 0.58 (PASS, 추가 식별 14건). B3(기존 매출 추세 모델) 비교 PR #36에서 Jaccard 0.151 (PASS, 추가 위험 231건) 동반 완료
+- [x] 검증 결과 패널 콘텐츠 작성 — **2026-05-03 b763b20** `ValidationView` 4카드 (H1 r=0.106 / H3 gap=0.746%p / B1 J=0.58 / B3 J=0.151), `/api/insights/validation` + 정적 fallback `frontend/src/data/validation_results.json`
 - [x] 프론트 Tier 1 — **2026-04-30 PR #32** 가치 명제 헤더 2단 + MVP 강남·관악 자동 줌 (center [127.0, 37.49], zoom 11.5)
 
 **주차 완료 기준**: 3분 발표 시나리오 1회 시연 통과, H1~H3 수치 확정.
