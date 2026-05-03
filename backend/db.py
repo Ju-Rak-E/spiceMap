@@ -29,4 +29,5 @@ redis_client = redis.from_url(
     socket_connect_timeout=0.2,
     socket_timeout=0.2,
 )
-CACHE_TTL = 3600  # 1시간
+CACHE_TTL = 3600          # 1시간
+FALLBACK_CACHE_TTL = 86400  # 24시간 (DB 장애 대비 fallback)

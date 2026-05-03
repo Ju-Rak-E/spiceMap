@@ -238,18 +238,27 @@ commerce_boundary (상권 폴리곤)
 
 ## 데이터 적재 현황 요약
 
+> 기준: 팀 공용 Supabase DB (`aws-1-ap-northeast-2.pooler.supabase.com`)
+> 분기 정책: 2025Q3 + 2025Q4 두 분기 (직전 분기 비교 추세 분석)
+
 | 테이블 | 행 수 | 데이터 범위 | 상태 |
 |--------|-------|-----------|------|
-| `admin_boundary` | 425 | 서울시 행정동 전체 | 완료 |
-| `commerce_boundary` | 1,650 | 서울시 상권 전체 | 완료 |
-| `od_flows` | 80,573,657 | 2025-10-01 ~ 2026-02-28, 강남·관악 MVP 필터 | 완료 |
-| `living_population` | 94,944 | 2025-10-01 ~ 2025-12-31, 강남·관악 MVP 필터 | 완료 |
-| `store_info` | 5,599 | 2019Q1 ~ 2025Q4 | 완료 |
-| `commerce_sales` | 21,333 | 2025Q4 | 완료 |
-| `commerce_analysis` | 0 | - | INSERT 파이프라인 대기 |
-| `adm_comm_mapping` | - | - | 공간 조인 산출 대상 |
-| `flow_barriers` | 0 | - | 분석 산출 대기 |
-| `policy_cards` | 0 | - | 분석 산출 대기 |
+| `admin_boundary` | 425 | 서울시 행정동 전체 | ✅ 완료 |
+| `commerce_boundary` | 1,650 | 서울시 상권 전체 | ✅ 완료 |
+| `adm_comm_mapping` | 2,207 | 행정동↔상권 공간 매핑 | ✅ 완료 |
+| `living_population` | 187,824 | 2025-07-01 ~ 2025-12-31 (강남·관악) | ✅ 완료 |
+| `store_info` | 400 | 2025Q3, 2025Q4 | ✅ 완료 |
+| `commerce_sales` | 42,853 | 2025Q3, 2025Q4 | ✅ 완료 |
+| `od_flows_aggregated` | 366,477 | 2025Q3 (183,506) + 2025Q4 (182,971) | ✅ 완료 |
+| `commerce_analysis` | 3,300 | 2025Q3 (1,650) + 2025Q4 (1,650) — Dev-C 산출 | ✅ 완료 |
+| `flow_barriers` | 200 | 2025Q4 — Dev-C 산출 | ✅ 완료 |
+| `policy_cards` | 833 | 2025Q3 (419) + 2025Q4 (414) — Dev-C 산출 | ✅ 완료 |
+
+**참고**:
+- 로컬 Docker DB(`localhost:5433/spicemap`)에는 `od_flows` 원본 8천만 행 보존(팀 공유 안 함).
+- DB 용량: **157 MB** / 500 MB Free Tier (31%)
+
+> 최종 갱신: 2026-04-30
 
 ---
 

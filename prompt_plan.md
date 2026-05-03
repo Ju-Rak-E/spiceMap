@@ -181,8 +181,8 @@
 
 ### 단계
 
-- [ ] Phase 1: `colorUtils.ts` 추출 (hexToRgb 분리 + 단위 테스트)
-- [ ] Phase 2: `CommerceNodeLayer.ts` 색상 로직 변경 + 테스트
+- [x] Phase 1: `colorUtils.ts` 추출 (hexToRgb 분리 + 단위 테스트)
+- [x] Phase 2: `CommerceNodeLayer.ts` 색상 로직 변경 + 테스트
   - 후보 노드: `COMMERCE_COLORS[type].fill` (alpha 230, 선택 시 255)
   - 컨텍스트 노드: 동일 유형색 (alpha 90)
 - [ ] Phase 3: 시각 검증 (`npm run dev`)
@@ -193,3 +193,79 @@
 - `frontend/src/utils/colorUtils.test.ts` (신규)
 - `frontend/src/layers/CommerceNodeLayer.ts` (수정)
 - `frontend/src/layers/griNodeStyle.test.ts` (확장)
+
+---
+
+## Week 4 후반 — Dev-B 보완·미완성 분담 계획 (2026-05-03 확정)
+
+> CommerceLegend / CLASSIFIED_TYPES는 보류. 보완 10항 + 미완성 5항을 Codex와 Claude가 분담.
+> 마감: P0 5/5, P1 5/7, P2 5/10, P3 5/12 (대회 제출일).
+
+### Phase 1 — P0 발표 임팩트 (5/4~5/5)
+
+| ID | 작업 | 담당 | 추정 |
+|----|------|------|------|
+| 1-1 | 상단 해설바 통일 (Map.tsx → summaryFormatter) | Codex-1 | 30분 |
+| 1-2 | 초기 자치구 선택 (강남·관악 기본 선택) | Codex-2 | 30분 |
+| 1-3 | PolicyCard 상세 패널 연결 | Claude-A | 1.5시간 |
+| 1-4 | GRI 위험도 테두리 (70+/40~69/<40 임계값) | Codex-3 | 1시간 |
+| 1-5 | 선택 상권 OD 강조 (admCd 매핑 설계 포함) | Claude-B | 2~3시간 |
+
+### Phase 2 — P1 신뢰 보강 (5/6~5/7)
+
+| ID | 작업 | 담당 | 추정 |
+|----|------|------|------|
+| 2-1 | "준비중"/"데이터 없음" 문구 정리 | Claude-C | 1시간 |
+| 2-2 | CSV 다운로드 실패 토스트 | Claude-D (컴포넌트) → Codex-8 (통합) | 1.5시간 |
+| 2-3 | 색각 시뮬 검증 | Claude-H 수동 | 1.5시간 |
+| 2-4 | aria-label 보강 | Codex-4 | 1시간 |
+
+### Phase 3 — P2 신규 기능 (5/8~5/10)
+
+| ID | 작업 | 담당 | 추정 |
+|----|------|------|------|
+| 3-1 | 흐름 단절 레이어 (toggle/점선/툴팁) | Claude-E (훅·통합) → Codex-9 (mock·Layer) | 4~5시간 |
+| 3-2 | 분기 비교 KPI delta (듀얼 슬라이더는 미룸) | Claude-F | 4시간 |
+
+### Phase 4 — P3 발표용 폴리시 (5/11~5/12)
+
+| ID | 작업 | 담당 | 추정 |
+|----|------|------|------|
+| 4-1 | 상권 경계 폴리곤 (BoundaryLayerManager 패턴 복제) | Codex-5 | 2시간 |
+| 4-2 | 시각화 상수 재조정 (실데이터 분포 기준) | Codex-6 | 1시간 |
+| 4-3 | 지도 로딩 성능 측정 (performance.mark) | Codex-7 | 30분 |
+| 4-4 | 발표 시나리오 애니메이션 (?demo=scenario) | Claude-G | 3시간 |
+| 4-5 | 태블릿 1024px / 실데이터 E2E | Claude-H 수동 | 2시간 |
+
+### 분담 원칙
+
+- Codex: 단일 파일·기계적 변경·테스트 추가·mock JSON. 발주문에 "Surgical change. 요청 외 변경 금지" 명시.
+- Claude: 멀티 파일 통합·데이터 매핑 설계·신규 컴포넌트 아키텍처·UX 판단.
+
+### 의존성 / 블로커
+
+- 1-5 OD 강조: `CommerceNode.admCd` 추가 후 `OD.sourceId/targetId`(adm_cd)와 매칭. Dev-A 응답에 adm_cd 추가 요청 동반 (그동안 mock 우선).
+- 3-1 흐름 단절: `/api/barriers` 가용성. 미가용 시 mock 우선.
+- 4-1 상권 경계: `commerce_boundary` 적재 (Dev-A 블로커). 그 전에는 mock GeoJSON.
+
+### 진행 상태
+
+- [x] 1-1 (Codex) / [x] 1-2 (Codex) / [x] 1-3 (Claude-A) / [x] 1-4 (Codex) / [x] 1-5 (Claude-B) — **2026-05-03 P0 전체 완료**
+- [x] 2-1 (Claude-C) / [x] 2-2 (Claude-D + 직접 통합) / [x] 2-3 (수동 색각 확인) / [x] 2-4 (Codex) — **2026-05-03 P1 완료**
+- [x] 3-1 (Claude-E + 직접 통합) / [x] 3-2 (Claude-F) — **2026-05-03 P2 완료**
+- [x] 4-1 (Codex) / [x] 4-2 (Codex) / [x] 4-3 (Codex) / [x] 4-4 (직접 통합) / [x] 4-5 (1024px·실사용 확인) — **2026-05-03 P3 완료**
+
+---
+
+## Dev-B 종료 검토 메모 (2026-05-03)
+
+- [x] 색각 구분 수동 확인 완료
+- [x] CSV 다운로드 확인 완료
+- [x] 흐름 단절 카드 겹침 수정 확인 완료
+- [x] 상권 경계 폴리곤 레이어 구현 및 선택 하이라이트 보완
+- [x] `/api/barriers` live row 좌표 보존 보완
+- [x] OD 하이라이트용 `adm_cd` 계약 보완
+- [x] API 상권 경계 선택 매칭 `comm_cd` 대응
+- [x] `commerce_analysis` NaN metric NULL 변환 보완
+
+남은 항목은 발표 준비와 운영 DB 기준 최종 확인입니다.

@@ -1,12 +1,15 @@
 """GET /api/barriers — 흐름 단절 구간 목록."""
-import json
-
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from backend.api.cache_utils import (
+    cache_get, cache_set_with_fallback, demo_response,
+    get_fallback, load_demo,
+)
 from backend.api.deps import get_session, get_cache
-from backend.db import CACHE_TTL
+from backend.config import settings
 from backend.schemas.barriers import BarrierItem, BarriersResponse
 
 router = APIRouter()
@@ -21,9 +24,16 @@ def barriers(
     cache=Depends(get_cache),
 ):
     cache_key = f"barriers:{quarter}:{gu or 'all'}:{min_score}"
-    cached = cache.get(cache_key)
+
+    if settings.demo_mode:
+        snap = load_demo(cache_key)
+        if snap:
+            return demo_response(snap, is_demo=True)
+        raise HTTPException(status_code=503, detail="데모 스냅샷 없음. generate_demo_snapshot 실행 필요.")
+
+    cached = cache_get(cache, cache_key)
     if cached:
-        return json.loads(cached)
+        return cached
 
     sql = text("""
         SELECT
@@ -32,7 +42,11 @@ def barriers(
             fb.to_comm_cd,
             cb_t.comm_nm AS to_comm_nm,
             fb.barrier_score,
-            fb.barrier_type
+            fb.barrier_type,
+            ST_X(ST_PointOnSurface(cb_f.geom)) AS source_lng,
+            ST_Y(ST_PointOnSurface(cb_f.geom)) AS source_lat,
+            ST_X(ST_PointOnSurface(cb_t.geom)) AS target_lng,
+            ST_Y(ST_PointOnSurface(cb_t.geom)) AS target_lat
         FROM flow_barriers fb
         LEFT JOIN commerce_boundary cb_f ON cb_f.comm_cd = fb.from_comm_cd
         LEFT JOIN commerce_boundary cb_t ON cb_t.comm_cd = fb.to_comm_cd
@@ -47,7 +61,13 @@ def barriers(
           AND (:gu IS NULL OR ab.gu_nm = :gu)
         ORDER BY fb.barrier_score DESC
     """)
-    rows = db.execute(sql, {"quarter": quarter, "gu": gu, "min_score": min_score}).fetchall()
+    try:
+        rows = db.execute(sql, {"quarter": quarter, "gu": gu, "min_score": min_score}).fetchall()
+    except SQLAlchemyError:
+        fallback = get_fallback(cache, cache_key)
+        if fallback:
+            return demo_response(fallback)
+        raise HTTPException(status_code=503, detail="Database unavailable for /api/barriers")
 
     items = [
         BarrierItem(
@@ -57,10 +77,21 @@ def barriers(
             to_comm_nm=row.to_comm_nm,
             barrier_score=row.barrier_score,
             barrier_type=row.barrier_type,
+            sourceCoord=(
+                (float(row.source_lng), float(row.source_lat))
+                if row.source_lng is not None and row.source_lat is not None
+                else None
+            ),
+            targetCoord=(
+                (float(row.target_lng), float(row.target_lat))
+                if row.target_lng is not None and row.target_lat is not None
+                else None
+            ),
+            affected_volume=round(float(row.barrier_score or 0) * 10000),
         )
         for row in rows
     ]
 
     result = BarriersResponse(quarter=quarter, total=len(items), barriers=items)
-    cache.setex(cache_key, CACHE_TTL, result.model_dump_json())
+    cache_set_with_fallback(cache, cache_key, result.model_dump_json())
     return result

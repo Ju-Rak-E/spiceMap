@@ -3,18 +3,23 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
-import { MAP_THEME, COMMERCE_COLORS, type MapTheme } from '../styles/tokens'
+import { MAP_THEME, COMMERCE_COLORS, type CommerceType, type MapTheme } from '../styles/tokens'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
+import CommerceBoundaryLayer from './CommerceBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
 import { createCommerceNodeLayers, createHeroPulseLayer } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
+import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
+import { useBarriers, type Barrier } from '../hooks/useBarriers'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
-import { getNodeInterpretation } from '../utils/summaryFormatter'
+import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatSignedFixed2 } from '../utils/numberFormat'
+import { markMapLoadEnd, markMapLoadStart } from '../utils/mapPerformance'
+import { getFlowProgressIncrement } from '../utils/flowAnimation'
 import {
   buildDistrictCommerceClusters,
   buildDongCommerceClusters,
@@ -37,8 +42,6 @@ const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
 
 const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
-const ANIMATION_SPEED = 0.00025
-const BASE_VOLUME = 10000
 const HOVER_CARD_WIDTH = 220
 const DISTRICT_ZOOM = 10.5
 const DONG_ZOOM = 12.5
@@ -47,6 +50,7 @@ const DISTRICT_CODES: Record<string, string> = {
   '강남구': '1123',
   '관악구': '1121',
 }
+const ALL_COMMERCE_TYPES = new Set(Object.keys(COMMERCE_COLORS) as CommerceType[])
 
 type ZoomStage = 'city' | 'district' | 'dong' | 'candidate'
 
@@ -65,11 +69,13 @@ interface MapProps {
   hour: number
   purpose: FlowPurpose | null
   topN: number
+  flowStrength: number
   scopeLabel: string
   dataStatusLabel: string
   selectedQuarter: string
   boundaryOpacity?: number
   showFlows?: boolean
+  showBarriers?: boolean
   selectedDistricts?: Set<string>
   selectedNode?: CommerceNode | null
   onSelectNode?: (node: CommerceNode | null) => void
@@ -79,6 +85,12 @@ interface MapProps {
 
 interface HoveredNode {
   node: CommerceNode
+  x: number
+  y: number
+}
+
+interface HoveredBarrier {
+  barrier: Barrier
   x: number
   y: number
 }
@@ -99,11 +111,13 @@ export default function Map({
   hour,
   purpose,
   topN,
+  flowStrength,
   scopeLabel,
   dataStatusLabel,
   selectedQuarter,
   boundaryOpacity = 0.2,
   showFlows = true,
+  showBarriers = false,
   selectedDistricts,
   selectedNode = null,
   onSelectNode,
@@ -115,11 +129,17 @@ export default function Map({
   const progressRef = useRef(0)
   const heroPulseRef = useRef(0)
   const zoomRef = useRef(11)
+  const zoomStageRef = useRef<ZoomStage>(getZoomStage(11))
+  const interactionActiveRef = useRef(false)
+  const viewportRafRef = useRef<number>(0)
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
+  const [hoveredBarrier, setHoveredBarrier] = useState<HoveredBarrier | null>(null)
   const [closedDetailNodeId, setClosedDetailNodeId] = useState<string | null>(null)
+  const { barriers } = useBarriers(selectedQuarter)
   const [zoom, setZoom] = useState(11)
-  const [viewportTick, setViewportTick] = useState(0)
+  const [viewportVersion, setViewportVersion] = useState(0)
+  const [isViewportInteracting, setIsViewportInteracting] = useState(false)
   const [boundaries, setBoundaries] = useState<AdminBoundaryCollection | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
@@ -128,6 +148,7 @@ export default function Map({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
+    markMapLoadStart()
     const apiKey = import.meta.env.VITE_VWORLD_API_KEY as string
     const map = new maplibregl.Map({
       container: containerRef.current,
@@ -146,32 +167,72 @@ export default function Map({
     map.addControl(overlay)
     overlayRef.current = overlay
 
-    let viewFrame: number | null = null
-    const syncView = () => {
-      if (viewFrame !== null) return
-      viewFrame = window.requestAnimationFrame(() => {
-        viewFrame = null
-        const z = map.getZoom()
-        zoomRef.current = z
+    const syncZoomRef = () => {
+      const z = map.getZoom()
+      zoomRef.current = z
+      return z
+    }
+
+    const syncZoomStage = (z: number, force = false) => {
+      const nextStage = getZoomStage(z)
+      if (force || nextStage !== zoomStageRef.current) {
+        zoomStageRef.current = nextStage
         setZoom(z)
-        setViewportTick(prev => prev + 1)
-        if (z < CANDIDATE_ZOOM) setHoveredNode(null)
+      }
+      if (z < CANDIDATE_ZOOM) setHoveredNode(null)
+    }
+
+    const updateViewportPosition = () => {
+      cancelAnimationFrame(viewportRafRef.current)
+      viewportRafRef.current = requestAnimationFrame(() => {
+        setViewportVersion(prev => prev + 1)
       })
     }
 
-    map.on('zoom', syncView)
-    map.on('move', syncView)
+    const handleMove = () => {
+      syncZoomRef()
+    }
+
+    const handleZoom = () => {
+      syncZoomStage(syncZoomRef())
+    }
+
+    const handleInteractionStart = () => {
+      interactionActiveRef.current = true
+      setIsViewportInteracting(true)
+      setHoveredNode(null)
+    }
+
+    const handleInteractionEnd = () => {
+      interactionActiveRef.current = false
+      setIsViewportInteracting(false)
+      syncZoomStage(syncZoomRef())
+      updateViewportPosition()
+    }
+
+    map.on('move', handleMove)
+    map.on('zoom', handleZoom)
+    map.on('movestart', handleInteractionStart)
+    map.on('zoomstart', handleInteractionStart)
+    map.on('moveend', handleInteractionEnd)
+    map.on('zoomend', handleInteractionEnd)
 
     map.once('load', () => {
+      markMapLoadEnd()
       mapRef.current = map
-      syncView()
+      syncZoomStage(syncZoomRef(), true)
+      updateViewportPosition()
       setMapInstance(map)
     })
 
     return () => {
-      if (viewFrame !== null) window.cancelAnimationFrame(viewFrame)
-      map.off('zoom', syncView)
-      map.off('move', syncView)
+      map.off('move', handleMove)
+      map.off('zoom', handleZoom)
+      map.off('movestart', handleInteractionStart)
+      map.off('zoomstart', handleInteractionStart)
+      map.off('moveend', handleInteractionEnd)
+      map.off('zoomend', handleInteractionEnd)
+      cancelAnimationFrame(viewportRafRef.current)
       overlayRef.current = null
       map.remove()
       mapRef.current = null
@@ -223,41 +284,72 @@ export default function Map({
     }
   }, [])
 
-  const handleFrame = useCallback((delta: number) => {
-    const totalVolume = flows.reduce((sum, f) => sum + f.volume, 0)
-    const speedScale = Math.max(0.3, Math.min(2.0, Math.sqrt(totalVolume / BASE_VOLUME)))
-    progressRef.current = (progressRef.current + delta * ANIMATION_SPEED * speedScale) % 1
-    heroPulseRef.current += delta
+  const handleNodeHover = useCallback((info: PickingInfo<CommerceNode>) => {
+    if (info.object) {
+      setHoveredNode({ node: info.object, x: info.x, y: info.y })
+    } else {
+      setHoveredNode(null)
+    }
+  }, [])
 
-    if (!overlayRef.current) return
+  const handleNodeClick = useCallback((info: PickingInfo<CommerceNode>) => {
+    onSelectNode?.(info.object ?? null)
+    if (info.object) {
+      setClosedDetailNodeId(null)
+      setSelectedClusterId(null)
+    }
+  }, [onSelectNode])
 
-    const flowLayers = showFlows
+  const colors = MAP_THEME[theme]
+  const zoomStage = getZoomStage(zoom)
+  const selectedFlowKey = selectedNode?.admKey ?? null
+  const staticFlowLayer = useMemo(
+    () => showFlows ? createODFlowLayer(flows, selectedFlowKey) : null,
+    [flows, selectedFlowKey, showFlows],
+  )
+  const barrierLayers = useMemo(
+    () => showBarriers && barriers.length > 0
       ? [
-          createODFlowLayer(flows, null),
-          createFlowParticleLayer(flows, progressRef.current, null),
+          createFlowBarrierLayer(barriers, (info) => {
+            if (info.object) {
+              setHoveredBarrier({ barrier: info.object.barrier, x: info.x, y: info.y })
+            } else {
+              setHoveredBarrier(null)
+            }
+          }),
         ]
-      : []
-
-    const commerceLayers = nodes.length > 0 && zoomRef.current >= CANDIDATE_ZOOM
+      : [],
+    [barriers, showBarriers],
+  )
+  const commerceLayers = useMemo(
+    () => nodes.length > 0 && zoomStage === 'candidate'
       ? createCommerceNodeLayers(
           nodes,
-          (info: PickingInfo<CommerceNode>) => {
-            if (info.object) {
-              setHoveredNode({ node: info.object, x: info.x, y: info.y })
-            } else {
-              setHoveredNode(null)
-            }
-          },
-          (info: PickingInfo<CommerceNode>) => {
-            onSelectNode?.(info.object ?? null)
-            if (info.object) {
-              setClosedDetailNodeId(null)
-              setSelectedClusterId(null)
-            }
-          },
+          handleNodeHover,
+          handleNodeClick,
           selectedNode?.id ?? null,
         )
-      : []
+      : [],
+    [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage],
+  )
+  const baseDeckLayers = useMemo(
+    () => [
+      ...(staticFlowLayer ? [staticFlowLayer] : []),
+      ...barrierLayers,
+      ...commerceLayers,
+    ],
+    [barrierLayers, commerceLayers, staticFlowLayer],
+  )
+
+  useEffect(() => {
+    overlayRef.current?.setProps({ layers: baseDeckLayers })
+  }, [baseDeckLayers, mapInstance])
+
+  const handleFrame = useCallback((delta: number) => {
+    if (!overlayRef.current || !showFlows || interactionActiveRef.current) return
+
+    progressRef.current = (progressRef.current + getFlowProgressIncrement(delta)) % 1
+    heroPulseRef.current += delta * 1000  // ms 단위 (createHeroPulseLayer elapsedMs 입력)
 
     const heroNode = heroNodeId ? nodes.find((n) => n.id === heroNodeId) ?? null : null
     const heroPulseLayer = createHeroPulseLayer(
@@ -266,12 +358,17 @@ export default function Map({
 
     overlayRef.current.setProps({
       layers: [
-        ...flowLayers,
-        ...commerceLayers,
+        ...baseDeckLayers,
+        createFlowParticleLayer(
+          flows,
+          progressRef.current,
+          selectedFlowKey,
+          { zoom: zoomRef.current, flowStrength },
+        ),
         ...(heroPulseLayer ? [heroPulseLayer] : []),
       ],
     })
-  }, [flows, nodes, onSelectNode, selectedNode?.id, showFlows, heroNodeId])
+  }, [baseDeckLayers, flowStrength, flows, selectedFlowKey, showFlows, heroNodeId, nodes])
 
   useAnimationFrame(handleFrame)
 
@@ -287,8 +384,6 @@ export default function Map({
     })
   }, [])
 
-  const colors = MAP_THEME[theme]
-  const zoomStage = getZoomStage(zoom)
   const districtClusters = useMemo(() => buildDistrictCommerceClusters(nodes), [nodes])
   const dongClusters = useMemo(() => buildDongCommerceClusters(nodes, boundaries), [nodes, boundaries])
   const clusters = useMemo(() => {
@@ -296,15 +391,14 @@ export default function Map({
     if (zoomStage === 'dong') return dongClusters
     return []
   }, [districtClusters, dongClusters, zoomStage])
-  const showClusters = clusters.length > 0
+  const showClusters = !isViewportInteracting && clusters.length > 0
   const selectedCluster = useMemo(
     () => clusters.find((cluster) => cluster.id === selectedClusterId) ?? null,
     [clusters, selectedClusterId],
   )
-  const summaryText = nodes.length > 0
-    ? `선택 자치구 상권 ${nodes.length.toLocaleString()}개 · 자치구 ${districtClusters.length.toLocaleString()}개 · 행정동 ${dongClusters.length.toLocaleString()}개 · ${hour}시 ${purpose ?? '전체'} 상위 ${topN}개 흐름`
-    : ''
+  const summaryText = buildSummaryText(purpose, hour, topN, ALL_COMMERCE_TYPES, nodes)
   const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
+  const commerceBoundaryStatus = zoom >= 11 ? '상권 경계 표시 중' : '상권 경계: 확대하면 표시'
   const selectedDistrictCodes = useMemo(
     () => [...(selectedDistricts ?? new Set<string>())]
       .map((district) => DISTRICT_CODES[district])
@@ -313,7 +407,7 @@ export default function Map({
   )
 
   const clusterPositions = useMemo((): ClusterPositionMap => {
-    void viewportTick
+    void viewportVersion
     if (!mapInstance || containerSize.width === 0 || containerSize.height === 0) return {}
     const next: ClusterPositionMap = {}
     for (const cluster of clusters) {
@@ -328,7 +422,7 @@ export default function Map({
       }
     }
     return next
-  }, [clusters, containerSize.height, containerSize.width, mapInstance, viewportTick])
+  }, [clusters, containerSize.height, containerSize.width, mapInstance, viewportVersion])
 
   function getClusterColor(cluster: DongCommerceCluster) {
     if (cluster.tone === 'recommended') return '#43A047'
@@ -506,13 +600,22 @@ export default function Map({
       />
 
       {mapInstance && (
-        <AdminBoundaryLayer
-          map={mapInstance}
-          theme={theme}
-          districtFilter={null}
-          districtFilters={selectedDistrictCodes}
-          fillOpacity={boundaryOpacity}
-        />
+        <>
+          <AdminBoundaryLayer
+            map={mapInstance}
+            theme={theme}
+            districtFilter={null}
+            districtFilters={selectedDistrictCodes}
+            fillOpacity={boundaryOpacity}
+          />
+          <CommerceBoundaryLayer
+            map={mapInstance}
+            theme={theme}
+            selectedId={selectedNode?.id ?? null}
+            quarter={selectedQuarter}
+            districts={[...(selectedDistricts ?? new Set<string>())]}
+          />
+        </>
       )}
 
       {clusters.map(renderClusterBadge)}
@@ -572,6 +675,18 @@ export default function Map({
             }}
           >
             {dataStatusLabel}
+          </span>
+          <span
+            style={{
+              background: zoom >= 11 ? 'rgba(46,125,50,0.24)' : 'rgba(21,29,38,0.95)',
+              border: `1px solid ${zoom >= 11 ? 'rgba(123,208,141,0.55)' : colors.panelBorder}`,
+              borderRadius: 999,
+              padding: '3px 8px',
+              fontSize: 10,
+              color: zoom >= 11 ? '#A5D6A7' : colors.secondaryText,
+            }}
+          >
+            {commerceBoundaryStatus}
           </span>
         </div>
       </div>
@@ -668,6 +783,72 @@ export default function Map({
               }}
             >
               {startup.headline} {interpretation}
+            </div>
+          </div>
+        )
+      })()}
+
+      {hoveredBarrier && (() => {
+        const { barrier, x, y } = hoveredBarrier
+        const containerWidth = containerSize.width || window.innerWidth
+        const cardWidth = 240
+        const rawLeft = x + 14 + cardWidth > containerWidth ? x - 14 - cardWidth : x + 14
+        const cardLeft = Math.max(0, rawLeft)
+        const cardTop = Math.max(56, y - 12)
+        const severityColor =
+          barrier.severity === 'high' ? '#EF5350'
+          : barrier.severity === 'medium' ? '#FFA726'
+          : '#FFD54F'
+        const severityLabel =
+          barrier.severity === 'high' ? '심각'
+          : barrier.severity === 'medium' ? '주의' : '경미'
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: cardLeft,
+              top: cardTop,
+              background: colors.panelBg,
+              color: colors.panelText,
+              border: `1px solid ${severityColor}`,
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 12,
+              pointerEvents: 'none',
+              zIndex: 11,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              width: cardWidth,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+              <span style={{ fontWeight: 700, fontSize: 13 }}>흐름 단절</span>
+              <span
+                style={{
+                  background: `${severityColor}22`,
+                  color: severityColor,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  borderRadius: 4,
+                  padding: '2px 6px',
+                }}
+              >
+                {severityLabel}
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: colors.secondaryText, lineHeight: 1.5, marginBottom: 6 }}>
+              {barrier.sourceName} → {barrier.targetName}
+            </div>
+            {barrier.type && (
+              <div style={{ fontSize: 11, color: colors.panelText, lineHeight: 1.4, marginBottom: 6 }}>
+                {barrier.type}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: colors.mutedText }}>
+              <span>영향 흐름량 {barrier.affectedVolume.toLocaleString()}</span>
+              <span>점수 {barrier.score.toFixed(2)}</span>
+            </div>
+            <div style={{ marginTop: 6, color: '#FFCC80', fontSize: 11, fontWeight: 700 }}>
+              단절 강도 {(barrier.score * 100).toFixed(0)}%
             </div>
           </div>
         )

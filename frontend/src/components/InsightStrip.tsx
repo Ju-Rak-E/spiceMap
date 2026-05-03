@@ -4,8 +4,9 @@
  * 전략(strategy_d13.md §5 §7): 첫 화면에서 검증 결과·정책 카드 N·위험 상권 N을
  * 즉시 노출하여 "차별화 + 데이터 활용도"를 30초 안에 전달한다.
  */
-import type { CommerceNode } from '../types/commerce'
 import { MAP_THEME, type MapTheme } from '../styles/tokens'
+
+type ThemeColors = (typeof MAP_THEME)[MapTheme]
 
 export interface InsightStripProps {
   theme?: MapTheme
@@ -78,7 +79,7 @@ interface CardProps {
   primary: string
   secondary: string
   accent: string
-  colors: typeof MAP_THEME['dark'] | typeof MAP_THEME['light']
+  colors: ThemeColors
   title: string
 }
 
@@ -116,10 +117,3 @@ function formatP(p: number): string {
   return p.toPrecision(2)
 }
 
-/**
- * 노드 배열에서 GRI ≥ 80 상권 수를 카운트.
- * 외부에서 동적으로 InsightStrip props 계산할 때 사용.
- */
-export function countCriticalCommerces(nodes: CommerceNode[]): number {
-  return nodes.filter((node) => (node.griScore ?? 0) >= 80).length
-}

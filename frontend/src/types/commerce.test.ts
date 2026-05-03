@@ -125,6 +125,18 @@ describe('featuresToNodes', () => {
       const [node] = featuresToNodes([makeFeature()])
       expect(node.degreeCentrality).toBe(0)
     })
+
+    it('adm_cd가 있으면 OD highlight용 admKey로 매핑한다', () => {
+      const feature = makeFeature({
+        properties: {
+          ...makeFeature().properties,
+          adm_cd: '1168010100',
+          adm_nm: '역삼1동',
+        },
+      })
+      const [node] = featuresToNodes([feature])
+      expect(node.admKey).toBe('1168010100')
+    })
   })
 
   describe('comm_type 검증', () => {

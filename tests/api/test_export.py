@@ -3,13 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 from backend.main import app
-from backend.api.deps import get_session, get_cache
-
-
-def _mock_cache():
-    cache = MagicMock()
-    cache.get.return_value = None
-    return cache
+from backend.api.deps import get_session
 
 
 class FakeRow:
@@ -23,7 +17,6 @@ class TestExportCsv:
         mock_db = MagicMock()
         mock_db.execute.return_value.fetchall.return_value = []
         app.dependency_overrides[get_session] = lambda: mock_db
-        app.dependency_overrides[get_cache] = _mock_cache
         client = TestClient(app)
         response = client.get("/api/export/csv?quarter=2025Q4")
         assert response.status_code == 200
@@ -34,7 +27,6 @@ class TestExportCsv:
         mock_db = MagicMock()
         mock_db.execute.return_value.fetchall.return_value = []
         app.dependency_overrides[get_session] = lambda: mock_db
-        app.dependency_overrides[get_cache] = _mock_cache
         client = TestClient(app)
         response = client.get("/api/export/csv?quarter=2025Q4")
         content = response.content.decode("utf-8-sig")
@@ -59,7 +51,6 @@ class TestExportCsv:
             )
         ]
         app.dependency_overrides[get_session] = lambda: mock_db
-        app.dependency_overrides[get_cache] = _mock_cache
         client = TestClient(app)
         response = client.get("/api/export/csv?quarter=2025Q4")
         content = response.content.decode("utf-8-sig")
@@ -73,7 +64,6 @@ class TestExportCsv:
         mock_db = MagicMock()
         mock_db.execute.return_value.fetchall.return_value = []
         app.dependency_overrides[get_session] = lambda: mock_db
-        app.dependency_overrides[get_cache] = _mock_cache
         client = TestClient(app)
         response = client.get("/api/export/csv?quarter=2025Q4")
         disposition = response.headers.get("content-disposition", "")

@@ -9,9 +9,14 @@ class BarrierItem(BaseModel):
     to_comm_nm: str | None = None
     barrier_score: float
     barrier_type: str | None = None
+    sourceCoord: tuple[float, float] | None = None
+    targetCoord: tuple[float, float] | None = None
+    affected_volume: int | None = None
 
 
 class BarriersResponse(BaseModel):
     quarter: str
     total: int
     barriers: list[BarrierItem]
+    from_cache: bool = False
+    cache_warning: str | None = None

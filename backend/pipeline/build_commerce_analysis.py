@@ -288,7 +288,7 @@ def replace_commerce_analysis(engine: Engine, rows: pd.DataFrame) -> int:
 
     comm_codes = rows["comm_cd"].dropna().astype(str).unique().tolist()
     quarter = str(rows["year_quarter"].iloc[0])
-    records = rows.where(pd.notna(rows), None).to_dict(orient="records")
+    records = dataframe_to_db_records(rows)
 
     delete_stmt = text(
         """
@@ -312,6 +312,11 @@ def replace_commerce_analysis(engine: Engine, rows: pd.DataFrame) -> int:
         conn.execute(delete_stmt, {"year_quarter": quarter, "comm_codes": comm_codes})
         conn.execute(insert_stmt, records)
     return len(records)
+
+
+def dataframe_to_db_records(rows: pd.DataFrame) -> list[dict]:
+    """Convert pandas missing values, including float NaN, to DB NULL values."""
+    return rows.astype(object).where(pd.notna(rows), None).to_dict(orient="records")
 
 
 def parse_args() -> argparse.Namespace:

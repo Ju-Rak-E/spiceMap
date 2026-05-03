@@ -41,3 +41,5 @@ class PolicyCardsResponse(BaseModel):
     total_cards: int
     generation_mode: str = "rule_based"
     cards: list[PolicyCard]
+    from_cache: bool = False
+    cache_warning: str | None = None
