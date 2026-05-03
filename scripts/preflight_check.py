@@ -142,6 +142,7 @@ def check_baseline_dir() -> list[CheckResult]:
     return [
         check_file_exists(REPO_ROOT / "data" / "baselines" / "README.md", "B1 baseline README"),
         check_file_exists(REPO_ROOT / "scripts" / "run_validation_h2_b1.py", "H2/B1 산출 스크립트"),
+        check_file_exists(REPO_ROOT / "scripts" / "run_validation_all.py", "H1/H2/H3/B1 통합 산출 스크립트"),
     ]
 
 

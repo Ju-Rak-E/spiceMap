@@ -69,6 +69,7 @@
 | [verification_h2.md](verification_h2.md) | H2 가설 검증 설계 (흐름 단절 → 폐업 상관) |
 | [deployment_guide.md](deployment_guide.md) | 발표/심사용 웹 데모 배포 (Vercel/Netlify 정적 + 풀 옵션) |
 | [api_openapi.json](api_openapi.json) | FastAPI app.openapi() 정적 export (8 경로, scripts/export_openapi.py) |
+| [csv_schema.md](csv_schema.md) | `/api/export/csv` 9 컬럼 스키마 + 활용 시나리오 |
 
 ## 작업 이력 / 에스컬레이션
 
