@@ -16,6 +16,7 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 const FALLBACK_BOUNDARY_URL = '/data/mock_commerce_boundary.geojson'
 
 async function fetchCommerceBoundary(quarter: string, districts: readonly string[]) {
+  if (!API_BASE) throw new Error('API base URL is not configured')
   if (districts.length === 0) throw new Error('No districts selected')
 
   const responses = await Promise.all(districts.map(async (district) => {

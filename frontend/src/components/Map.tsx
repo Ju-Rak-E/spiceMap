@@ -387,7 +387,7 @@ export default function Map({
   )
   const summaryText = buildSummaryText(purpose, hour, topN, ALL_COMMERCE_TYPES, nodes)
   const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
-  const commerceBoundaryStatus = zoom >= 12 ? '상권 경계 표시 중' : '상권 경계: 확대하면 표시'
+  const commerceBoundaryStatus = zoom >= 11 ? '상권 경계 표시 중' : '상권 경계: 확대하면 표시'
   const selectedDistrictCodes = useMemo(
     () => [...(selectedDistricts ?? new Set<string>())]
       .map((district) => DISTRICT_CODES[district])
@@ -667,12 +667,12 @@ export default function Map({
           </span>
           <span
             style={{
-              background: zoom >= 12 ? 'rgba(46,125,50,0.24)' : 'rgba(21,29,38,0.95)',
-              border: `1px solid ${zoom >= 12 ? 'rgba(123,208,141,0.55)' : colors.panelBorder}`,
+              background: zoom >= 11 ? 'rgba(46,125,50,0.24)' : 'rgba(21,29,38,0.95)',
+              border: `1px solid ${zoom >= 11 ? 'rgba(123,208,141,0.55)' : colors.panelBorder}`,
               borderRadius: 999,
               padding: '3px 8px',
               fontSize: 10,
-              color: zoom >= 12 ? '#A5D6A7' : colors.secondaryText,
+              color: zoom >= 11 ? '#A5D6A7' : colors.secondaryText,
             }}
           >
             {commerceBoundaryStatus}

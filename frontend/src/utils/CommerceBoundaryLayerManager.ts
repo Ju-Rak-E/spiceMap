@@ -9,6 +9,8 @@ const SELECTED_LINE_LAYER_ID = 'commerce-boundary-selected-line'
 const DATA_URL = '/data/mock_commerce_boundary.geojson'
 
 const SELECTED_COLOR = '#7BD08D'
+const MIN_VISIBLE_ZOOM = 11
+const SELECTED_MIN_VISIBLE_ZOOM = 11.5
 type BoundaryData = NonNullable<maplibregl.GeoJSONSourceSpecification['data']>
 
 function buildSelectedFilter(selectedId: string | null): maplibregl.FilterSpecification {
@@ -21,7 +23,7 @@ function buildSelectedFilter(selectedId: string | null): maplibregl.FilterSpecif
 }
 
 function lineColor(theme: MapTheme): string {
-  return theme === 'dark' ? '#B0BEC5' : '#263238'
+  return theme === 'dark' ? '#E8F1F5' : '#263238'
 }
 
 export class CommerceBoundaryLayerManager {
@@ -93,14 +95,14 @@ export class CommerceBoundaryLayerManager {
       id: FILL_LAYER_ID,
       type: 'fill',
       source: SOURCE_ID,
-      minzoom: 12,
+      minzoom: MIN_VISIBLE_ZOOM,
       paint: {
         'fill-color': '#90A4AE',
         'fill-opacity': [
           'interpolate', ['linear'], ['zoom'],
-          12, 0.04,
-          13, 0.08,
-          16, 0.14,
+          11, 0.035,
+          12, 0.07,
+          16, 0.13,
         ],
       },
     })
@@ -109,16 +111,17 @@ export class CommerceBoundaryLayerManager {
       id: LINE_LAYER_ID,
       type: 'line',
       source: SOURCE_ID,
-      minzoom: 12,
+      minzoom: MIN_VISIBLE_ZOOM,
       paint: {
         'line-color': lineColor(this.theme),
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
-          13, 0.6,
-          15, 1.4,
-          17, 2.2,
+          11, 0.9,
+          13, 1.4,
+          15, 2.1,
+          17, 3,
         ],
-        'line-opacity': 0.7,
+        'line-opacity': 0.92,
       },
     })
 
@@ -126,7 +129,7 @@ export class CommerceBoundaryLayerManager {
       id: SELECTED_FILL_LAYER_ID,
       type: 'fill',
       source: SOURCE_ID,
-      minzoom: 12.5,
+      minzoom: SELECTED_MIN_VISIBLE_ZOOM,
       filter: buildSelectedFilter(this.selectedId),
       paint: {
         'fill-color': SELECTED_COLOR,
@@ -138,11 +141,11 @@ export class CommerceBoundaryLayerManager {
       id: SELECTED_LINE_LAYER_ID,
       type: 'line',
       source: SOURCE_ID,
-      minzoom: 12.5,
+      minzoom: SELECTED_MIN_VISIBLE_ZOOM,
       filter: buildSelectedFilter(this.selectedId),
       paint: {
         'line-color': SELECTED_COLOR,
-        'line-width': 3,
+        'line-width': 4,
         'line-opacity': 0.95,
       },
     })
