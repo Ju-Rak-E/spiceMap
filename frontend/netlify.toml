@@ -1,0 +1,24 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback — 모든 경로를 index.html 로 (App.tsx 내부 view 토글로 라우팅)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 정적 자산 캐시
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300"

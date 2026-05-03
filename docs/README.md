@@ -66,6 +66,8 @@
 | [policy_report_gangnam_apgujeong.md](policy_report_gangnam_apgujeong.md) | 강남 압구정 정책 리포트 (R4 젠트리피케이션) |
 | [policy_report_gwanak_sillim.md](policy_report_gwanak_sillim.md) | 관악 신림 정책 리포트 (R4 흐름 단절 회복) |
 | [strategy_d13.md](strategy_d13.md) | D-13 수상 전략 + 실용성 강화 플랜 |
+| [verification_h2.md](verification_h2.md) | H2 가설 검증 설계 (흐름 단절 → 폐업 상관) |
+| [deployment_guide.md](deployment_guide.md) | 발표/심사용 웹 데모 배포 (Vercel/Netlify 정적 + 풀 옵션) |
 
 ## 작업 이력 / 에스컬레이션
 
