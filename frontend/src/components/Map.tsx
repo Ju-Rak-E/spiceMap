@@ -5,6 +5,7 @@ import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
 import { MAP_THEME, COMMERCE_COLORS, type CommerceType, type MapTheme } from '../styles/tokens'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
+import CommerceBoundaryLayer from './CommerceBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
 import { createCommerceNodeLayers } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
@@ -17,6 +18,7 @@ import type { CommerceNode } from '../types/commerce'
 import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatSignedFixed2 } from '../utils/numberFormat'
+import { markMapLoadEnd, markMapLoadStart } from '../utils/mapPerformance'
 import {
   buildDistrictCommerceClusters,
   buildDongCommerceClusters,
@@ -137,6 +139,7 @@ export default function Map({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
+    markMapLoadStart()
     const apiKey = import.meta.env.VITE_VWORLD_API_KEY as string
     const map = new maplibregl.Map({
       container: containerRef.current,
@@ -170,6 +173,7 @@ export default function Map({
     map.on('move', syncView)
 
     map.once('load', () => {
+      markMapLoadEnd()
       mapRef.current = map
       syncView()
       setMapInstance(map)
@@ -244,6 +248,17 @@ export default function Map({
           createFlowParticleLayer(flows, progressRef.current, selectedFlowKey),
         ]
       : []
+    const barrierLayers = showBarriers && barriers.length > 0
+      ? [
+          createFlowBarrierLayer(barriers, (info) => {
+            if (info.object) {
+              setHoveredBarrier({ barrier: info.object.barrier, x: info.x, y: info.y })
+            } else {
+              setHoveredBarrier(null)
+            }
+          }),
+        ]
+      : []
     const commerceLayers = nodes.length > 0 && zoomRef.current >= CANDIDATE_ZOOM
       ? createCommerceNodeLayers(
           nodes,
@@ -300,6 +315,7 @@ export default function Map({
   )
   const summaryText = buildSummaryText(purpose, hour, topN, ALL_COMMERCE_TYPES, nodes)
   const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
+  const commerceBoundaryStatus = zoom >= 12 ? '상권 경계 표시 중' : '상권 경계: 확대하면 표시'
   const selectedDistrictCodes = useMemo(
     () => [...(selectedDistricts ?? new Set<string>())]
       .map((district) => DISTRICT_CODES[district])
@@ -501,13 +517,22 @@ export default function Map({
       />
 
       {mapInstance && (
-        <AdminBoundaryLayer
-          map={mapInstance}
-          theme={theme}
-          districtFilter={null}
-          districtFilters={selectedDistrictCodes}
-          fillOpacity={boundaryOpacity}
-        />
+        <>
+          <AdminBoundaryLayer
+            map={mapInstance}
+            theme={theme}
+            districtFilter={null}
+            districtFilters={selectedDistrictCodes}
+            fillOpacity={boundaryOpacity}
+          />
+          <CommerceBoundaryLayer
+            map={mapInstance}
+            theme={theme}
+            selectedId={selectedNode?.id ?? null}
+            quarter={selectedQuarter}
+            districts={[...(selectedDistricts ?? new Set<string>())]}
+          />
+        </>
       )}
 
       {clusters.map(renderClusterBadge)}
@@ -562,6 +587,18 @@ export default function Map({
             }}
           >
             {dataStatusLabel}
+          </span>
+          <span
+            style={{
+              background: zoom >= 12 ? 'rgba(46,125,50,0.24)' : 'rgba(21,29,38,0.95)',
+              border: `1px solid ${zoom >= 12 ? 'rgba(123,208,141,0.55)' : colors.panelBorder}`,
+              borderRadius: 999,
+              padding: '3px 8px',
+              fontSize: 10,
+              color: zoom >= 12 ? '#A5D6A7' : colors.secondaryText,
+            }}
+          >
+            {commerceBoundaryStatus}
           </span>
         </div>
       </div>
@@ -669,6 +706,7 @@ export default function Map({
         const cardWidth = 240
         const rawLeft = x + 14 + cardWidth > containerWidth ? x - 14 - cardWidth : x + 14
         const cardLeft = Math.max(0, rawLeft)
+        const cardTop = Math.max(56, y - 12)
         const severityColor =
           barrier.severity === 'high' ? '#EF5350'
           : barrier.severity === 'medium' ? '#FFA726'
@@ -681,7 +719,7 @@ export default function Map({
             style={{
               position: 'absolute',
               left: cardLeft,
-              top: y - 12,
+              top: cardTop,
               background: colors.panelBg,
               color: colors.panelText,
               border: `1px solid ${severityColor}`,
@@ -721,37 +759,12 @@ export default function Map({
               <span>영향 흐름량 {barrier.affectedVolume.toLocaleString()}</span>
               <span>점수 {barrier.score.toFixed(2)}</span>
             </div>
+            <div style={{ marginTop: 6, color: '#FFCC80', fontSize: 11, fontWeight: 700 }}>
+              단절 강도 {(barrier.score * 100).toFixed(0)}%
+            </div>
           </div>
         )
       })()}
-
-      {hoveredBarrier && (
-        <div
-          style={{
-            position: 'absolute',
-            left: Math.max(0, hoveredBarrier.x + 14),
-            top: Math.max(56, hoveredBarrier.y - 12),
-            background: colors.panelBg,
-            color: colors.panelText,
-            border: '1px solid #FFAB40',
-            borderRadius: 8,
-            padding: '9px 12px',
-            fontSize: 12,
-            pointerEvents: 'none',
-            zIndex: 11,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.45)',
-            maxWidth: 260,
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 5 }}>흐름 단절 후보</div>
-          <div style={{ color: colors.secondaryText, lineHeight: 1.45 }}>
-            {hoveredBarrier.barrier.sourceName} → {hoveredBarrier.barrier.targetName}
-          </div>
-          <div style={{ marginTop: 5, color: '#FFCC80', fontWeight: 700 }}>
-            단절 강도 {(hoveredBarrier.barrier.score * 100).toFixed(0)}%
-          </div>
-        </div>
-      )}
 
       {selectedNode && !detailPanelOpen && (
         <button

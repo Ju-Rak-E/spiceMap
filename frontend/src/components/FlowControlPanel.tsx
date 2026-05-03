@@ -60,6 +60,8 @@ interface FlowControlPanelProps {
   compareQuarter: string | null
   kpiDelta: QuarterKpiDelta | null
   onToggleCompare: () => void
+  compact?: boolean
+  stacked?: boolean
 }
 
 function formatVolume(value: number): string {
@@ -94,17 +96,46 @@ function getDeltaColor(value: number, betterWhen: 'higher' | 'lower' = 'higher')
   return COLORS.mutedText
 }
 
+function csvCell(value: string | number | null | undefined): string {
+  const text = value == null ? '' : String(value)
+  return `"${text.replaceAll('"', '""')}"`
+}
+
 function downloadCsvDemo(nodes: CommerceNode[], quarter: string): void {
-  const header = '상권명,자치구,창업적합도,상권성격,고객흐름,상권위험도,분기'
+  const header = [
+    '상권ID',
+    '상권명',
+    '자치구',
+    '분기',
+    '상권유형',
+    '창업적합도',
+    '판단',
+    '순유입',
+    '연결중심성',
+    '상권위험도',
+    '폐업률',
+  ]
   const rows = nodes
     .filter((n) => deriveStartupSummary(n).fitLevel === 'recommended')
     .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
     .map((n) => {
       const summary = deriveStartupSummary(n)
-      return `${n.name},${n.district},${summary.fitScore},${summary.characterLabel},${summary.flowLabel},${formatFixed2(n.griScore)},${quarter}`
+      return [
+        n.id,
+        n.name,
+        n.district,
+        quarter,
+        summary.characterLabel,
+        summary.fitScore,
+        summary.fitLabel,
+        formatSignedFixed2(n.netFlow),
+        formatFixed2(n.degreeCentrality),
+        formatFixed2(n.griScore),
+        n.closeRate != null ? `${n.closeRate.toFixed(1)}%` : '',
+      ].map(csvCell).join(',')
     })
-  const csv = [header, ...rows].join('\n')
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const csv = [header.map(csvCell).join(','), ...rows].join('\r\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -130,21 +161,21 @@ async function downloadCsvApi(quarter: string): Promise<void> {
 }
 
 const S = {
-  panel: {
-    width: 320,
-    minWidth: 320,
-    height: '100%',
+  panel: (compact: boolean, stacked: boolean): CSSProperties => ({
+    width: stacked ? '100%' : compact ? 292 : 320,
+    minWidth: stacked ? 0 : compact ? 292 : 320,
+    height: stacked ? '44vh' : '100%',
     background: COLORS.panelBg,
     borderLeft: `1px solid ${COLORS.panelBorder}`,
     display: 'flex',
     flexDirection: 'column',
     overflowY: 'auto',
-    padding: '18px 16px',
-    gap: 18,
+    padding: compact ? '14px 12px' : '18px 16px',
+    gap: compact ? 14 : 18,
     boxSizing: 'border-box',
     color: COLORS.panelText,
     fontFamily: 'system-ui, sans-serif',
-  } satisfies CSSProperties,
+  }),
   header: {
     paddingBottom: 12,
     borderBottom: `1px solid ${COLORS.panelBorder}`,
@@ -531,6 +562,8 @@ export default function FlowControlPanel({
   compareQuarter,
   kpiDelta,
   onToggleCompare,
+  compact = false,
+  stacked = false,
 }: FlowControlPanelProps) {
   const densityLabel = DENSITY_LABELS[flowStrength] ?? '보통'
   const priorityNodes = getPriorityNodes(nodes)
@@ -565,7 +598,7 @@ export default function FlowControlPanel({
   }
 
   return (
-    <aside style={S.panel}>
+    <aside style={S.panel(compact, stacked)}>
       <div style={S.header}>
         <div style={S.title}>창업 상권 탐색</div>
         <div style={S.subtitle}>
@@ -577,85 +610,6 @@ export default function FlowControlPanel({
           <span style={S.statusTag}>{usingMockData ? '캐시 데이터' : 'API 연결'}</span>
           {selectedNode && <span style={S.statusTag}>선택: {selectedNode.name}</span>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={compareMode}
-            onClick={onToggleCompare}
-            disabled={compareQuarter === null}
-            aria-label={compareQuarter === null
-              ? '직전 분기 데이터가 없어 비교 모드를 사용할 수 없습니다'
-              : `직전 분기(${formatQuarter(compareQuarter)})와 비교 ${compareMode ? '해제' : '시작'}`}
-            style={{
-              background: compareMode ? '#1565C0' : 'rgba(21,29,38,0.92)',
-              color: compareMode ? '#FFF' : '#B0BEC5',
-              border: `1px solid ${compareMode ? '#42A5F5' : '#37474F'}`,
-              borderRadius: 999,
-              padding: '4px 10px',
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: compareQuarter === null ? 'not-allowed' : 'pointer',
-              opacity: compareQuarter === null ? 0.5 : 1,
-            }}
-          >
-            {compareMode ? '비교 모드 ON' : '직전 분기 비교'}
-          </button>
-          {compareMode && compareQuarter && (
-            <span style={{ fontSize: 11, color: '#90A4AE' }}>
-              vs {formatQuarter(compareQuarter)}
-            </span>
-          )}
-        </div>
-        {compareMode && kpiDelta && (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 6,
-              marginTop: 10,
-            }}
-          >
-            {[
-              {
-                label: '총 흐름량',
-                value: formatDelta(kpiDelta.delta.totalVolume, 0),
-                tone: deltaTone(kpiDelta.delta.totalVolume, 'higher'),
-              },
-              {
-                label: 'GRI 평균',
-                value: formatDelta(kpiDelta.delta.avgGri, 1),
-                tone: deltaTone(kpiDelta.delta.avgGri, 'lower'),
-              },
-              {
-                label: '상권 수',
-                value: formatDelta(kpiDelta.delta.commerceCount, 0),
-                tone: deltaTone(kpiDelta.delta.commerceCount, 'higher'),
-              },
-              {
-                label: '추천 상권',
-                value: formatDelta(kpiDelta.delta.recommendedCount, 0),
-                tone: deltaTone(kpiDelta.delta.recommendedCount, 'higher'),
-              },
-            ].map((chip) => {
-              const color = chip.tone === 'up' ? '#66BB6A' : chip.tone === 'down' ? '#EF5350' : '#B0BEC5'
-              return (
-                <div
-                  key={chip.label}
-                  style={{
-                    background: 'rgba(21,29,38,0.92)',
-                    border: `1px solid ${color}55`,
-                    borderRadius: 6,
-                    padding: '6px 8px',
-                  }}
-                >
-                  <div style={{ fontSize: 10, color: '#78909C', marginBottom: 2 }}>{chip.label}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color }}>{chip.value}</div>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
 
       <section style={S.section}>

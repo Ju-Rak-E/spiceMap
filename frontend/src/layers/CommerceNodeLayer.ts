@@ -3,6 +3,7 @@ import type { PickingInfo } from '@deck.gl/core'
 import type { CommerceNode } from '../types/commerce'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { hexToRgba } from '../utils/colorUtils'
+import { normalizeVisualScores, resolveVisualScore } from '../utils/visualScore'
 import { COMMERCE_COLORS } from '../styles/tokens'
 
 const MAX_CANDIDATES = 50
@@ -14,10 +15,14 @@ const RECOMMENDED_ALPHA = 230
 const CONTEXT_TYPE_ALPHA = 90
 const SELECTED_MARKER_RADIUS = 24
 
-function getCandidateRadius(node: CommerceNode, isSelected: boolean): number {
+export function getCandidateRadius(
+  node: CommerceNode,
+  isSelected: boolean,
+  visualScores: ReadonlyMap<string, number> = new Map(),
+): number {
   if (isSelected) return SELECTED_MARKER_RADIUS
-  const { fitScore } = deriveStartupSummary(node)
-  return MIN_CANDIDATE_RADIUS + (fitScore / 100) * (MAX_CANDIDATE_RADIUS - MIN_CANDIDATE_RADIUS)
+  const visualScore = resolveVisualScore(node, visualScores)
+  return MIN_CANDIDATE_RADIUS + (visualScore / 100) * (MAX_CANDIDATE_RADIUS - MIN_CANDIDATE_RADIUS)
 }
 
 function getCandidateAlpha(): number {
@@ -78,6 +83,7 @@ export function createCommerceNodeLayers(
   selectedId: string | null,
 ): ScatterplotLayer<CommerceNode>[] {
   const candidateNodes = getCandidateNodes(nodes, selectedId)
+  const visualScores = normalizeVisualScores(candidateNodes)
   const candidateIds = new Set(candidateNodes.map((node) => node.id))
   const contextNodes = nodes.filter((node) => !candidateIds.has(node.id))
 
@@ -102,7 +108,7 @@ export function createCommerceNodeLayers(
     pickable: true,
     stroked: true,
     getPosition: (node) => node.coordinates,
-    getRadius: (node) => getCandidateRadius(node, node.id === selectedId),
+    getRadius: (node) => getCandidateRadius(node, node.id === selectedId, visualScores),
     getFillColor: (node) => getCandidateFillColor(node, node.id === selectedId),
     getLineColor: (node) =>
       getGriBorderColor(node.griScore, node.id === selectedId),
@@ -113,7 +119,7 @@ export function createCommerceNodeLayers(
     onHover,
     onClick,
     updateTriggers: {
-      getRadius: [candidateNodes, selectedId],
+      getRadius: [candidateNodes, selectedId, visualScores],
       getFillColor: [candidateNodes, selectedId],
       getLineColor: [candidateNodes, selectedId],
       getLineWidth: [candidateNodes, selectedId],
@@ -130,13 +136,14 @@ export function createCommerceNodeLayer(
   selectedId: string | null,
 ): ScatterplotLayer<CommerceNode> {
   const candidateNodes = getCandidateNodes(nodes, selectedId)
+  const visualScores = normalizeVisualScores(candidateNodes)
   return new ScatterplotLayer<CommerceNode>({
     id: 'commerce-nodes-candidates',
     data: candidateNodes,
     pickable: true,
     stroked: true,
     getPosition: (node) => node.coordinates,
-    getRadius: (node) => getCandidateRadius(node, node.id === selectedId),
+    getRadius: (node) => getCandidateRadius(node, node.id === selectedId, visualScores),
     getFillColor: (node) => getCandidateFillColor(node, node.id === selectedId),
     getLineColor: (node) =>
       getGriBorderColor(node.griScore, node.id === selectedId),
@@ -147,7 +154,7 @@ export function createCommerceNodeLayer(
     onHover,
     onClick,
     updateTriggers: {
-      getRadius: [candidateNodes, selectedId],
+      getRadius: [candidateNodes, selectedId, visualScores],
       getFillColor: [candidateNodes, selectedId],
       getLineColor: [candidateNodes, selectedId],
       getLineWidth: [candidateNodes, selectedId],

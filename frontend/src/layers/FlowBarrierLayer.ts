@@ -5,14 +5,14 @@ import type { Barrier } from '../hooks/useBarriers'
 import { getControlPoint, quadBezier } from '../utils/flowBezier'
 
 const SEGMENTS = 32
-const MIN_WIDTH = 1.5
-const MAX_WIDTH = 5
+const MIN_WIDTH = 4
+const MAX_WIDTH = 9
 const MAX_VOLUME = 10000
 
 const SEVERITY_COLOR: Record<Barrier['severity'], [number, number, number, number]> = {
-  high: [239, 83, 80, 220],
-  medium: [255, 167, 38, 200],
-  low: [255, 213, 79, 180],
+  high: [255, 82, 82, 255],
+  medium: [255, 183, 77, 245],
+  low: [255, 235, 59, 235],
 }
 
 interface BarrierPath {
@@ -53,10 +53,11 @@ export function createFlowBarrierLayer(
     getColor: (p) => p.color,
     getWidth: (p) => p.width,
     widthUnits: 'pixels',
+    widthMinPixels: MIN_WIDTH,
     capRounded: true,
     jointRounded: true,
     // @ts-expect-error PathStyleExtension dash props are supported at runtime but absent from this deck.gl type.
-    getDashArray: () => [6, 4],
+    getDashArray: () => [14, 6],
     dashJustified: true,
     extensions: [new PathStyleExtension({ dash: true })],
     onHover,

@@ -1,0 +1,101 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gc_001", "name": "강남역 상권", "district": "강남구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.0238,37.4949],[127.0314,37.4949],[127.0314,37.5009],[127.0238,37.5009],[127.0238,37.4949]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gc_002", "name": "역삼동 상권", "district": "강남구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.0322,37.4981],[127.0394,37.4981],[127.0394,37.5034],[127.0322,37.5034],[127.0322,37.4981]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gc_003", "name": "선릉역 상권", "district": "강남구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.0457,37.5015],[127.0532,37.5015],[127.0532,37.5074],[127.0457,37.5074],[127.0457,37.5015]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gc_004", "name": "삼성역 상권", "district": "강남구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.0592,37.5061],[127.0674,37.5061],[127.0674,37.5122],[127.0592,37.5122],[127.0592,37.5061]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gc_005", "name": "압구정 상권", "district": "강남구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.0249,37.5239],[127.0331,37.5239],[127.0331,37.5305],[127.0249,37.5305],[127.0249,37.5239]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gc_006", "name": "청담동 상권", "district": "강남구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.0464,37.5222],[127.0550,37.5222],[127.0550,37.5285],[127.0464,37.5285],[127.0464,37.5222]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gc_007", "name": "논현동 상권", "district": "강남구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[127.0225,37.5114],[127.0308,37.5114],[127.0308,37.5180],[127.0225,37.5180],[127.0225,37.5114]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gw_001", "name": "신림역 상권", "district": "관악구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.9252,37.4815],[126.9331,37.4815],[126.9331,37.4873],[126.9252,37.4873],[126.9252,37.4815]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gw_002", "name": "봉천동 상권", "district": "관악구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.9341,37.4846],[126.9415,37.4846],[126.9415,37.4905],[126.9341,37.4905],[126.9341,37.4846]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gw_003", "name": "낙성대 상권", "district": "관악구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.9591,37.4760],[126.9678,37.4760],[126.9678,37.4822],[126.9591,37.4822],[126.9591,37.4760]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gw_004", "name": "서울대입구 상권", "district": "관악구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.9486,37.4781],[126.9568,37.4781],[126.9568,37.4844],[126.9486,37.4844],[126.9486,37.4781]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "comm_id": "gw_005", "name": "사당역 상권", "district": "관악구" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[126.9761,37.4731],[126.9851,37.4731],[126.9851,37.4791],[126.9761,37.4791],[126.9761,37.4731]]]
+      }
+    }
+  ]
+}

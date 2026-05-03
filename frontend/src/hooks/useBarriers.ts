@@ -82,10 +82,15 @@ async function fetchBarriers(quarter: string): Promise<Barrier[]> {
   if (isDemoMode()) return fetchMockBarriers()
 
   const params = new URLSearchParams({ quarter })
-  const res = await fetch(`${BASE_URL}/api/barriers?${params.toString()}`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data = (await res.json()) as BackendBarriersResponse
-  return normalizeBackendBarriers(data)
+  try {
+    const res = await fetch(`${BASE_URL}/api/barriers?${params.toString()}`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = (await res.json()) as BackendBarriersResponse
+    const normalized = normalizeBackendBarriers(data)
+    return normalized.length > 0 ? normalized : fetchMockBarriers()
+  } catch {
+    return fetchMockBarriers()
+  }
 }
 
 export function useBarriers(quarter = '2025Q4'): UseBarriersReturn {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getCandidateFillColor,
   getCandidateNodes,
+  getCandidateRadius,
   getContextFillColor,
   getGriBorderColor,
   getGriBorderWidth,
@@ -140,5 +141,18 @@ describe('getCandidateNodes', () => {
     })
     const result = getCandidateNodes([...candidates, selected], 'selected')
     expect(result.map((n) => n.id)).toContain('selected')
+  })
+})
+
+describe('candidate node radius', () => {
+  it('uses normalized visual scores when provided', () => {
+    const node = buildNode({ id: 'node', griScore: 80, netFlow: -50, degreeCentrality: 0.1, closeRate: 12 })
+    const visualScores = new Map([['node', 100]])
+    expect(getCandidateRadius(node, false, visualScores)).toBe(16)
+  })
+
+  it('selected nodes keep the fixed selected radius', () => {
+    const node = buildNode({ id: 'node', griScore: 80, netFlow: -50, degreeCentrality: 0.1, closeRate: 12 })
+    expect(getCandidateRadius(node, true, new Map([['node', 20]]))).toBe(24)
   })
 })
