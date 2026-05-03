@@ -144,10 +144,10 @@
 ### 제출 산출물
 - [ ] 웹 데모 최종 버전 배포 (Dev-B)
 - [ ] 시연 영상 녹화 (Dev-B 주도)
-- [ ] PDF 정책 요약 리포트 예시 2종 (Dev-C)
-- [ ] 데이터 결합 구조도 1장 (Dev-C)
-- [ ] KPI/검증 결과 표 1장 (Dev-C)
-- [ ] 발표 Q&A 대응 자료 (Dev-C)
+- [x] PDF 정책 요약 리포트 예시 2종 — **2026-05-03** `docs/policy_report_gangnam_apgujeong.md` (R4 젠트리피케이션) + `docs/policy_report_gwanak_sillim.md` (Hero shot 기준 상권, R4 흐름 단절 회복). pandoc 변환으로 PDF 산출 가능
+- [x] 데이터 결합 구조도 1장 — **2026-05-03** `docs/data_integration_diagram.md` (Mermaid: 공공API 6 → PostGIS 11 테이블 → 분석 5모듈 → API 6 → 프론트)
+- [x] KPI/검증 결과 표 1장 — **2026-05-03** `docs/kpi_summary.md` (가설 H1·H2·H3, 베이스라인 B1·B3, 시스템 KPI, 정책 규칙 활성표, 한계 보고)
+- [x] 발표 Q&A 대응 자료 — **2026-05-03** `docs/qa_briefing.md` (13개 예상 질문 + 출처 인용 답변, A 정량 한계 / B 베이스라인 신뢰성 / C 데이터 갭 / D 정책 규칙 / E 운영·윤리 / F 기술 스택)
 
 ---
 

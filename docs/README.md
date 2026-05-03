@@ -1,7 +1,7 @@
 # spiceMap 문서 인덱스
 
 > 문서 카테고리별 정리
-> 최종 갱신: 2026-04-21
+> 최종 갱신: 2026-05-03 (D-9, Week 4 Day 5)
 
 ---
 
@@ -32,7 +32,7 @@
 | [week3_implementation_plan.md](week3_implementation_plan.md) | Module E 설계 + Module D R4~R7 구현 계획 |
 | [od_flows_aggregation.md](od_flows_aggregation.md) | od_flows 분기 집계본 스키마·집계 SQL·Module A 어댑터 |
 
-> Module C (흐름 단절 탐지) 설계 문서는 `od_flows` 적재 후 추가.
+> Module C 풀 구현은 시계열 갭 알고리즘으로 대체 (`backend/analysis/module_c_barriers.py:80-139`, strategy_d13.md §2 결정 A).
 
 ## API / UI 설계
 
@@ -53,6 +53,19 @@
 |------|------|
 | [data_quality_report.md](data_quality_report.md) | 데이터 품질 검토 리포트 (2026-04-15) |
 | [quarter_coverage_report.md](quarter_coverage_report.md) | 분기 커버리지 실측 (2026-04-22) |
+
+## 발표 산출물 (D-9, 2026-05-03)
+
+| 문서 | 설명 |
+|------|------|
+| [hero_shot_scenario.md](hero_shot_scenario.md) | 3 분 발표 시간축 (단일 진실 문서) |
+| [hero_shot_assets/README.md](hero_shot_assets/README.md) | PNG/MP4 자산 인벤토리 |
+| [data_integration_diagram.md](data_integration_diagram.md) | 데이터 결합 구조도 (Mermaid) |
+| [kpi_summary.md](kpi_summary.md) | KPI / 검증 결과 표 1 장 |
+| [qa_briefing.md](qa_briefing.md) | 발표 Q&A 13 종 대응 자료 |
+| [policy_report_gangnam_apgujeong.md](policy_report_gangnam_apgujeong.md) | 강남 압구정 정책 리포트 (R4 젠트리피케이션) |
+| [policy_report_gwanak_sillim.md](policy_report_gwanak_sillim.md) | 관악 신림 정책 리포트 (R4 흐름 단절 회복) |
+| [strategy_d13.md](strategy_d13.md) | D-13 수상 전략 + 실용성 강화 플랜 |
 
 ## 작업 이력 / 에스컬레이션
 
