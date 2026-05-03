@@ -142,7 +142,7 @@
 - [ ] 태블릿 반응형 최종 확인 (Dev-B)
 
 ### 제출 산출물
-- [~] 웹 데모 최종 버전 배포 — **2026-05-03** Vercel(`frontend/vercel.json`) + Netlify(`frontend/netlify.toml`) 정적 호스팅 설정 + `.env.production.example` + `docs/deployment_guide.md` (절차/검증/일정). D-3 preview, D-1 production promote 권장. 실제 배포는 V-World 도메인 등록 후 Dev-B 수동
+- [~] 웹 데모 최종 버전 배포 — **2026-05-03** Vercel(`frontend/vercel.json`) + Netlify(`frontend/netlify.toml`) 정적 호스팅 설정 + `.env.production.example` + `docs/deployment_guide.md` (절차/검증/일정) + `scripts/preflight_check.py` (시연 안전 점검 25 항목, files/files+server/remote 모드, 10 tests) + `scripts/export_openapi.py` → `docs/api_openapi.json` 8 경로. D-3 preview, D-1 production promote 권장. 실제 배포는 V-World 도메인 등록 후 Dev-B 수동
 - [ ] 시연 영상 녹화 (Dev-B 주도)
 - [x] PDF 정책 요약 리포트 예시 2종 — **2026-05-03** `docs/policy_report_gangnam_apgujeong.md` (R4 젠트리피케이션) + `docs/policy_report_gwanak_sillim.md` (Hero shot 기준 상권, R4 흐름 단절 회복). pandoc 변환으로 PDF 산출 가능
 - [x] 데이터 결합 구조도 1장 — **2026-05-03** `docs/data_integration_diagram.md` (Mermaid: 공공API 6 → PostGIS 11 테이블 → 분석 5모듈 → API 6 → 프론트)
