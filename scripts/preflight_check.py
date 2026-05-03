@@ -135,6 +135,9 @@ def check_critical_docs() -> list[CheckResult]:
         check_file_exists(docs / "verification_h2.md", "H2 분석 설계"),
         check_file_exists(docs / "policy_report_gangnam_apgujeong.md", "정책 리포트 강남"),
         check_file_exists(docs / "policy_report_gwanak_sillim.md", "정책 리포트 관악"),
+        check_file_exists(docs / "csv_schema.md", "CSV export 스키마"),
+        check_file_exists(docs / "PR_DRAFT.md", "PR 초안"),
+        check_file_exists(REPO_ROOT / "CHANGELOG.md", "CHANGELOG"),
     ]
 
 
