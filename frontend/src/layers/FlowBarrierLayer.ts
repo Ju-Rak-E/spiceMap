@@ -2,9 +2,7 @@ import { PathLayer } from '@deck.gl/layers'
 import type { PickingInfo } from '@deck.gl/core'
 import { PathStyleExtension } from '@deck.gl/extensions'
 import type { Barrier } from '../hooks/useBarriers'
-import { getControlPoint, quadBezier } from '../utils/flowBezier'
 
-const SEGMENTS = 32
 const MIN_WIDTH = 4
 const MAX_WIDTH = 9
 const MAX_VOLUME = 10000
@@ -22,16 +20,22 @@ interface BarrierPath {
   width: number
 }
 
+export type BarrierRoutePathMap = ReadonlyMap<string, [number, number][]>
+
 export function getBarrierWidth(volume: number): number {
   const ratio = Math.min(volume / MAX_VOLUME, 1)
   return MIN_WIDTH + ratio * (MAX_WIDTH - MIN_WIDTH)
 }
 
-function buildBarrierPath(barrier: Barrier): BarrierPath {
-  const ctrl = getControlPoint(barrier.sourceCoord, barrier.targetCoord)
-  const path = Array.from({ length: SEGMENTS + 1 }, (_, i) =>
-    quadBezier(barrier.sourceCoord, ctrl, barrier.targetCoord, i / SEGMENTS),
-  )
+function getRoutePath(barrier: Barrier, routes: BarrierRoutePathMap): [number, number][] | null {
+  return routes.get(barrier.id)
+    ?? routes.get(`${barrier.sourceId}-${barrier.targetId}`)
+    ?? null
+}
+
+function buildBarrierPath(barrier: Barrier, routes: BarrierRoutePathMap): BarrierPath | null {
+  const path = getRoutePath(barrier, routes)
+  if (!path || path.length < 2) return null
   return {
     barrier,
     path,
@@ -42,9 +46,12 @@ function buildBarrierPath(barrier: Barrier): BarrierPath {
 
 export function createFlowBarrierLayer(
   barriers: Barrier[],
+  routes: BarrierRoutePathMap,
   onHover?: (info: PickingInfo<BarrierPath>) => void,
 ): PathLayer<BarrierPath> {
-  const paths = barriers.map(buildBarrierPath)
+  const paths = barriers
+    .map((barrier) => buildBarrierPath(barrier, routes))
+    .filter((path): path is BarrierPath => path !== null)
   return new PathLayer<BarrierPath>({
     id: 'flow-barriers',
     data: paths,

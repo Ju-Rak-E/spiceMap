@@ -14,6 +14,7 @@ import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
 import { createDisruptedBarrierParticleLayer } from '../layers/DisruptedBarrierParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import { useBarriers, type Barrier } from '../hooks/useBarriers'
+import { useBarrierRoutes } from '../hooks/useBarrierRoutes'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { buildSummaryText, getNodeInterpretation } from '../utils/summaryFormatter'
@@ -138,6 +139,7 @@ export default function Map({
   const [hoveredBarrier, setHoveredBarrier] = useState<HoveredBarrier | null>(null)
   const [closedDetailNodeId, setClosedDetailNodeId] = useState<string | null>(null)
   const { barriers } = useBarriers(selectedQuarter)
+  const { routes: barrierRoutes } = useBarrierRoutes(selectedQuarter, showBarriers)
   const [zoom, setZoom] = useState(11)
   const [viewportVersion, setViewportVersion] = useState(0)
   const [isViewportInteracting, setIsViewportInteracting] = useState(false)
@@ -308,10 +310,18 @@ export default function Map({
     () => showFlows ? createODFlowLayer(flows, selectedFlowKey) : null,
     [flows, selectedFlowKey, showFlows],
   )
+  const barrierRoutePathMap = useMemo(() => {
+    const routeMap = new globalThis.Map<string, [number, number][]>()
+    for (const route of barrierRoutes) {
+      routeMap.set(route.barrierId, route.path)
+      routeMap.set(`${route.sourceId}-${route.targetId}`, route.path)
+    }
+    return routeMap
+  }, [barrierRoutes])
   const barrierLayers = useMemo(
-    () => showBarriers && barriers.length > 0
+    () => showBarriers && barriers.length > 0 && barrierRoutePathMap.size > 0
       ? [
-          createFlowBarrierLayer(barriers, (info) => {
+          createFlowBarrierLayer(barriers, barrierRoutePathMap, (info) => {
             if (info.object) {
               setHoveredBarrier({ barrier: info.object.barrier, x: info.x, y: info.y })
             } else {
@@ -320,7 +330,7 @@ export default function Map({
           }),
         ]
       : [],
-    [barriers, showBarriers],
+    [barrierRoutePathMap, barriers, showBarriers],
   )
   const commerceLayers = useMemo(
     () => nodes.length > 0 && zoomStage === 'candidate'
@@ -349,7 +359,7 @@ export default function Map({
   const handleFrame = useCallback((delta: number) => {
     if (!overlayRef.current || interactionActiveRef.current) return
     const animateFlow = showFlows
-    const animateBarriers = showBarriers && barriers.length > 0
+    const animateBarriers = showBarriers && barriers.length > 0 && barrierRoutePathMap.size > 0
     if (!animateFlow && !animateBarriers) return
 
     progressRef.current = (progressRef.current + getFlowProgressIncrement(delta)) % 1
@@ -365,7 +375,12 @@ export default function Map({
       : null
 
     const barrierParticleLayer = animateBarriers
-      ? createDisruptedBarrierParticleLayer(barriers, progressRef.current, zoomRef.current)
+      ? createDisruptedBarrierParticleLayer(
+          barriers,
+          progressRef.current,
+          zoomRef.current,
+          barrierRoutePathMap,
+        )
       : null
 
     overlayRef.current.setProps({
@@ -376,7 +391,7 @@ export default function Map({
         ...(heroPulseLayer ? [heroPulseLayer] : []),
       ],
     })
-  }, [barriers, baseDeckLayers, flowStrength, flows, selectedFlowKey, showBarriers, showFlows, heroNodeId, nodes])
+  }, [barrierRoutePathMap, barriers, baseDeckLayers, flowStrength, flows, selectedFlowKey, showBarriers, showFlows, heroNodeId, nodes])
 
   useAnimationFrame(handleFrame)
 

@@ -120,4 +120,28 @@ describe('createDisruptedBarrierParticleLayer', () => {
     expect(() => createDisruptedBarrierParticleLayer([mockBarrierLow], 0.3, 11)).not.toThrow()
   })
 
+  it('samples particles from the supplied road route path', () => {
+    const routePath: [number, number][] = [
+      mockBarrierHigh.sourceCoord,
+      [126.98, 37.49],
+      mockBarrierHigh.targetCoord,
+    ]
+    const layer = createDisruptedBarrierParticleLayer(
+      [mockBarrierHigh],
+      0,
+      11,
+      new Map([[mockBarrierHigh.id, routePath]]),
+    )
+    const data = layer.props.data as Array<{ position: [number, number] }>
+
+    expect(data).toHaveLength(SEVERITY_PARTICLE_COUNT.high)
+    expect(data[0].position).toEqual(routePath[0])
+  })
+
+  it('does not emit particles when route paths are absent', () => {
+    const layer = createDisruptedBarrierParticleLayer([mockBarrierHigh], 0, 11, new Map())
+    const data = layer.props.data as Array<{ position: [number, number] }>
+
+    expect(data).toHaveLength(0)
+  })
 })

@@ -1,12 +1,12 @@
 import { ScatterplotLayer } from '@deck.gl/layers'
 import type { Barrier, BarrierSeverity } from '../hooks/useBarriers'
 import {
-  buildNavRouteWaypoints,
   samplePolyline,
   disruptionAlpha,
   disruptionScatter,
 } from '../utils/barrierRouteAnimation'
 import { clamp } from '../utils/math'
+import type { BarrierRoutePathMap } from './FlowBarrierLayer'
 
 const BASE_RADIUS_M = 180
 const MIN_ZOOM = 9
@@ -44,11 +44,13 @@ function generateParticles(
   barriers: Barrier[],
   progress: number,
   zoom: number,
+  routes: BarrierRoutePathMap,
 ): BarrierParticle[] {
   const radiusScale = getBarrierParticleRadiusScale(zoom)
 
   return barriers.flatMap((barrier) => {
-    const waypoints = buildNavRouteWaypoints(barrier.sourceCoord, barrier.targetCoord)
+    const routePath = routes.get(barrier.id) ?? routes.get(`${barrier.sourceId}-${barrier.targetId}`)
+    if (!routePath || routePath.length < 2) return []
     const count = SEVERITY_PARTICLE_COUNT[barrier.severity]
     const scatterDeg = SEVERITY_SCATTER_DEG[barrier.severity]
     const [r, g, b] = SEVERITY_COLOR[barrier.severity]
@@ -57,7 +59,7 @@ function generateParticles(
     return Array.from({ length: count }, (_, i) => {
       const seed = i / count
       const t = (progress + seed) % 1
-      const basePos = samplePolyline(waypoints, t)
+      const basePos = samplePolyline(routePath, t)
       const alpha = disruptionAlpha(t)
       const [sx, sy] = disruptionScatter(t, seed, scatterDeg)
       return {
@@ -73,8 +75,9 @@ export function createDisruptedBarrierParticleLayer(
   barriers: Barrier[],
   progress: number,
   zoom = 11,
+  routes: BarrierRoutePathMap = new Map(),
 ): ScatterplotLayer<BarrierParticle> {
-  const particles = generateParticles(barriers, progress, zoom)
+  const particles = generateParticles(barriers, progress, zoom, routes)
   return new ScatterplotLayer<BarrierParticle>({
     id: 'barrier-disrupted-particles',
     data: particles,
