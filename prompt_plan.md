@@ -107,16 +107,21 @@
 ## Week 4 (4/29 ~ 5/5) — 완성도 + 검증
 
 ### Dev-A
-- [ ] 데이터 출처 아이콘 API 연동 (각 지표별 공공데이터포털 OA-ID 매핑)
-- [ ] 캐시 데이터 폴백 + "캐시 데이터로 표시 중" 안내
-- [ ] 재생 모드 (정적 캐시 데이터 시연용)
+- [x] 데이터 출처 아이콘 API 연동 — **PR #38 nik** `backend/api/data_sources.py` 신규 (`/api/data_sources`), 각 지표별 OA-ID 매핑
+- [x] 캐시 데이터 폴백 + "캐시 데이터로 표시 중" 안내 — **PR #38 nik** `backend/api/cache_utils.py`
+- [x] 재생 모드 (정적 캐시 데이터 시연용) — **PR #38 nik**
 
 ### Dev-B
-- [ ] 흐름 단절 레이어 토글 (점선 강조 + 툴팁)
-- [ ] 분기 비교 뷰 (두 핸들 슬라이더 → 나란히 비교)
-- [ ] 접근성 검토 (색각 이상 시뮬레이션) + 수정
+- [x] 흐름 단절 레이어 토글 (점선 강조 + 툴팁) — **PR #39 kbh 3-1** `BarrierLayer` + 토글 + hover 카드 (Claude-E + 직접 통합)
+- [x] 분기 비교 뷰 (두 핸들 슬라이더 → 나란히 비교) — **PR #39 kbh 3-2** `kpiDelta` 표시 + `compareMode` (Claude-F)
+- [x] 접근성 검토 (색각 이상 시뮬레이션) + 수정 — **PR #39 kbh** Codex aria-label 보강 + 색각 구분 수동 확인
+- [x] P0 발표 임팩트 5종 — **PR #39 kbh** 해설바·초기 자치구·정책카드·GRI 테두리·OD 강조
+- [x] P1 신뢰 보강 — **PR #39 kbh** Toast 알림(`ToastProvider`/`ToastContext`) + placeholder 문구 정리
+- [x] P3 폴리시 4종 — **PR #39 kbh** 상권경계·시각화상수·성능측정·태블릿반응형 (`useViewportMode`)
+- [x] API 데이터 계약 align + commerce boundary visibility — **PR #39 kbh** `0436665` `ed249e3`
 - [x] Hero shot 시연 동선 정밀화 — **2026-05-03 b763b20** PR1 펄싱+R4 강조 (`createHeroPulseLayer` 1.5s halo, `?hero=1` 시 전 zoom 가시 / `CommerceDetailPanel` 정책카드 R4 우선 정렬 / `PolicyCard.highlight` 노란 outline + fadeIn 300ms) + PR2 CSV toast 피드백(`FlowControlPanel`) + 검증 탭(`ValidationView` H1/H3/B1/B3 4카드, `/api/insights/validation` + 정적 fallback `frontend/src/data/validation_results.json`) + `?hero=1` 토글 + `HERO_NODE_ID='gw_001'`(신림) + 단축키 1~4. `docs/hero_shot_scenario.md` 시간축 1:1 정렬, `docs/hero_shot_assets/README.md` 자산 인벤토리. InsightStrip light theme fix(0d8feda). 178 vitest 통과, npm run build 성공.
 - [x] 컴포넌트 회귀 강화 — **2026-05-04** ValidationView 8 tests(`f0e7c81`) + PolicyCard 10 tests(`bf04622`) + `computeHeroPulseFrame` helper 분리 + 7 tests(`1a33bd8`). frontend vitest 178 → 203 (+25).
+- [x] PR #40 main 통합 머지 — **2026-05-04 b3f4c48** PR #38 nik (Dev-A 영역) + PR #39 kbh (Dev-B P0~P3) 충돌 7파일 해결. backend pytest 248 → 260 / frontend vitest 203 → 246 / build 2.0MB / gzip 582KB ✅
 
 ### Dev-C
 - [x] Module C 시계열 갭 알고리즘 + flow_barriers 적재 — **2026-04-30 PR #29** Module C 풀 구현 대체. `compute_flow_gaps(od_q3, od_q4, mapping, threshold=0.5)` 18 tests. Supabase Q4 200건 적재 (decline 0.587~1.000)
