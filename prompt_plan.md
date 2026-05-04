@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-04-30 (Week 4 Day 2)
+> 최종 갱신: 2026-05-04 (Week 4 Day 6)
 
 ---
 
@@ -107,14 +107,21 @@
 ## Week 4 (4/29 ~ 5/5) — 완성도 + 검증
 
 ### Dev-A
-- [ ] 데이터 출처 아이콘 API 연동 (각 지표별 공공데이터포털 OA-ID 매핑)
-- [ ] 캐시 데이터 폴백 + "캐시 데이터로 표시 중" 안내
-- [ ] 재생 모드 (정적 캐시 데이터 시연용)
+- [x] 데이터 출처 아이콘 API 연동 — **PR #38 nik** `backend/api/data_sources.py` 신규 (`/api/data_sources`), 각 지표별 OA-ID 매핑
+- [x] 캐시 데이터 폴백 + "캐시 데이터로 표시 중" 안내 — **PR #38 nik** `backend/api/cache_utils.py`
+- [x] 재생 모드 (정적 캐시 데이터 시연용) — **PR #38 nik**
 
 ### Dev-B
-- [ ] 흐름 단절 레이어 토글 (점선 강조 + 툴팁)
-- [ ] 분기 비교 뷰 (두 핸들 슬라이더 → 나란히 비교)
-- [ ] 접근성 검토 (색각 이상 시뮬레이션) + 수정
+- [x] 흐름 단절 레이어 토글 (점선 강조 + 툴팁) — **PR #39 kbh 3-1** `BarrierLayer` + 토글 + hover 카드 (Claude-E + 직접 통합)
+- [x] 분기 비교 뷰 (두 핸들 슬라이더 → 나란히 비교) — **PR #39 kbh 3-2** `kpiDelta` 표시 + `compareMode` (Claude-F)
+- [x] 접근성 검토 (색각 이상 시뮬레이션) + 수정 — **PR #39 kbh** Codex aria-label 보강 + 색각 구분 수동 확인
+- [x] P0 발표 임팩트 5종 — **PR #39 kbh** 해설바·초기 자치구·정책카드·GRI 테두리·OD 강조
+- [x] P1 신뢰 보강 — **PR #39 kbh** Toast 알림(`ToastProvider`/`ToastContext`) + placeholder 문구 정리
+- [x] P3 폴리시 4종 — **PR #39 kbh** 상권경계·시각화상수·성능측정·태블릿반응형 (`useViewportMode`)
+- [x] API 데이터 계약 align + commerce boundary visibility — **PR #39 kbh** `0436665` `ed249e3`
+- [x] Hero shot 시연 동선 정밀화 — **2026-05-03 b763b20** PR1 펄싱+R4 강조 (`createHeroPulseLayer` 1.5s halo, `?hero=1` 시 전 zoom 가시 / `CommerceDetailPanel` 정책카드 R4 우선 정렬 / `PolicyCard.highlight` 노란 outline + fadeIn 300ms) + PR2 CSV toast 피드백(`FlowControlPanel`) + 검증 탭(`ValidationView` H1/H3/B1/B3 4카드, `/api/insights/validation` + 정적 fallback `frontend/src/data/validation_results.json`) + `?hero=1` 토글 + `HERO_NODE_ID='gw_001'`(신림) + 단축키 1~4. `docs/hero_shot_scenario.md` 시간축 1:1 정렬, `docs/hero_shot_assets/README.md` 자산 인벤토리. InsightStrip light theme fix(0d8feda). 178 vitest 통과, npm run build 성공.
+- [x] 컴포넌트 회귀 강화 — **2026-05-04** ValidationView 8 tests(`f0e7c81`) + PolicyCard 10 tests(`bf04622`) + `computeHeroPulseFrame` helper 분리 + 7 tests(`1a33bd8`). frontend vitest 178 → 203 (+25).
+- [x] PR #40 main 통합 머지 — **2026-05-04 b3f4c48** PR #38 nik (Dev-A 영역) + PR #39 kbh (Dev-B P0~P3) 충돌 7파일 해결. backend pytest 248 → 260 / frontend vitest 203 → 246 / build 2.0MB / gzip 582KB ✅
 
 ### Dev-C
 - [x] Module C 시계열 갭 알고리즘 + flow_barriers 적재 — **2026-04-30 PR #29** Module C 풀 구현 대체. `compute_flow_gaps(od_q3, od_q4, mapping, threshold=0.5)` 18 tests. Supabase Q4 200건 적재 (decline 0.587~1.000)
@@ -122,9 +129,10 @@
 - [x] commerce_sales 2025Q3 적재 + run_analysis Q3 실행 — **2026-04-30** Q3 commerce_analysis 1650 + policy_cards 419 적재 (trend_penalty/H3 활성)
 - [x] H1 검증 실데이터 — **2026-04-30 PR #30** Q4 net_flow vs Q4 sales Pearson **r=0.106 / p=2.83e-05 / n=1565** (방향 ✓ 효과 약함, FAIL r<0.5)
 - [x] H3 검증 실데이터 — **2026-04-30 PR #30** Q3 GRI 상위 20% Q4 폐업률 vs 하위 80% **gap=0.75pp / p=5.26e-36 / n=1650** (방향 ✓ 절대 격차 작음, FAIL gap<2.0pp). 한계: closure_rate 자치구 단위 매핑 → 분산 부족
-- [ ] H2 검증: flow_barriers 단절 강도 → 폐업률 상관 (Q4 flow_barriers 200 + Q4 closure 활용)
-- [ ] 베이스라인 B1 (OA-15576) vs 제안 priority_score 비교 — Jaccard / Spearman
-- [ ] 검증 결과 패널 콘텐츠 작성 (H1/H3 결과 + 베이스라인)
+- [x] H2 검증 함수 구현 — **2026-05-03** `backend/analysis/verification_h2.py` (`aggregate_barrier_intensity` + `compute_h2_alignment`, Pearson/Spearman, 임계 r ≥ 0.3 + p < 0.05). 10 tests pass. 실데이터 산출은 `scripts/run_validation_all.py --quarter 2025Q4 --previous 2025Q3` (H1·H2·H3·B1 통합) 또는 `scripts/run_validation_h2_b1.py` (H2+B1 좁은 범위)
+- [x] 베이스라인 B1 코드 구현 — **2026-05-03** `backend/analysis/baseline_b1.py` (`load_change_index_csv` utf-8/utf-8-sig/cp949 자동 + `compute_b1_baseline` 상권쇠퇴 binary + `compare_priority_to_b1` Jaccard). 15 tests pass. 정적 CSV 절차 `data/baselines/README.md`. 기존 산출(Jaccard 0.58, 14건) 재현 가능
+- [x] 베이스라인 B3 (기존 매출 추세 모델) — **PR #36** Jaccard 0.151 (PASS, 추가 위험 231건)
+- [x] 검증 결과 패널 콘텐츠 작성 — **2026-05-03 b763b20+88adc9f** `ValidationView` 5카드 (H1 r=0.106 / H2 함수+카드 / H3 gap=0.746%p / B1 J=0.58 / B3 J=0.151) + 백엔드 `GET /api/insights/validation` (`backend/api/validation.py`, 5 tests, env override 가능). 단일 소스 `frontend/src/data/validation_results.json` — backend 가 동일 파일 응답
 - [x] 프론트 Tier 1 — **2026-04-30 PR #32** 가치 명제 헤더 2단 + MVP 강남·관악 자동 줌 (center [127.0, 37.49], zoom 11.5)
 
 **주차 완료 기준**: 3분 발표 시나리오 1회 시연 통과, H1~H3 수치 확정.
@@ -140,12 +148,12 @@
 - [ ] 태블릿 반응형 최종 확인 (Dev-B)
 
 ### 제출 산출물
-- [ ] 웹 데모 최종 버전 배포 (Dev-B)
+- [~] 웹 데모 최종 버전 배포 — **2026-05-03** Vercel(`frontend/vercel.json`) + Netlify(`frontend/netlify.toml`) 정적 호스팅 설정 + `.env.production.example` + `docs/deployment_guide.md` (절차/검증/일정) + `scripts/preflight_check.py` (시연 안전 점검 25 항목, files/files+server/remote 모드, 10 tests) + `scripts/export_openapi.py` → `docs/api_openapi.json` 8 경로. D-3 preview, D-1 production promote 권장. 실제 배포는 V-World 도메인 등록 후 Dev-B 수동
 - [ ] 시연 영상 녹화 (Dev-B 주도)
-- [ ] PDF 정책 요약 리포트 예시 2종 (Dev-C)
-- [ ] 데이터 결합 구조도 1장 (Dev-C)
-- [ ] KPI/검증 결과 표 1장 (Dev-C)
-- [ ] 발표 Q&A 대응 자료 (Dev-C)
+- [x] PDF 정책 요약 리포트 예시 2종 — **2026-05-03** `docs/policy_report_gangnam_apgujeong.md` (R4 젠트리피케이션) + `docs/policy_report_gwanak_sillim.md` (Hero shot 기준 상권, R4 흐름 단절 회복). pandoc 변환으로 PDF 산출 가능
+- [x] 데이터 결합 구조도 1장 — **2026-05-03** `docs/data_integration_diagram.md` (Mermaid: 공공API 6 → PostGIS 11 테이블 → 분석 5모듈 → API 6 → 프론트)
+- [x] KPI/검증 결과 표 1장 — **2026-05-03** `docs/kpi_summary.md` (가설 H1·H2·H3, 베이스라인 B1·B3, 시스템 KPI, 정책 규칙 활성표, 한계 보고)
+- [x] 발표 Q&A 대응 자료 — **2026-05-03** `docs/qa_briefing.md` (13개 예상 질문 + 출처 인용 답변, A 정량 한계 / B 베이스라인 신뢰성 / C 데이터 갭 / D 정책 규칙 / E 운영·윤리 / F 기술 스택)
 
 ---
 

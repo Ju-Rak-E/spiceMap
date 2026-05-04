@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { type CSSProperties } from 'react'
 import type { FlowPurpose, FlowStats, PurposeVolumeMap } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { COMMERCE_COLORS, MAP_THEME } from '../styles/tokens'
@@ -571,15 +571,18 @@ export default function FlowControlPanel({
   const selectedPurposeVolume = purpose ? purposeTotals[purpose] ?? 0 : totalPurposeVolume
   const toast = useToast()
 
+  // docs/hero_shot_scenario.md §1-3: CSV 다운로드 시 toast 컨텍스트로 결과 피드백.
+  // 메시지에 "추천 상권 N건 + 정책 R4~R7 한 줄 요약" 명시 (hero shot 시간축 대사와 일치).
   function handleCsvDownload() {
     if (priorityNodes.length === 0) {
       toast.info('현재 조건에서 다운로드할 추천 상권이 없습니다')
       return
     }
+    const successMsg = `${formatQuarter(selectedQuarter)} 추천 상권 ${priorityNodes.length}건 + 정책 R4~R7 한 줄 요약 다운로드`
     if (usingMockData) {
       try {
         downloadCsvDemo(nodes, selectedQuarter)
-        toast.success(`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드 완료`)
+        toast.success(successMsg)
       } catch (err) {
         console.error('CSV 다운로드 오류:', err)
         toast.error('CSV 생성에 실패했습니다')
@@ -588,7 +591,7 @@ export default function FlowControlPanel({
     }
     downloadCsvApi(selectedQuarter)
       .then(() => {
-        toast.success(`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드 완료`)
+        toast.success(successMsg)
       })
       .catch((err: unknown) => {
         console.error('CSV 다운로드 오류:', err)
@@ -636,6 +639,7 @@ export default function FlowControlPanel({
           type="button"
           style={S.csvButton}
           onClick={handleCsvDownload}
+          data-testid="hero-csv-export"
           aria-label={`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드`}
         >
           추천 상권 CSV 다운로드

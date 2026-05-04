@@ -19,13 +19,15 @@ Dev-B는 React 기반 인터랙티브 지도 앱을 담당한다.
 - Vitest (단위 테스트)
 
 ## 디렉토리 구조
-`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, CommerceBoundaryLayer, FlowControlPanel, CommerceLegend, CommerceDetailPanel, TrendChart, PolicyCard)
+`frontend/src/components/` UI 컴포넌트 (Map, AdminBoundaryLayer, CommerceBoundaryLayer, FlowControlPanel, CommerceLegend, CommerceDetailPanel, TrendChart, PolicyCard, ValidationView, InsightStrip)
+
+`frontend/src/data/` 정적 fixture (validation_results.json — H1/H2/H3/B1/B3 검증 결과)
 
 `frontend/src/layers/` Deck.gl 레이어 정의 (CommerceNodeLayer, ODFlowLayer, FlowParticleLayer, BarrierLayer)
 
-`frontend/src/hooks/` 데이터 페칭/상태 훅 (useCommerceData, useFlowData, useBarriers, useGriHistory, usePolicyInsights, useTimelineControl, useScenarioPlayer, useViewportMode)
+`frontend/src/hooks/` 데이터 페칭/상태 훅 (useCommerceData, useFlowData, useBarriers, useGriHistory, usePolicyInsights, useTimelineControl, useScenarioPlayer, useViewportMode, useAnimationFrame)
 
-`frontend/src/styles/` 디자인 토큰 (COMMERCE_COLORS 등)
+`frontend/src/styles/` 디자인 토큰 (COMMERCE_COLORS 등 — description 필드 포함)
 
 `frontend/src/types/` 공유 타입 정의 (CommerceNode 등)
 
@@ -90,6 +92,19 @@ API mode 주의사항:
 - [x] 색각 구분 수동 확인
 - [x] 태블릿 1024px 반응형 확인
 - [x] 지도 로딩 성능 측정 훅
+
+## Hero shot 시연 모드 (3분 발표 동선)
+- URL `?hero=1` → `HERO_NODE_ID='gw_001'`(신림) 펄싱 halo (`createHeroPulseLayer`, 1.5s loop, 전 zoom 가시)
+- 단축키: `1` 인트로 / `2` 펄싱+패널 / `3` CSV export / `4` 검증 탭(map↔validation 토글)
+- R4 정책카드 강조 (`PolicyCard.highlight` — 노란 outline + fadeIn 300ms, `CommerceDetailPanel`에서 R4 우선 정렬)
+- 회귀 안전: `?hero=1` 미사용 시 일반 동작 동일. `docs/hero_shot_scenario.md` 시간축이 단일 진실 문서.
+
+## 주의 사항
+- 정책 추천 카드에 "규칙 기반 | 생성형 AI 미사용" 라벨 명시 (FR-07)
+- 각 지표에 데이터 출처 아이콘 표시 (공공데이터포털 ID) (FR-06)
+- 데이터 로딩 실패 시 "캐시 데이터로 표시 중" 안내 문구 표시
+- MVP 범위: 강남구·관악구 2개 자치구 (서울 전역 아님)
+- UX 검토 기준: 관악구 경제과 담당자 페르소나 (분기별 상권 동향 → 사업 우선순위 선정)
 
 ## 남은 운영 확인
 - 실제 DB에 `commerce_boundary`, `commerce_analysis`, `flow_barriers`, `od_flows_aggregated`가 기대 범위로 적재되어야 한다.

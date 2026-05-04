@@ -7,7 +7,7 @@ import { MAP_THEME, COMMERCE_COLORS, type CommerceType, type MapTheme } from '..
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceBoundaryLayer from './CommerceBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
-import { createCommerceNodeLayers } from '../layers/CommerceNodeLayer'
+import { createCommerceNodeLayers, createHeroPulseLayer } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
@@ -79,6 +79,8 @@ interface MapProps {
   selectedDistricts?: Set<string>
   selectedNode?: CommerceNode | null
   onSelectNode?: (node: CommerceNode | null) => void
+  // docs/hero_shot_scenario.md §1-2: ?hero=1 진입 시 신림(gw_001)을 펄싱으로 강조.
+  heroNodeId?: string | null
 }
 
 interface HoveredNode {
@@ -119,11 +121,13 @@ export default function Map({
   selectedDistricts,
   selectedNode = null,
   onSelectNode,
+  heroNodeId = null,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
+  const heroPulseRef = useRef(0)
   const zoomRef = useRef(11)
   const zoomStageRef = useRef<ZoomStage>(getZoomStage(11))
   const interactionActiveRef = useRef(false)
@@ -345,6 +349,12 @@ export default function Map({
     if (!overlayRef.current || !showFlows || interactionActiveRef.current) return
 
     progressRef.current = (progressRef.current + getFlowProgressIncrement(delta)) % 1
+    heroPulseRef.current += delta * 1000  // ms 단위 (createHeroPulseLayer elapsedMs 입력)
+
+    const heroNode = heroNodeId ? nodes.find((n) => n.id === heroNodeId) ?? null : null
+    const heroPulseLayer = createHeroPulseLayer(
+      heroNode ? { node: heroNode, elapsedMs: heroPulseRef.current } : null,
+    )
 
     overlayRef.current.setProps({
       layers: [
@@ -355,9 +365,10 @@ export default function Map({
           selectedFlowKey,
           { zoom: zoomRef.current, flowStrength },
         ),
+        ...(heroPulseLayer ? [heroPulseLayer] : []),
       ],
     })
-  }, [baseDeckLayers, flowStrength, flows, selectedFlowKey, showFlows])
+  }, [baseDeckLayers, flowStrength, flows, selectedFlowKey, showFlows, heroNodeId, nodes])
 
   useAnimationFrame(handleFrame)
 
