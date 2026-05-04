@@ -6,7 +6,7 @@ import {
   disruptionScatter,
 } from '../utils/barrierRouteAnimation'
 import { clamp } from '../utils/math'
-import type { BarrierRoutePathMap } from './FlowBarrierLayer'
+import { getBarrierRoutePath, type BarrierRoutePathMap } from './FlowBarrierLayer'
 
 const BASE_RADIUS_M = 180
 const MIN_ZOOM = 9
@@ -49,7 +49,7 @@ function generateParticles(
   const radiusScale = getBarrierParticleRadiusScale(zoom)
 
   return barriers.flatMap((barrier) => {
-    const routePath = routes.get(barrier.id) ?? routes.get(`${barrier.sourceId}-${barrier.targetId}`)
+    const routePath = getBarrierRoutePath(barrier, routes)
     if (!routePath || routePath.length < 2) return []
     const count = SEVERITY_PARTICLE_COUNT[barrier.severity]
     const scatterDeg = SEVERITY_SCATTER_DEG[barrier.severity]

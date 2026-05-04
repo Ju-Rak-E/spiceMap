@@ -36,4 +36,20 @@ describe('createFlowBarrierLayer', () => {
 
     expect(data).toHaveLength(0)
   })
+
+  it('fits mock route templates to live barriers when route ids do not match', () => {
+    const routePath: [number, number][] = [
+      [126.7, 37.3],
+      [126.75, 37.36],
+      [126.82, 37.34],
+      [126.9, 37.4],
+    ]
+    const layer = createFlowBarrierLayer([barrier], new Map([['mock-only', routePath]]))
+    const data = layer.props.data as Array<{ path: [number, number][] }>
+
+    expect(data).toHaveLength(1)
+    expect(data[0].path).toHaveLength(routePath.length)
+    expect(data[0].path[0]).toEqual(barrier.sourceCoord)
+    expect(data[0].path[data[0].path.length - 1]).toEqual(barrier.targetCoord)
+  })
 })

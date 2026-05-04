@@ -144,4 +144,23 @@ describe('createDisruptedBarrierParticleLayer', () => {
 
     expect(data).toHaveLength(0)
   })
+
+  it('samples particles from fitted mock route templates when route ids do not match', () => {
+    const routePath: [number, number][] = [
+      [126.7, 37.3],
+      [126.75, 37.36],
+      [126.82, 37.34],
+      [126.9, 37.4],
+    ]
+    const layer = createDisruptedBarrierParticleLayer(
+      [mockBarrierHigh],
+      0,
+      11,
+      new Map([['mock-only', routePath]]),
+    )
+    const data = layer.props.data as Array<{ position: [number, number] }>
+
+    expect(data).toHaveLength(SEVERITY_PARTICLE_COUNT.high)
+    expect(data[0].position).toEqual(mockBarrierHigh.sourceCoord)
+  })
 })
