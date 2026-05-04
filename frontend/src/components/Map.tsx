@@ -11,6 +11,7 @@ import { createCommerceNodeLayers, createHeroPulseLayer } from '../layers/Commer
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
+import { createDisruptedBarrierParticleLayer } from '../layers/DisruptedBarrierParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import { useBarriers, type Barrier } from '../hooks/useBarriers'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
@@ -346,7 +347,10 @@ export default function Map({
   }, [baseDeckLayers, mapInstance])
 
   const handleFrame = useCallback((delta: number) => {
-    if (!overlayRef.current || !showFlows || interactionActiveRef.current) return
+    if (!overlayRef.current || interactionActiveRef.current) return
+    const animateFlow = showFlows
+    const animateBarriers = showBarriers && barriers.length > 0
+    if (!animateFlow && !animateBarriers) return
 
     progressRef.current = (progressRef.current + getFlowProgressIncrement(delta)) % 1
     heroPulseRef.current += delta * 1000  // ms 단위 (createHeroPulseLayer elapsedMs 입력)
@@ -356,19 +360,23 @@ export default function Map({
       heroNode ? { node: heroNode, elapsedMs: heroPulseRef.current } : null,
     )
 
+    const flowParticleLayer = animateFlow
+      ? createFlowParticleLayer(flows, progressRef.current, selectedFlowKey, { zoom: zoomRef.current, flowStrength })
+      : null
+
+    const barrierParticleLayer = animateBarriers
+      ? createDisruptedBarrierParticleLayer(barriers, progressRef.current, zoomRef.current)
+      : null
+
     overlayRef.current.setProps({
       layers: [
         ...baseDeckLayers,
-        createFlowParticleLayer(
-          flows,
-          progressRef.current,
-          selectedFlowKey,
-          { zoom: zoomRef.current, flowStrength },
-        ),
+        ...(flowParticleLayer ? [flowParticleLayer] : []),
+        ...(barrierParticleLayer ? [barrierParticleLayer] : []),
         ...(heroPulseLayer ? [heroPulseLayer] : []),
       ],
     })
-  }, [baseDeckLayers, flowStrength, flows, selectedFlowKey, showFlows, heroNodeId, nodes])
+  }, [barriers, baseDeckLayers, flowStrength, flows, selectedFlowKey, showBarriers, showFlows, heroNodeId, nodes])
 
   useAnimationFrame(handleFrame)
 

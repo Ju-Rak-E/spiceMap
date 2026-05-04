@@ -3,6 +3,7 @@ import { MAP_THEME } from '../styles/tokens'
 import { BoundaryLayerManager } from './BoundaryLayerManager'
 
 const LINE_LAYER_ID = 'admin-boundary-line'
+const FILL_LAYER_ID = 'admin-boundary-fill'
 const HIGHLIGHT_FILL_LAYER_ID = 'admin-boundary-highlight-fill'
 const HIGHLIGHT_LAYER_ID = 'admin-boundary-highlight'
 
@@ -141,6 +142,25 @@ describe('BoundaryLayerManager', () => {
     map.addLayer.mockClear()
     emit('idle')
 
+    expect(map.addLayer).toHaveBeenCalledTimes(4)
+    const highlightCall = map.addLayer.mock.calls.find(([layer]) => layer.id === HIGHLIGHT_LAYER_ID)
+    expect(highlightCall?.[0].paint['line-color']).toBe(MAP_THEME.dark.highlightLine)
+  })
+
+  it('recreates missing layers without adding the source again', () => {
+    const { map, emit } = createMockMap(true)
+
+    new BoundaryLayerManager(map as never, 'dark')
+    map.addSource.mockClear()
+    map.addLayer.mockClear()
+
+    map.removeLayer(HIGHLIGHT_LAYER_ID)
+    map.removeLayer(LINE_LAYER_ID)
+    map.removeLayer(HIGHLIGHT_FILL_LAYER_ID)
+    map.removeLayer(FILL_LAYER_ID)
+    emit('idle')
+
+    expect(map.addSource).not.toHaveBeenCalled()
     expect(map.addLayer).toHaveBeenCalledTimes(4)
     const highlightCall = map.addLayer.mock.calls.find(([layer]) => layer.id === HIGHLIGHT_LAYER_ID)
     expect(highlightCall?.[0].paint['line-color']).toBe(MAP_THEME.dark.highlightLine)

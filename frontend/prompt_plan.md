@@ -30,6 +30,7 @@
 - [x] 색각 구분 확인
 - [x] aria-label 보강
 - [x] 흐름 단절 레이어 토글/점선/툴팁
+- [x] 흐름단절 파티클 애니메이션 (`DisruptedBarrierParticleLayer` + `barrierRouteAnimation`) — showBarriers ON 시 경로 따라 파티클 흐름, 단절 지점 scatter 효과 (304 tests)
 - [x] 분기 비교 KPI delta
 - [x] 상권 경계 폴리곤 레이어
 - [x] 시각 점수 보조 설명

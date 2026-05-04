@@ -74,21 +74,36 @@ export class BoundaryLayerManager {
     if (!this.map.isStyleLoaded()) return
 
     if (!this.map.getSource(SOURCE_ID)) {
-      this.addLayers()
-      return
+      this.addSource()
+    }
+
+    if (!this.hasAllLayers()) {
+      this.removeLayerSet()
+      this.addLayerSet()
     }
 
     this.updatePaint()
     this.applyHighlightFilter()
   }
 
-  private addLayers() {
-    const paint = getBoundaryPaintConfig(this.theme)
-
+  private addSource() {
     this.map.addSource(SOURCE_ID, {
       type: 'geojson',
       data: '/data/seoul_admin_boundary.geojson',
     })
+  }
+
+  private hasAllLayers(): boolean {
+    return Boolean(
+      this.map.getLayer(FILL_LAYER_ID)
+      && this.map.getLayer(HIGHLIGHT_FILL_LAYER_ID)
+      && this.map.getLayer(LINE_LAYER_ID)
+      && this.map.getLayer(HIGHLIGHT_LAYER_ID),
+    )
+  }
+
+  private addLayerSet() {
+    const paint = getBoundaryPaintConfig(this.theme)
 
     const fillColor = MAP_THEME[this.theme].boundaryFill
     this.map.addLayer({
@@ -131,6 +146,13 @@ export class BoundaryLayerManager {
       filter: buildHighlightFilter(this.districtFilter),
       paint: paint.highlight,
     })
+  }
+
+  private removeLayerSet() {
+    if (this.map.getLayer(HIGHLIGHT_LAYER_ID)) this.map.removeLayer(HIGHLIGHT_LAYER_ID)
+    if (this.map.getLayer(LINE_LAYER_ID)) this.map.removeLayer(LINE_LAYER_ID)
+    if (this.map.getLayer(HIGHLIGHT_FILL_LAYER_ID)) this.map.removeLayer(HIGHLIGHT_FILL_LAYER_ID)
+    if (this.map.getLayer(FILL_LAYER_ID)) this.map.removeLayer(FILL_LAYER_ID)
   }
 
   private updatePaint() {
@@ -176,10 +198,7 @@ export class BoundaryLayerManager {
   private removeLayers() {
     try {
       if (!this.map.isStyleLoaded()) return
-      if (this.map.getLayer(HIGHLIGHT_LAYER_ID)) this.map.removeLayer(HIGHLIGHT_LAYER_ID)
-      if (this.map.getLayer(LINE_LAYER_ID)) this.map.removeLayer(LINE_LAYER_ID)
-      if (this.map.getLayer(HIGHLIGHT_FILL_LAYER_ID)) this.map.removeLayer(HIGHLIGHT_FILL_LAYER_ID)
-      if (this.map.getLayer(FILL_LAYER_ID)) this.map.removeLayer(FILL_LAYER_ID)
+      this.removeLayerSet()
       if (this.map.getSource(SOURCE_ID)) this.map.removeSource(SOURCE_ID)
     } catch {
       // The MapLibre style can be torn down before React effect cleanup runs.
