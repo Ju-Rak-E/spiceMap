@@ -35,6 +35,20 @@ const mockBarrierLow: Barrier = {
   type: null,
 }
 
+const mockBarrierMedium: Barrier = {
+  id: 'b3',
+  sourceId: 'GC_CHEONGDAM',
+  targetId: 'GC_SINSA',
+  sourceName: '청담동',
+  targetName: '신사동',
+  sourceCoord: [127.047, 37.524],
+  targetCoord: [127.020, 37.526],
+  affectedVolume: 3000,
+  score: 0.55,
+  severity: 'medium',
+  type: null,
+}
+
 describe('getBarrierParticleRadiusScale', () => {
   it('returns minimum scale (0.3) at minimum zoom (9)', () => {
     expect(getBarrierParticleRadiusScale(9)).toBeCloseTo(0.3)
@@ -162,5 +176,41 @@ describe('createDisruptedBarrierParticleLayer', () => {
 
     expect(data).toHaveLength(SEVERITY_PARTICLE_COUNT.high)
     expect(data[0].position).toEqual(mockBarrierHigh.sourceCoord)
+  })
+
+  it('emits exactly the medium severity particle count from a matched route', () => {
+    const routePath: [number, number][] = [
+      mockBarrierMedium.sourceCoord,
+      [127.033, 37.525],
+      mockBarrierMedium.targetCoord,
+    ]
+    const layer = createDisruptedBarrierParticleLayer(
+      [mockBarrierMedium],
+      0,
+      11,
+      new Map([[mockBarrierMedium.id, routePath]]),
+    )
+    const data = layer.props.data as Array<unknown>
+
+    expect(data).toHaveLength(SEVERITY_PARTICLE_COUNT.medium)
+  })
+
+  it('wraps progress > 1 to its modulo equivalent (1.5 ≡ 0.5)', () => {
+    const routePath: [number, number][] = [
+      mockBarrierHigh.sourceCoord,
+      mockBarrierHigh.targetCoord,
+    ]
+    const routes = new Map([[mockBarrierHigh.id, routePath]])
+
+    const half = createDisruptedBarrierParticleLayer([mockBarrierHigh], 0.5, 11, routes)
+    const wrap = createDisruptedBarrierParticleLayer([mockBarrierHigh], 1.5, 11, routes)
+    const halfData = half.props.data as Array<{ position: [number, number] }>
+    const wrapData = wrap.props.data as Array<{ position: [number, number] }>
+
+    expect(wrapData).toHaveLength(halfData.length)
+    halfData.forEach((p, i) => {
+      expect(wrapData[i].position[0]).toBeCloseTo(p.position[0])
+      expect(wrapData[i].position[1]).toBeCloseTo(p.position[1])
+    })
   })
 })

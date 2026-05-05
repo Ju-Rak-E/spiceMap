@@ -55,6 +55,7 @@ cd frontend && npm run dev                        # 프론트엔드
 - `prompt_plan.md` — 5주 체크리스트
 - `docs/strategy_d13.md` — D-13 수상 전략 + 실용성 강화 플랜
 - `docs/hero_shot_scenario.md` — 3분 발표 4구간 시간축 + Hero shot 시연 동선 (단일 진실 문서)
+- `docs/openrouteservice_key_note.md` — 흐름단절 실 도로 경로 ORS 키 운영 가이드
 - `docs/schema.md` — DB 스키마 (commerce_analysis 5컬럼 확장 + policy_cards)
 - `docs/od_flows_aggregation.md` — od_flows 분기 집계본 설계
 - `docs/admin_boundary_gu_backfill.md` — gu_nm 백필 SQL + 검증
@@ -65,7 +66,7 @@ cd frontend && npm run dev                        # 프론트엔드
 
 - **Week 2 (4/15~4/21)**: 완료.
 - **Week 3 (4/22~4/28)**: 완료. API 5종, Module A/B/D/E, run_analysis 파이프라인, closure_rate spatial join, admin_boundary 백필, type-map gu 필터, Dev-B 상세패널·타임라인·자치구필터.
-- **Week 4 (4/29~5/5)**: 진행 중 (Day 6). Module C·H1·H3·분류기 v1.1·프론트 Tier 1·B1/B3 베이스라인·검증 패널(ValidationView 5카드)·Hero shot 시연 동선·H2 함수+15 tests·B1 코드+15 tests·`/api/insights/validation`·통합 검증 스크립트·배포 인프라(Vercel/Netlify)·발표 자료(KPI/Q&A/PDF×2/구조도/CSV schema/v2 backlog/PR 초안/CHANGELOG/README) 완료. 사용자 잔여: H2/B1 실측 산출(scripts/run_validation_all)·Hero shot 캡처·시연 영상·실제 배포·접근성 검토.
+- **Week 4 (4/29~5/5)**: 진행 중 (Day 7). Module C·H1·H3·분류기 v1.1·프론트 Tier 1·B1/B3 베이스라인·검증 패널(ValidationView 5카드)·Hero shot 시연 동선·H2 함수+15 tests·B1 코드+15 tests·`/api/insights/validation`·통합 검증 스크립트·배포 인프라(Vercel/Netlify)·발표 자료(KPI/Q&A/PDF×2/구조도/CSV schema/v2 backlog/PR 초안/CHANGELOG/README)·**흐름단절 실 도로 경로(`/api/barrier-routes` ORS+fallback, `useBarrierRoutes` hook, FlowBarrierLayer 도로 매칭/fitting, DisruptedBarrierParticleLayer 도로 polyline 파티클)** 완료. 사용자 잔여: H2/B1 실측 산출(scripts/run_validation_all)·Hero shot 캡처·시연 영상·실제 배포·접근성 검토·`OPENROUTESERVICE_API_KEY` 등록 결정(미등록 시 mock 고정).
 - **이월 블로커**: 원본 `od_flows`만 Dev-A 로컬 (집계본으로 우회). admin/commerce boundary 모두 Supabase 적재 완료.
 
 ## 원칙

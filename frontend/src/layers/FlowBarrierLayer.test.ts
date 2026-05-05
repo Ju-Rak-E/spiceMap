@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createFlowBarrierLayer } from './FlowBarrierLayer'
+import {
+  createFlowBarrierLayer,
+  getBarrierRoutePath,
+  getBarrierWidth,
+} from './FlowBarrierLayer'
 import type { Barrier } from '../hooks/useBarriers'
 
 const barrier: Barrier = {
@@ -51,5 +55,49 @@ describe('createFlowBarrierLayer', () => {
     expect(data[0].path).toHaveLength(routePath.length)
     expect(data[0].path[0]).toEqual(barrier.sourceCoord)
     expect(data[0].path[data[0].path.length - 1]).toEqual(barrier.targetCoord)
+  })
+
+  it('omits barriers when only template is degenerate (zero-length)', () => {
+    const zeroLen: [number, number][] = [[126.95, 37.5], [126.95, 37.5]]
+    const layer = createFlowBarrierLayer([barrier], new Map([['mock-only', zeroLen]]))
+    const data = layer.props.data as Array<{ path: [number, number][] }>
+
+    expect(data).toHaveLength(0)
+  })
+
+  it('omits barriers whose source equals target with non-matching template', () => {
+    const degenerate: Barrier = {
+      ...barrier,
+      sourceCoord: [127.0, 37.5],
+      targetCoord: [127.0, 37.5],
+    }
+    const template: [number, number][] = [[126.7, 37.3], [126.9, 37.4]]
+    const layer = createFlowBarrierLayer([degenerate], new Map([['mock-only', template]]))
+    const data = layer.props.data as Array<{ path: [number, number][] }>
+
+    expect(data).toHaveLength(0)
+  })
+})
+
+describe('getBarrierWidth', () => {
+  it('returns the minimum width at zero volume', () => {
+    expect(getBarrierWidth(0)).toBe(4)
+  })
+
+  it('returns the maximum width at the cap volume', () => {
+    expect(getBarrierWidth(10000)).toBe(9)
+  })
+
+  it('clamps to the maximum width above the cap', () => {
+    expect(getBarrierWidth(50000)).toBe(9)
+  })
+})
+
+describe('getBarrierRoutePath', () => {
+  it('matches by sourceId-targetId composite key when barrier id is missing', () => {
+    const path: [number, number][] = [[126.9, 37.4], [127.1, 37.6]]
+    const result = getBarrierRoutePath(barrier, new Map([['A-B', path]]))
+
+    expect(result).toEqual(path)
   })
 })
