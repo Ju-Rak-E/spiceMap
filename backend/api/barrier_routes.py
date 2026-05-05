@@ -1,6 +1,8 @@
 """GET /api/barrier-routes - road-following routes for flow barriers."""
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -82,8 +84,12 @@ def _normalize_ors_route(data: dict, route: BarrierRouteInput) -> BarrierRouteIt
     )
 
 
-def _fetch_ors_route(route: BarrierRouteInput, api_key: str) -> BarrierRouteItem | None:
-    response = httpx.post(
+async def _fetch_ors_route(
+    client: httpx.AsyncClient,
+    route: BarrierRouteInput,
+    api_key: str,
+) -> BarrierRouteItem | None:
+    response = await client.post(
         ORS_DIRECTIONS_URL,
         headers={
             "Authorization": api_key,
@@ -196,7 +202,7 @@ def _fetch_barrier_route_inputs(
 
 
 @router.get("/barrier-routes", response_model=BarrierRoutesResponse)
-def barrier_routes(
+async def barrier_routes(
     quarter: str = Query("2025Q4", description="Analysis quarter"),
     gu: str | None = Query(None, description="Optional district filter"),
     comm_cd: str | None = Query(None, description="Optional commerce code endpoint filter"),
@@ -232,13 +238,20 @@ def barrier_routes(
             return demo_response(fallback)
         raise HTTPException(status_code=503, detail="Database unavailable for /api/barrier-routes")
 
-    routes: list[BarrierRouteItem] = []
     try:
-        for route in route_inputs:
-            item = _fetch_ors_route(route, api_key)
-            if item:
-                routes.append(item)
+        async with httpx.AsyncClient(timeout=ORS_TIMEOUT_SECONDS) as client:
+            results = await asyncio.gather(
+                *(_fetch_ors_route(client, route, api_key) for route in route_inputs),
+                return_exceptions=True,
+            )
     except (httpx.HTTPError, ValueError, TypeError):
+        fallback = _load_route_fallback(cache_key, cache)
+        if fallback:
+            return demo_response(fallback)
+        raise HTTPException(status_code=503, detail="Routing provider unavailable")
+
+    routes = [item for item in results if isinstance(item, BarrierRouteItem)]
+    if route_inputs and not routes and any(isinstance(item, Exception) for item in results):
         fallback = _load_route_fallback(cache_key, cache)
         if fallback:
             return demo_response(fallback)

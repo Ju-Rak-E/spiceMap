@@ -1,194 +1,150 @@
-# Dev-B 보고 — D-8 시점 프론트엔드 진행 보고 (2026-05-04)
+# Dev-B Frontend Report - Flow Barrier UX Update (2026-05-05)
 
-> 작성: 김광오 (Dev-C, @pangvelop)
-> 수신: Dev-B (프론트엔드 담당)
-> 마감: 2026-05-12 (D-day)
-> 근거: `docs/hero_shot_scenario.md` v1.1 · `docs/deployment_guide.md` · 본 브랜치 13 커밋 (`feature/d9-validation-coverage`)
-
----
-
-## 슬랙/디스코드용 (짧은 DM)
-
-```
-디비님, 김광오입니다. D-8 시점 프론트엔드 영역 진행 정리 공유드립니다.
-
-[추가/완료 — Dev-C 가 진행]
-- ValidationView 컴포넌트 신규 (검증 보고 5카드 H1·H2·H3·B1·B3, auto-fit grid)
-- Hero shot 시연 모드 정밀화 (?hero=1 + 단축키 1~4 + 펄싱·R4 강조·CSV toast)
-- Hero pulse 1.5s halo helper 추출 + 7 단위 테스트 (createHeroPulseLayer + computeHeroPulseFrame)
-- ValidationView 8 / PolicyCard 10 단위 테스트 추가 (vitest 178 → 203, +25)
-- frontend build 2.0MB / gzip 562KB OK / tsc -b 통과
-- Vercel/Netlify 배포 설정 + .env.production.example 작성
-
-[Dev-B 잔여 작업 — D-1까지]
-1) Hero shot PNG 5종 캡처 (브라우저 + ?hero=1 + 단축키)
-2) Vercel preview 배포 (D-3, 5/9) — V-World 도메인 등록 필요
-3) 시연 영상 녹화 (D-2~D-1, 5/10~11)
-4) 흐름 단절 레이어 토글 / 분기 비교 뷰 / 색각 시뮬 / 태블릿 반응형 (Week 4 잔여)
-
-상세는 docs/team_report_dev_b_d8.md 참조. 도움 필요하신 부분 알려주세요.
-```
+> 작성: Codex
+> 대상: Dev-B frontend handoff
+> 기준 브랜치: `kbh`
+> 범위: 강남구 barrier 미표시, 단절 토글 지연, 단절 영역 해석 UX, 선택 상권 fallback
 
 ---
 
-## 상세 메시지 (이메일/노션 게시용)
+## 요약
 
-### 1. Dev-C 가 추가/완료한 프론트엔드 영역 (D-9 ~ D-8, 13 커밋)
+이번 업데이트는 발표 시연에서 `흐름 단절` 토글을 켰을 때 사용자가 바로 의미를 이해하도록 프론트 흐름을 정리한 작업이다.
 
-#### 컴포넌트 신규/확장
+- 강남구 단절이 관악구 상위 점수에 밀려 안 보이는 문제를 자치구별 fetch + 균형 선택으로 완화했다.
+- 단절 route는 토글 시점이 아니라 페이지 로드 후 바로 prefetch하도록 바꿨다.
+- 지도 위 단절선만으로는 의미가 부족해서 `흐름 단절 감지` 요약 카드를 추가했다.
+- 선택 상권에 직접 연결된 단절이 없을 때 레이어가 사라지던 문제를 전체 overview 유지 방식으로 고쳤다.
+- 현재 데이터에는 강남구-관악구 직접 단절 pair가 없으므로 UI 문구에 해석 범위를 명시했다.
 
-| 컴포넌트 | 변경 | 커밋 |
-|---------|------|------|
-| `ValidationView.tsx` (신규) | 검증 보고 탭 5카드 (H1·H2·H3·B1·B3) auto-fit grid + 백엔드 fetch + 정적 fallback | `2e75fce` `1288ca1` |
-| `Map.tsx` | `heroNodeId` prop + heroPulseRef + handleFrame 통합 | `b763b20` |
-| `CommerceDetailPanel.tsx` | usePolicyInsights 호출 + 정책카드 섹션 + R4 우선 정렬 | `b763b20` |
-| `PolicyCard.tsx` | `highlight` prop (노란 outline + fadeIn 300ms) | `b763b20` |
-| `FlowControlPanel.tsx` | csvToast 상태 + `data-testid="hero-csv-export"` | `b763b20` |
-| `InsightStrip.tsx` | `colors` 타입 union 확장 (light theme 호환 fix) | `0d8feda` |
-| `App.tsx` | `?hero=1` 토글 + view 토글(map/validation) + 단축키 1~4 | `b763b20` |
-| `index.css` | `heroPolicyFadeIn` keyframe | `b763b20` |
+## 변경 파일
 
-#### 레이어/유틸
+| 파일 | 변경 내용 |
+| --- | --- |
+| `frontend/src/hooks/useBarriers.ts` | `districts` 인자 추가, 자치구별 `/api/barriers?gu=...` 병렬 fetch, id 기준 dedupe |
+| `frontend/src/hooks/useBarriers.test.ts` | gu 없는 fetch, 1/2개 자치구 fetch, dedupe, mock fallback 테스트 |
+| `frontend/src/utils/barrierSelection.ts` | severity balanced 선택 로직 분리, 선택 자치구별 quota 보장 |
+| `frontend/src/utils/barrierSelection.test.ts` | severity ranking, 자치구 quota, 한쪽 부족 시 fallback 테스트 |
+| `frontend/src/components/Map.tsx` | selectedDistricts 전달, route prefetch, 단절 카드, 선택 상권 fallback, 카드 위치 조정 |
+| `frontend/src/layers/FlowBarrierLayer.ts` | 단절선 굵기/투명도 상향으로 시각적 존재감 강화 |
+| `frontend/src/layers/FlowBarrierLayer.test.ts` | 변경된 단절선 width expectation 반영 |
 
-| 파일 | 변경 |
-|------|------|
-| `layers/CommerceNodeLayer.ts` | `createHeroPulseLayer` 1.5s halo (`?hero=1` 시 전 zoom 가시) + `computeHeroPulseFrame` helper 분리 (단위 테스트 가능) |
-| `data/validation_results.json` (신규) | H1/H2/H3/B1/B3 5카드 fixture (정적 fallback) |
+## 주요 동작
 
-#### 컴포넌트 회귀 강화 (단위 테스트 +25)
+### 1. 자치구별 barrier fetch
 
-| 테스트 | 항목 |
-|--------|------|
-| `ValidationView.test.tsx` | 헤더 부제, 5카드 ID, H1 r=0.106 / H2 산출 대기 / B1 J=0.58 / B3 J=0.151, onClose, 출처 |
-| `PolicyCard.test.tsx` | highlight 동작, fadeIn animation, 노란 outline, priority 아이콘 4종, rule_based 라벨 (FR-07) |
-| `heroPulse.test.ts` | phase/radius/alpha 계산 정확도, multi-cycle wrap, monotonic 검증, null target |
+기존에는 `/api/barriers` 전체 응답을 가져온 뒤 프론트에서 8개로 잘랐다. 이 방식은 점수 상위가 특정 자치구에 몰리면 강남구 단절이 누락될 수 있었다.
 
-vitest 결과: **178 → 203 (+25)**, 22 → 23 test files.
+현재는 선택된 자치구가 있으면 자치구별로 병렬 요청한다.
 
-### 2. 배포 인프라 (정적 호스팅 즉시 가능)
+```text
+/api/barriers?quarter=2025Q4&gu=강남구
+/api/barriers?quarter=2025Q4&gu=관악구
+```
 
-| 파일 | 용도 |
-|------|------|
-| `frontend/vercel.json` | Vite framework 자동 인식 + SPA rewrites + 정적 자산 캐시 (1년 immutable / 5분) |
-| `frontend/netlify.toml` | 동등 SPA fallback + NODE_VERSION 20 |
-| `frontend/.env.production.example` | VITE_VWORLD_API_KEY (필수) / VITE_API_BASE_URL (선택, 미설정 시 demo mode) / VITE_USE_DEMO_POLICY |
-| `docs/deployment_guide.md` | Vercel 정적 + demo mode 권장 시나리오 / Netlify 대안 / 풀 백엔드 옵션 / D-3·D-2·D-1 일정 / 시연 안전 점검표 / troubleshooting |
+결과는 flat merge 후 `barrier.id` 기준으로 dedupe한다.
 
-#### 권장 배포 시나리오 (D-3, 5/9)
+### 2. 균형 선택
+
+`selectBalancedBarriers`를 `Map.tsx`에서 분리해 테스트 가능한 유틸로 만들었다. 선택 자치구가 있으면 각 자치구 quota를 먼저 채우고, 한쪽에 후보가 부족하면 나머지 자리를 전체 ranked barrier로 채운다.
+
+### 3. route prefetch
+
+기존:
+
+```ts
+useBarrierRoutes(selectedQuarter, showBarriers, selectedBarrierNodeId)
+```
+
+현재:
+
+```ts
+useBarrierRoutes(selectedQuarter, true, barrierRouteNodeId)
+```
+
+단절 토글을 켜기 전에 route 요청이 시작되므로, 시연 중 토글 ON 후 5~15초 대기하는 현상을 줄인다.
+
+### 4. 단절 카드 UX
+
+토글 ON 시 지도 위에 `흐름 단절 감지` 카드가 표시된다.
+
+카드 내용:
+
+- 표시 중인 단절 수
+- 심각/주의/관찰 건수
+- 평균 단절 강도
+- 영향 흐름량
+- 상위 3개 단절 구간
+- 해석 문구
+
+사용자 오해 방지 문구:
+
+```text
+현재 표시는 각 자치구 내부 또는 인접 상권의 이동량 급감 구간입니다.
+```
+
+로컬 API 기준 `강남구 <-> 관악구` 직접 단절 pair는 0건이다. 따라서 발표에서는 "두 구 사이 단절"이 아니라 "각 자치구 내부 또는 인접 상권의 이동량 급감 구간"으로 설명해야 한다.
+
+### 5. 카드 위치
+
+단절 카드는 우측 `검증 보고` 영역과 겹치지 않도록 좌측 기준으로 배치한다.
+
+- 기본: 좌측 상단
+- 상권 상세 패널 열림: 상세 패널 오른쪽
+- 클러스터 목록 패널 열림: 클러스터 패널 오른쪽
+
+### 6. 선택 상권 fallback
+
+이전에는 상권을 선택하면 "선택 상권과 직접 연결된 단절"만 표시했고, 관련 단절이 없으면 단절 레이어가 사라졌다.
+
+현재 동작:
+
+- 선택 상권에 직접 연결된 단절이 있으면 해당 단절만 표시
+- 없으면 전체 단절 overview 유지
+- 카드에 다음 문구 표시
+
+```text
+선택한 상권에 직접 연결된 단절이 없어 전체 단절 구간을 유지합니다.
+```
+
+## 수동 확인 결과
+
+로컬 API 기준:
+
+| 항목 | 값 |
+| --- | ---: |
+| 강남 상권 노드 | 104 |
+| 관악 상권 노드 | 74 |
+| 전체 barrier | 280 |
+| 강남 endpoint 포함 barrier | 200 |
+| 관악 endpoint 포함 barrier | 80 |
+| 강남-관악 직접 barrier | 0 |
+
+## 검증 명령
+
+통과:
 
 ```bash
 cd frontend
-vercel
-# 프롬프트:
-#   Set up and deploy?       Y
-#   Project name?            spicemap
-#   Framework detected: Vite (자동)
-#   Override settings?       N
+npm test -- --run useBarriers useBarrierRoutes barrierSelection FlowBarrierLayer DisruptedBarrierParticleLayer
+npm run build
 ```
 
-배포 후 Preview URL 노출. Vercel 대시보드 Settings → Environment Variables 에서 `VITE_VWORLD_API_KEY` 만 등록 (다른 변수 미설정 → demo mode).
+추가로 backend route 병렬화 테스트는 Dev-A report에 정리했다.
 
-### 3. Hero shot 시연 모드 (`?hero=1` + 단축키 1~4)
+## Dev-B 남은 확인
 
-#### 진입
+1. `http://127.0.0.1:5173/?hero=1` 진입
+2. 단절 토글 ON
+3. 강남/관악 모두 선택 상태에서 단절 카드와 단절선 표시 확인
+4. 상권 버튼 클릭 후 단절 레이어가 사라지지 않는지 확인
+5. 검증 보고 패널과 단절 카드가 겹치지 않는지 확인
+6. 발표 멘트에서 "강남-관악 직접 단절"이라고 표현하지 않기
 
+## 발표 멘트 권장
+
+```text
+이 레이어는 전 분기 대비 이동량이 급감한 상권 연결을 보여줍니다.
+현재 표시는 각 자치구 내부 또는 인접 상권의 이동량 급감 구간이며,
+붉은 점선일수록 단절 강도가 높은 이동축입니다.
 ```
-http://localhost:5173/?hero=1
-또는 https://spicemap-xxx.vercel.app/?hero=1
-```
-
-#### 동작
-
-| 키 | 동작 | App.tsx 위치 |
-|----|------|--------------|
-| 클릭 1 (진입) | 강남·관악 자동 줌 + 신림 (`gw_001`) 펄싱 halo (1.5s 주기, 14→34px 금색) | `App.tsx:47-48` |
-| 단축키 `1` | 인트로 (selectedNode=null, view='map') | `App.tsx:89` |
-| 단축키 `2` | 신림 펄싱+패널 (gw_001 클릭 시뮬) → R4 정책카드 노란 outline + fadeIn | `App.tsx:90` |
-| 단축키 `3` | CSV export + toast 3초 노출 | `App.tsx:97` (data-testid=hero-csv-export) |
-| 단축키 `4` | 검증 보고 탭 (ValidationView 5카드) | view 토글 |
-
-modifier (Alt/Cmd/Ctrl) 누르면 단축키 비활성 — `App.tsx:81`. (이전 `Cmd+1~4` 표기 오류 v1.1 정정)
-
-#### 시간축 (3분 발표)
-
-| 구간 | 내용 | 대사 풀 |
-|------|------|--------|
-| 0:00~0:30 | 가치 명제 + 강남·관악 대비 | A-1 (28초, 권장) / A-2 / A-3 |
-| 0:30~1:30 | Hero — 신림 (Q3→Q4 -38%, 폐업 +4.2%p, GRI 78) | B-1 (58초, 권장) / B-2 / B-3 |
-| 1:30~2:15 | 정책 활용 (R4 카드 + CSV) | C-1 (42초, 권장) / C-2 / C-3 |
-| 2:15~3:00 | 분석 신뢰 (H1·H2·H3·B1·B3 5카드) | D-1 (42초, 권장) / D-2 / D-3 |
-
-상세: [`docs/hero_shot_scenario.md`](hero_shot_scenario.md) v1.1.
-
-### 4. Dev-B 잔여 작업 (D-1 까지)
-
-#### 즉시 (D-7 ~ D-3)
-
-| # | 작업 | 마감 | 비고 |
-|---|------|------|------|
-| 1 | **Hero shot PNG 5종 캡처** | D-7 (5/5) | `docs/hero_shot_assets/README.md` D-8/D-7 절차. 진입 / 펄싱 / R4 카드 / CSV toast / 검증 5카드 = 5장 |
-| 2 | **Vercel preview 배포** | D-3 (5/9) | V-World API 도메인 등록 필요 (https://www.vworld.kr). Vercel CLI 1회 또는 GitHub import |
-| 3 | **시연 안전 점검** | D-3 ~ D-1 | `python -m scripts.preflight_check --mode remote --base-url https://<vercel-url>` |
-
-#### 시연 영상 녹화 (D-2 ~ D-1, 5/10~5/11)
-
-- **30초 컷**: A-3 + B-3 + C-3 + D-3 = 18+38+22+24 = 102초 (단축안). 라이브 백업으로도 사용.
-- **3분 풀**: A-1 + B-1 + C-1 + D-1 = 28+58+42+42 = 170초.
-- 녹화 도구: OBS Studio / QuickTime Screen Recording.
-- 출력: `docs/hero_shot_assets/hero_shot_30s.mp4` + 풀 영상 별도.
-- 백업 트리거: 라이브 실패 시 즉시 영상 재생 (`hero_shot_scenario.md` §5).
-
-#### Week 4 Dev-B 미완료 (D-day 후 v1.1 으로 이전 가능)
-
-| 항목 | 우선순위 |
-|------|--------|
-| 흐름 단절 레이어 토글 (점선 강조 + 툴팁) | P2 (v2 backlog #10) |
-| 분기 비교 뷰 (두 핸들 슬라이더) | P2 (v2 backlog #11) |
-| 접근성 검토 (색각 이상 시뮬레이션) + 수정 | P2 (v2 backlog #12) |
-| 태블릿 반응형 정밀화 | P2 (v2 backlog #13) |
-
-발표 후 v1.1 patch 또는 v2 일정. 발표 전 무리해서 추가 안 해도 안전 (Hero shot 시연이 데스크톱 기준).
-
-### 5. 협의 사항 3 건
-
-1. **V-World API 도메인 등록**
-   - https://www.vworld.kr 대시보드에서 Vercel preview/production 도메인을 V-World 키에 추가.
-   - 미등록 시 지도 회색 화면 (콘솔 401/403). troubleshooting: `docs/deployment_guide.md §6`.
-
-2. **시연 도구 / 환경 협의**
-   - 데스크톱 1920×1080 / Chrome 또는 Edge 권장.
-   - 발표 노트북에 V-World 도메인 추가된 키 사전 설정.
-   - **회신 부탁: D-3 까지 시연 환경 (브라우저 / 해상도 / 백업 영상 위치) 알려주세요.**
-
-3. **30초 컷 영상 채택안**
-   - 현 시나리오 §3 D-1 (권장) vs D-3 (최단). Dev-B 가 녹화 후 결정.
-   - 녹화 시점 결정 후 Dev-C 에게 공유 → KPI 게이트 점검 (`hero_shot_scenario.md` §6).
-
-### 6. 시연 안전 점검 (D-1 자동)
-
-```bash
-# 오프라인 31 항목 (파일/구성)
-python -m scripts.preflight_check --mode files
-
-# 배포 URL 점검 (브라우저 단계는 수동)
-python -m scripts.preflight_check --mode remote --base-url https://<vercel-url>
-```
-
-발표 직전 통과 필요 (`hero_shot_scenario.md` §6 KPI 게이트):
-- [ ] commerce_analysis ≥ 1,500/1,650 — 현재 Q3 1,650 적재됨
-- [ ] policy_cards ≥ 30 — 현재 Q3 419 적재됨
-- [ ] flow_barriers ≥ 50 — 현재 Q4 200 적재됨
-- [ ] H1 r 통계 유의 — r=0.106, p<0.0001 (방향성 지지)
-- [ ] H3 방향성 강함 — gap 0.75%p, 14.5배 격차
-- [ ] B1 Jaccard ≥ 0.5 — J=0.58 PASS
-- [ ] 라이브 동선 4클릭 30초 컷 이내
-- [ ] 백업 자산 5종(PNG) + 30초 영상 + 단축키 `1`~`4` 작동 ⏳ Dev-B 캡처 후
-
-### 7. 감사 + 마무리
-
-PR #19 (상세 패널 API 연동), PR #32 (가치 명제 헤더 2단 + 자동 줌), 그리고 Hero shot precision (PR `b763b20`) 까지 프론트 영역 완성도 끌어올려 주신 덕에 발표 시연 동선이 명확해졌습니다. D-day 까지 남은 PNG 캡처 + 영상 + 배포만 안전하게 진행되면 Dev-C 측 잔여 (Q4 실측 산출 + JSON 갱신, 30분) 와 함께 100% 완성됩니다.
-
-D-3 시연 환경 협의 + D-1 영상 점검 메시지 다시 드릴게요.
-
-감사합니다.
-김광오

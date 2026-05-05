@@ -81,15 +81,15 @@ describe('createFlowBarrierLayer', () => {
 
 describe('getBarrierWidth', () => {
   it('returns the minimum width at zero volume', () => {
-    expect(getBarrierWidth(0)).toBe(4)
+    expect(getBarrierWidth(0)).toBe(5)
   })
 
   it('returns the maximum width at the cap volume', () => {
-    expect(getBarrierWidth(10000)).toBe(9)
+    expect(getBarrierWidth(10000)).toBe(12)
   })
 
   it('clamps to the maximum width above the cap', () => {
-    expect(getBarrierWidth(50000)).toBe(9)
+    expect(getBarrierWidth(50000)).toBe(12)
   })
 })
 

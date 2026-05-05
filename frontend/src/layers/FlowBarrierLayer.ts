@@ -3,14 +3,14 @@ import type { PickingInfo } from '@deck.gl/core'
 import { PathStyleExtension } from '@deck.gl/extensions'
 import type { Barrier } from '../hooks/useBarriers'
 
-const MIN_WIDTH = 4
-const MAX_WIDTH = 9
+const MIN_WIDTH = 5
+const MAX_WIDTH = 12
 const MAX_VOLUME = 10000
 
 const SEVERITY_COLOR: Record<Barrier['severity'], [number, number, number, number]> = {
-  high: [188, 82, 82, 120],
-  medium: [184, 134, 72, 108],
-  low: [178, 166, 92, 96],
+  high: [239, 83, 80, 190],
+  medium: [255, 167, 38, 172],
+  low: [255, 213, 79, 148],
 }
 
 interface BarrierPath {

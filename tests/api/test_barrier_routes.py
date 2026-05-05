@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from backend.api.deps import get_cache, get_session
 from backend.main import app
+from backend.schemas.barrier_routes import BarrierRouteItem
 
 
 class FakeRow:
@@ -33,22 +34,22 @@ def test_barrier_routes_returns_ors_geometry(monkeypatch):
             target_lat=37.6,
         )
     ]
-    response = MagicMock()
-    response.json.return_value = {
-        "features": [{
-            "geometry": {
-                "coordinates": [[126.9, 37.4], [127.0, 37.5], [127.1, 37.6]],
-            },
-            "properties": {
-                "summary": {"distance": 1234.5, "duration": 321.0},
-            },
-        }]
-    }
-    response.raise_for_status.return_value = None
-    post = MagicMock(return_value=response)
+    route_calls = []
+
+    async def fetch_route(client, route, api_key):
+        route_calls.append((route, api_key))
+        return BarrierRouteItem(
+            barrierId=route.barrier_id,
+            sourceId=route.source_id,
+            targetId=route.target_id,
+            path=[(126.9, 37.4), (127.0, 37.5), (127.1, 37.6)],
+            distanceM=1234.5,
+            durationS=321.0,
+            source="ors",
+        )
 
     monkeypatch.setattr("backend.api.barrier_routes.settings.openrouteservice_api_key", "test-key")
-    monkeypatch.setattr("backend.api.barrier_routes.httpx.post", post)
+    monkeypatch.setattr("backend.api.barrier_routes._fetch_ors_route", fetch_route)
     app.dependency_overrides[get_session] = lambda: mock_db
     app.dependency_overrides[get_cache] = _mock_cache
 
@@ -61,7 +62,8 @@ def test_barrier_routes_returns_ors_geometry(monkeypatch):
     assert data["routes"][0]["barrierId"] == "C1-C2"
     assert data["routes"][0]["path"] == [[126.9, 37.4], [127.0, 37.5], [127.1, 37.6]]
     assert data["routes"][0]["distanceM"] == 1234.5
-    post.assert_called_once()
+    assert len(route_calls) == 1
+    assert route_calls[0][1] == "test-key"
     app.dependency_overrides.clear()
 
 
@@ -109,10 +111,14 @@ def test_barrier_routes_cache_hit_skips_db_and_ors(monkeypatch):
     cache = MagicMock()
     cache.get.return_value = json.dumps(payload)
     mock_db = MagicMock()
-    post = MagicMock()
+    route_calls = []
+
+    async def fetch_route(client, route, api_key):
+        route_calls.append((route, api_key))
+        return None
 
     monkeypatch.setattr("backend.api.barrier_routes.settings.openrouteservice_api_key", "test-key")
-    monkeypatch.setattr("backend.api.barrier_routes.httpx.post", post)
+    monkeypatch.setattr("backend.api.barrier_routes._fetch_ors_route", fetch_route)
     app.dependency_overrides[get_session] = lambda: mock_db
     app.dependency_overrides[get_cache] = lambda: cache
 
@@ -122,7 +128,7 @@ def test_barrier_routes_cache_hit_skips_db_and_ors(monkeypatch):
     assert result.status_code == 200
     assert result.json()["routes"][0]["barrierId"] == "cached"
     mock_db.execute.assert_not_called()
-    post.assert_not_called()
+    assert route_calls == []
     app.dependency_overrides.clear()
 
 

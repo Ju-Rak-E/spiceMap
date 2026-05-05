@@ -22,6 +22,7 @@ import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatSignedFixed2 } from '../utils/numberFormat'
 import { markMapLoadEnd, markMapLoadStart } from '../utils/mapPerformance'
 import { getFlowProgressIncrement } from '../utils/flowAnimation'
+import { selectBalancedBarriers } from '../utils/barrierSelection'
 import {
   buildDistrictCommerceClusters,
   buildDongCommerceClusters,
@@ -45,6 +46,10 @@ const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
 const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
 const HOVER_CARD_WIDTH = 220
+const BARRIER_PANEL_WIDTH = 318
+const LEFT_PANEL_GAP = 12
+const DETAIL_PANEL_WIDTH = 360
+const CLUSTER_PANEL_WIDTH = 332
 const DISTRICT_ZOOM = 10.5
 const DONG_ZOOM = 12.5
 const CANDIDATE_ZOOM = 14.5
@@ -56,6 +61,7 @@ const ALL_COMMERCE_TYPES = new Set(Object.keys(COMMERCE_COLORS) as CommerceType[
 const OVERVIEW_BARRIER_LIMIT = 8
 
 type ZoomStage = 'city' | 'district' | 'dong' | 'candidate'
+type BarrierSeverity = Barrier['severity']
 
 function getZoomStage(zoom: number): ZoomStage {
   if (zoom < DISTRICT_ZOOM) return 'city'
@@ -98,36 +104,15 @@ interface HoveredBarrier {
   y: number
 }
 
-function getBarrierSeverityBucket(barrier: Barrier): number {
-  if (barrier.severity === 'high') return 0
-  if (barrier.severity === 'medium') return 1
-  return 2
+const BARRIER_SEVERITY_META: Record<BarrierSeverity, { label: string; color: string; bg: string }> = {
+  high: { label: '심각', color: '#EF5350', bg: 'rgba(239,83,80,0.16)' },
+  medium: { label: '주의', color: '#FFA726', bg: 'rgba(255,167,38,0.16)' },
+  low: { label: '관찰', color: '#FFD54F', bg: 'rgba(255,213,79,0.14)' },
 }
 
-function selectBalancedBarriers(barriers: Barrier[], limit: number): Barrier[] {
-  const ranked = barriers
-    .map((barrier, index) => ({ barrier, index }))
-    .sort((a, b) => {
-      const scoreDelta = b.barrier.score - a.barrier.score
-      return scoreDelta !== 0 ? scoreDelta : a.index - b.index
-    })
-
-  const bucketCounts = new globalThis.Map<number, number>()
-  const bucketRanked = ranked
-    .map(({ barrier, index }) => {
-      const bucket = getBarrierSeverityBucket(barrier)
-      const rank = bucketCounts.get(bucket) ?? 0
-      bucketCounts.set(bucket, rank + 1)
-      return { barrier, index, bucket, rank }
-    })
-    .sort((a, b) => (
-      a.rank - b.rank
-      || a.bucket - b.bucket
-      || b.barrier.score - a.barrier.score
-      || a.index - b.index
-    ))
-
-  return bucketRanked.slice(0, limit).map(({ barrier }) => barrier)
+function formatBarrierVolume(value: number): string {
+  if (value >= 10000) return `${(value / 10000).toFixed(1)}만`
+  return value.toLocaleString()
 }
 
 interface ScreenPosition {
@@ -171,9 +156,12 @@ export default function Map({
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
   const [hoveredBarrier, setHoveredBarrier] = useState<HoveredBarrier | null>(null)
   const [closedDetailNodeId, setClosedDetailNodeId] = useState<string | null>(null)
-  const { barriers } = useBarriers(selectedQuarter)
+  const selectedDistrictList = useMemo(
+    () => [...(selectedDistricts ?? new Set<string>())].sort(),
+    [selectedDistricts],
+  )
+  const { barriers } = useBarriers(selectedQuarter, selectedDistricts)
   const selectedBarrierNodeId = selectedNode?.id ?? null
-  const { routes: barrierRoutes } = useBarrierRoutes(selectedQuarter, showBarriers, selectedBarrierNodeId)
   const [zoom, setZoom] = useState(11)
   const [viewportVersion, setViewportVersion] = useState(0)
   const [isViewportInteracting, setIsViewportInteracting] = useState(false)
@@ -181,6 +169,25 @@ export default function Map({
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
   const detailPanelOpen = selectedNode !== null && closedDetailNodeId !== selectedNode.id
+  const displayedNodeIds = useMemo(() => new Set(nodes.map((node) => node.id)), [nodes])
+  const nodeDistrictMap = useMemo(
+    () => new globalThis.Map(nodes.map((node) => [node.id, node.district])),
+    [nodes],
+  )
+  const scopedBarriers = useMemo(() => (
+    barriers.filter((barrier) =>
+      displayedNodeIds.has(barrier.sourceId) || displayedNodeIds.has(barrier.targetId)
+    )
+  ), [barriers, displayedNodeIds])
+  const selectedScopedBarriers = useMemo(() => (
+    selectedBarrierNodeId
+      ? scopedBarriers.filter((barrier) =>
+          barrier.sourceId === selectedBarrierNodeId || barrier.targetId === selectedBarrierNodeId,
+        )
+      : []
+  ), [scopedBarriers, selectedBarrierNodeId])
+  const barrierRouteNodeId = selectedScopedBarriers.length > 0 ? selectedBarrierNodeId : null
+  const { routes: barrierRoutes } = useBarrierRoutes(selectedQuarter, true, barrierRouteNodeId)
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -352,17 +359,24 @@ export default function Map({
     }
     return routeMap
   }, [barrierRoutes])
-  const displayedNodeIds = useMemo(() => new Set(nodes.map((node) => node.id)), [nodes])
   const visibleBarriers = useMemo(() => {
     if (!showBarriers) return []
-    const scopedBarriers = barriers.filter((barrier) =>
-      displayedNodeIds.has(barrier.sourceId) || displayedNodeIds.has(barrier.targetId)
-    )
-    if (!selectedBarrierNodeId) return selectBalancedBarriers(scopedBarriers, OVERVIEW_BARRIER_LIMIT)
-    return selectBalancedBarriers(scopedBarriers.filter((barrier) =>
-      barrier.sourceId === selectedBarrierNodeId || barrier.targetId === selectedBarrierNodeId,
-    ), OVERVIEW_BARRIER_LIMIT)
-  }, [barriers, displayedNodeIds, selectedBarrierNodeId, showBarriers])
+    const selectionOptions = {
+      districts: selectedDistrictList,
+      nodeDistrictMap,
+    }
+    if (!selectedBarrierNodeId || selectedScopedBarriers.length === 0) {
+      return selectBalancedBarriers(scopedBarriers, OVERVIEW_BARRIER_LIMIT, selectionOptions)
+    }
+    return selectBalancedBarriers(selectedScopedBarriers, OVERVIEW_BARRIER_LIMIT, selectionOptions)
+  }, [
+    nodeDistrictMap,
+    scopedBarriers,
+    selectedBarrierNodeId,
+    selectedDistrictList,
+    selectedScopedBarriers,
+    showBarriers,
+  ])
   const barrierLayers = useMemo(
     () => visibleBarriers.length > 0 && barrierRoutePathMap.size > 0
       ? [
@@ -377,6 +391,22 @@ export default function Map({
       : [],
     [barrierRoutePathMap, visibleBarriers],
   )
+  const barrierSummary = useMemo(() => {
+    const severityCounts: Record<BarrierSeverity, number> = { high: 0, medium: 0, low: 0 }
+    let totalScore = 0
+    let totalVolume = 0
+    for (const barrier of visibleBarriers) {
+      severityCounts[barrier.severity] += 1
+      totalScore += barrier.score
+      totalVolume += barrier.affectedVolume
+    }
+    return {
+      severityCounts,
+      avgScore: visibleBarriers.length > 0 ? totalScore / visibleBarriers.length : 0,
+      totalVolume,
+      topBarriers: [...visibleBarriers].sort((a, b) => b.score - a.score).slice(0, 3),
+    }
+  }, [visibleBarriers])
   const commerceLayers = useMemo(
     () => nodes.length > 0 && zoomStage === 'candidate'
       ? createCommerceNodeLayers(
@@ -660,6 +690,176 @@ export default function Map({
     )
   }
 
+  function renderBarrierPanel() {
+    if (!showBarriers) return null
+    const hasBarriers = visibleBarriers.length > 0
+    const usingOverviewFallback = Boolean(selectedBarrierNodeId && selectedScopedBarriers.length === 0)
+    const leftPanelWidth = detailPanelOpen
+      ? DETAIL_PANEL_WIDTH
+      : selectedCluster && showClusters
+        ? CLUSTER_PANEL_WIDTH
+        : 0
+    const panelLeft = 16 + (leftPanelWidth > 0 ? leftPanelWidth + LEFT_PANEL_GAP : 0)
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          left: panelLeft,
+          top: 64,
+          zIndex: 17,
+          width: BARRIER_PANEL_WIDTH,
+          maxWidth: `calc(100% - ${panelLeft + 16}px)`,
+          background: 'rgba(16,22,29,0.95)',
+          border: `1px solid ${colors.panelBorder}`,
+          borderRadius: 8,
+          padding: 12,
+          color: colors.panelText,
+          boxShadow: '0 12px 28px rgba(0,0,0,0.34)',
+          backdropFilter: 'blur(10px)',
+          pointerEvents: 'auto',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.25 }}>
+              흐름 단절 감지
+            </div>
+            <div style={{ marginTop: 4, fontSize: 11, color: colors.secondaryText, lineHeight: 1.45 }}>
+              전 분기 대비 이동량이 급감한 상권 연결입니다.
+            </div>
+            {usingOverviewFallback && (
+              <div style={{ marginTop: 5, fontSize: 10, color: '#FFCC80', lineHeight: 1.4 }}>
+                선택한 상권에 직접 연결된 단절이 없어 전체 단절 구간을 유지합니다.
+              </div>
+            )}
+          </div>
+          <div
+            style={{
+              minWidth: 48,
+              textAlign: 'right',
+              color: '#FFCC80',
+              fontSize: 20,
+              fontWeight: 850,
+              lineHeight: 1,
+            }}
+          >
+            {visibleBarriers.length}
+          </div>
+        </div>
+
+        {hasBarriers ? (
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 7,
+                marginTop: 12,
+              }}
+            >
+              {(['high', 'medium', 'low'] as BarrierSeverity[]).map((severity) => {
+                const meta = BARRIER_SEVERITY_META[severity]
+                return (
+                  <div
+                    key={severity}
+                    style={{
+                      border: `1px solid ${meta.color}66`,
+                      background: meta.bg,
+                      borderRadius: 8,
+                      padding: '7px 8px',
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: meta.color, fontWeight: 800 }}>
+                      {meta.label}
+                    </div>
+                    <div style={{ marginTop: 3, fontSize: 15, fontWeight: 850 }}>
+                      {barrierSummary.severityCounts[severity]}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 8,
+                marginTop: 10,
+              }}
+            >
+              <div style={{ background: 'rgba(21,29,38,0.86)', border: `1px solid ${colors.panelBorder}`, borderRadius: 8, padding: '8px 9px' }}>
+                <div style={{ fontSize: 10, color: colors.mutedText }}>평균 단절 강도</div>
+                <div style={{ marginTop: 3, fontSize: 15, fontWeight: 850, color: '#FFCC80' }}>
+                  {(barrierSummary.avgScore * 100).toFixed(0)}%
+                </div>
+              </div>
+              <div style={{ background: 'rgba(21,29,38,0.86)', border: `1px solid ${colors.panelBorder}`, borderRadius: 8, padding: '8px 9px' }}>
+                <div style={{ fontSize: 10, color: colors.mutedText }}>영향 흐름량</div>
+                <div style={{ marginTop: 3, fontSize: 15, fontWeight: 850 }}>
+                  {formatBarrierVolume(barrierSummary.totalVolume)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 12 }}>
+              {barrierSummary.topBarriers.map((barrier) => {
+                const meta = BARRIER_SEVERITY_META[barrier.severity]
+                return (
+                  <div
+                    key={barrier.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '8px 1fr auto',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 9px',
+                      background: 'rgba(21,29,38,0.88)',
+                      border: `1px solid ${colors.panelBorder}`,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <span style={{ width: 8, height: 32, borderRadius: 999, background: meta.color }} />
+                    <span style={{ minWidth: 0 }}>
+                      <span
+                        style={{
+                          display: 'block',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontSize: 11,
+                          fontWeight: 750,
+                        }}
+                      >
+                        {barrier.sourceName} → {barrier.targetName}
+                      </span>
+                      <span style={{ display: 'block', marginTop: 2, fontSize: 10, color: colors.mutedText }}>
+                        영향 {formatBarrierVolume(barrier.affectedVolume)} · {meta.label}
+                      </span>
+                    </span>
+                    <span style={{ color: meta.color, fontSize: 13, fontWeight: 850 }}>
+                      {(barrier.score * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 10, color: colors.mutedText, lineHeight: 1.45 }}>
+              현재 표시는 각 자치구 내부 또는 인접 상권의 이동량 급감 구간입니다.
+              지도에서 붉은 점선은 단절 강도가 높은 이동축이고, 퍼지는 입자는 감소 충격이 주변으로 번지는 구간입니다.
+            </div>
+          </>
+        ) : (
+          <div style={{ marginTop: 12, fontSize: 12, color: colors.secondaryText, lineHeight: 1.5 }}>
+            현재 선택한 자치구와 줌 범위에서 표시할 단절 구간이 없습니다.
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div
@@ -688,6 +888,7 @@ export default function Map({
 
       {clusters.map(renderClusterBadge)}
       {renderClusterPanel()}
+      {renderBarrierPanel()}
 
       <div
         style={{
@@ -951,6 +1152,7 @@ export default function Map({
           node={selectedNode}
           quarter={selectedQuarter}
           usingMockData={usingMockData}
+          nodes={nodes}
           onClose={() => setClosedDetailNodeId(selectedNode?.id ?? null)}
         />
       )}
