@@ -191,28 +191,48 @@ export default function App() {
             heroNodeId={heroNodeId}
           />
           {view === 'map' && (
-            <button
-              type="button"
-              onClick={() => setView('validation')}
-              data-testid="validation-tab-toggle"
+            <div
               style={{
                 position: 'absolute',
-                top: MAP_HEADER_CLEARANCE + 12,
+                top: MAP_HEADER_CLEARANCE + 8,
                 right: 16,
                 zIndex: 60,
-                padding: '6px 12px',
-                borderRadius: 999,
-                border: '1px solid #304251',
-                background: 'rgba(16,22,29,0.92)',
-                color: '#ECEFF1',
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: 8,
+                maxWidth: 'calc(100% - 32px)',
+                pointerEvents: 'none',
               }}
             >
-              검증 보고
-            </button>
+              <InsightStrip
+                theme="dark"
+                h1R={usingMockData ? null : VERIFICATION_H1_R}
+                h1P={usingMockData ? null : VERIFICATION_H1_P}
+                policyCardCount={POLICY_CARD_COUNT_Q4}
+                criticalCommerceCount={criticalCount}
+                quarter={selectedQuarter}
+              />
+              <button
+                type="button"
+                onClick={() => setView('validation')}
+                data-testid="validation-tab-toggle"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  border: '1px solid #304251',
+                  background: 'rgba(16,22,29,0.92)',
+                  color: '#ECEFF1',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                  pointerEvents: 'auto',
+                }}
+              >
+                검증 보고
+              </button>
+            </div>
           )}
           {view === 'validation' && <ValidationView onClose={() => setView('map')} />}
         </div>
@@ -257,14 +277,6 @@ export default function App() {
           onToggleCompare={() => setCompareMode((prev) => !prev)}
           compact={viewportMode.isTablet}
           stacked={viewportMode.isNarrow}
-        />
-        <InsightStrip
-          theme="dark"
-          h1R={usingMockData ? null : VERIFICATION_H1_R}
-          h1P={usingMockData ? null : VERIFICATION_H1_P}
-          policyCardCount={POLICY_CARD_COUNT_Q4}
-          criticalCommerceCount={criticalCount}
-          quarter={selectedQuarter}
         />
       </div>
       <ToastViewport />

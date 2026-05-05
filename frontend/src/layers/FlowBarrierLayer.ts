@@ -8,9 +8,9 @@ const MAX_WIDTH = 9
 const MAX_VOLUME = 10000
 
 const SEVERITY_COLOR: Record<Barrier['severity'], [number, number, number, number]> = {
-  high: [255, 82, 82, 255],
-  medium: [255, 183, 77, 245],
-  low: [255, 235, 59, 235],
+  high: [188, 82, 82, 120],
+  medium: [184, 134, 72, 108],
+  low: [178, 166, 92, 96],
 }
 
 interface BarrierPath {

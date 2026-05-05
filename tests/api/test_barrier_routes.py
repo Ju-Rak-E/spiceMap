@@ -124,3 +124,39 @@ def test_barrier_routes_cache_hit_skips_db_and_ors(monkeypatch):
     mock_db.execute.assert_not_called()
     post.assert_not_called()
     app.dependency_overrides.clear()
+
+
+def test_barrier_routes_applies_score_and_limit_filters(monkeypatch):
+    mock_db = MagicMock()
+    mock_db.execute.return_value.fetchall.return_value = []
+
+    monkeypatch.setattr("backend.api.barrier_routes.settings.openrouteservice_api_key", "test-key")
+    app.dependency_overrides[get_session] = lambda: mock_db
+    app.dependency_overrides[get_cache] = _mock_cache
+
+    client = TestClient(app)
+    result = client.get("/api/barrier-routes?quarter=2025Q4&min_score=0.9&limit=3")
+
+    assert result.status_code == 200
+    params = mock_db.execute.call_args.args[1]
+    assert params["min_score"] == 0.9
+    assert params["limit"] == 3
+    assert params["comm_cd"] is None
+    app.dependency_overrides.clear()
+
+
+def test_barrier_routes_applies_commerce_endpoint_filter(monkeypatch):
+    mock_db = MagicMock()
+    mock_db.execute.return_value.fetchall.return_value = []
+
+    monkeypatch.setattr("backend.api.barrier_routes.settings.openrouteservice_api_key", "test-key")
+    app.dependency_overrides[get_session] = lambda: mock_db
+    app.dependency_overrides[get_cache] = _mock_cache
+
+    client = TestClient(app)
+    result = client.get("/api/barrier-routes?quarter=2025Q4&comm_cd=C1")
+
+    assert result.status_code == 200
+    params = mock_db.execute.call_args.args[1]
+    assert params["comm_cd"] == "C1"
+    app.dependency_overrides.clear()

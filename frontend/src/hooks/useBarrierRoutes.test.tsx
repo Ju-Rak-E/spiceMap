@@ -45,6 +45,8 @@ describe('useBarrierRoutes', () => {
       expect(result.current.routes).toHaveLength(1)
     })
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/barrier-routes?quarter=2025Q4'))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('min_score=0.45'))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('limit=8'))
     expect(fetchMock).toHaveBeenCalledWith('/data/mock_barrier_routes.json')
   })
 
@@ -73,6 +75,22 @@ describe('useBarrierRoutes', () => {
     expect(result.current.routes[0].source).toBe('ors')
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/barrier-routes?quarter=2025Q4'))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('min_score=0.45'))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('limit=8'))
+  })
+
+  it('requests selected commerce routes with a higher limit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ quarter: '2025Q4', total: 0, routes: [] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderHook(() => useBarrierRoutes('2025Q4', true, '3110183'))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('comm_cd=3110183'))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('limit=20'))
   })
 
   it('refetches when quarter changes', async () => {

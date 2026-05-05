@@ -53,6 +53,7 @@ const DISTRICT_CODES: Record<string, string> = {
   '관악구': '1121',
 }
 const ALL_COMMERCE_TYPES = new Set(Object.keys(COMMERCE_COLORS) as CommerceType[])
+const OVERVIEW_BARRIER_LIMIT = 8
 
 type ZoomStage = 'city' | 'district' | 'dong' | 'candidate'
 
@@ -97,6 +98,38 @@ interface HoveredBarrier {
   y: number
 }
 
+function getBarrierSeverityBucket(barrier: Barrier): number {
+  if (barrier.severity === 'high') return 0
+  if (barrier.severity === 'medium') return 1
+  return 2
+}
+
+function selectBalancedBarriers(barriers: Barrier[], limit: number): Barrier[] {
+  const ranked = barriers
+    .map((barrier, index) => ({ barrier, index }))
+    .sort((a, b) => {
+      const scoreDelta = b.barrier.score - a.barrier.score
+      return scoreDelta !== 0 ? scoreDelta : a.index - b.index
+    })
+
+  const bucketCounts = new globalThis.Map<number, number>()
+  const bucketRanked = ranked
+    .map(({ barrier, index }) => {
+      const bucket = getBarrierSeverityBucket(barrier)
+      const rank = bucketCounts.get(bucket) ?? 0
+      bucketCounts.set(bucket, rank + 1)
+      return { barrier, index, bucket, rank }
+    })
+    .sort((a, b) => (
+      a.rank - b.rank
+      || a.bucket - b.bucket
+      || b.barrier.score - a.barrier.score
+      || a.index - b.index
+    ))
+
+  return bucketRanked.slice(0, limit).map(({ barrier }) => barrier)
+}
+
 interface ScreenPosition {
   x: number
   y: number
@@ -139,7 +172,8 @@ export default function Map({
   const [hoveredBarrier, setHoveredBarrier] = useState<HoveredBarrier | null>(null)
   const [closedDetailNodeId, setClosedDetailNodeId] = useState<string | null>(null)
   const { barriers } = useBarriers(selectedQuarter)
-  const { routes: barrierRoutes } = useBarrierRoutes(selectedQuarter, showBarriers)
+  const selectedBarrierNodeId = selectedNode?.id ?? null
+  const { routes: barrierRoutes } = useBarrierRoutes(selectedQuarter, showBarriers, selectedBarrierNodeId)
   const [zoom, setZoom] = useState(11)
   const [viewportVersion, setViewportVersion] = useState(0)
   const [isViewportInteracting, setIsViewportInteracting] = useState(false)
@@ -318,10 +352,17 @@ export default function Map({
     }
     return routeMap
   }, [barrierRoutes])
+  const visibleBarriers = useMemo(() => {
+    if (!showBarriers) return []
+    if (!selectedBarrierNodeId) return selectBalancedBarriers(barriers, OVERVIEW_BARRIER_LIMIT)
+    return selectBalancedBarriers(barriers.filter((barrier) =>
+      barrier.sourceId === selectedBarrierNodeId || barrier.targetId === selectedBarrierNodeId,
+    ), OVERVIEW_BARRIER_LIMIT)
+  }, [barriers, selectedBarrierNodeId, showBarriers])
   const barrierLayers = useMemo(
-    () => showBarriers && barriers.length > 0 && barrierRoutePathMap.size > 0
+    () => visibleBarriers.length > 0 && barrierRoutePathMap.size > 0
       ? [
-          createFlowBarrierLayer(barriers, barrierRoutePathMap, (info) => {
+          createFlowBarrierLayer(visibleBarriers, barrierRoutePathMap, (info) => {
             if (info.object) {
               setHoveredBarrier({ barrier: info.object.barrier, x: info.x, y: info.y })
             } else {
@@ -330,7 +371,7 @@ export default function Map({
           }),
         ]
       : [],
-    [barrierRoutePathMap, barriers, showBarriers],
+    [barrierRoutePathMap, visibleBarriers],
   )
   const commerceLayers = useMemo(
     () => nodes.length > 0 && zoomStage === 'candidate'
@@ -359,7 +400,7 @@ export default function Map({
   const handleFrame = useCallback((delta: number) => {
     if (!overlayRef.current || interactionActiveRef.current) return
     const animateFlow = showFlows
-    const animateBarriers = showBarriers && barriers.length > 0 && barrierRoutePathMap.size > 0
+    const animateBarriers = visibleBarriers.length > 0 && barrierRoutePathMap.size > 0
     if (!animateFlow && !animateBarriers) return
 
     progressRef.current = (progressRef.current + getFlowProgressIncrement(delta)) % 1
@@ -376,7 +417,7 @@ export default function Map({
 
     const barrierParticleLayer = animateBarriers
       ? createDisruptedBarrierParticleLayer(
-          barriers,
+          visibleBarriers,
           progressRef.current,
           zoomRef.current,
           barrierRoutePathMap,
@@ -391,7 +432,7 @@ export default function Map({
         ...(heroPulseLayer ? [heroPulseLayer] : []),
       ],
     })
-  }, [barrierRoutePathMap, barriers, baseDeckLayers, flowStrength, flows, selectedFlowKey, showBarriers, showFlows, heroNodeId, nodes])
+  }, [barrierRoutePathMap, baseDeckLayers, flowStrength, flows, selectedFlowKey, showFlows, heroNodeId, nodes, visibleBarriers])
 
   useAnimationFrame(handleFrame)
 

@@ -37,12 +37,11 @@ export default function InsightStrip(props: InsightStripProps) {
     <div
       data-testid="insight-strip"
       style={{
-        position: 'absolute',
-        top: 56, // 헤더 바 아래
-        right: 16,
         display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-end',
         gap: 8,
-        zIndex: 5,
+        maxWidth: '100%',
         pointerEvents: 'auto',
       }}
     >

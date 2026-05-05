@@ -103,29 +103,65 @@ def _fetch_barrier_route_inputs(
     db: Session,
     quarter: str,
     gu: str | None,
+    comm_cd: str | None,
+    min_score: float,
+    limit: int,
 ) -> list[BarrierRouteInput]:
     sql = text("""
+        WITH ranked AS (
+            SELECT
+                fb.from_comm_cd,
+                fb.to_comm_cd,
+                fb.barrier_score,
+                CASE
+                    WHEN fb.barrier_score >= 0.75 THEN 0
+                    WHEN fb.barrier_score >= 0.45 THEN 1
+                    ELSE 2
+                END AS severity_bucket,
+                ROW_NUMBER() OVER (
+                    PARTITION BY CASE
+                        WHEN fb.barrier_score >= 0.75 THEN 0
+                        WHEN fb.barrier_score >= 0.45 THEN 1
+                        ELSE 2
+                    END
+                    ORDER BY fb.barrier_score DESC
+                ) AS bucket_rank,
+                ST_X(ST_PointOnSurface(cb_f.geom)) AS source_lng,
+                ST_Y(ST_PointOnSurface(cb_f.geom)) AS source_lat,
+                ST_X(ST_PointOnSurface(cb_t.geom)) AS target_lng,
+                ST_Y(ST_PointOnSurface(cb_t.geom)) AS target_lat
+            FROM flow_barriers fb
+            LEFT JOIN commerce_boundary cb_f ON cb_f.comm_cd = fb.from_comm_cd
+            LEFT JOIN commerce_boundary cb_t ON cb_t.comm_cd = fb.to_comm_cd
+            LEFT JOIN LATERAL (
+                SELECT gu_nm
+                FROM admin_boundary
+                WHERE ST_Contains(geom, ST_PointOnSurface(cb_f.geom))
+                LIMIT 1
+            ) ab ON TRUE
+            WHERE fb.year_quarter = :quarter
+              AND fb.barrier_score >= :min_score
+              AND (:gu IS NULL OR ab.gu_nm = :gu)
+              AND (:comm_cd IS NULL OR fb.from_comm_cd = :comm_cd OR fb.to_comm_cd = :comm_cd)
+        )
         SELECT
-            fb.from_comm_cd,
-            fb.to_comm_cd,
-            ST_X(ST_PointOnSurface(cb_f.geom)) AS source_lng,
-            ST_Y(ST_PointOnSurface(cb_f.geom)) AS source_lat,
-            ST_X(ST_PointOnSurface(cb_t.geom)) AS target_lng,
-            ST_Y(ST_PointOnSurface(cb_t.geom)) AS target_lat
-        FROM flow_barriers fb
-        LEFT JOIN commerce_boundary cb_f ON cb_f.comm_cd = fb.from_comm_cd
-        LEFT JOIN commerce_boundary cb_t ON cb_t.comm_cd = fb.to_comm_cd
-        LEFT JOIN LATERAL (
-            SELECT gu_nm
-            FROM admin_boundary
-            WHERE ST_Contains(geom, ST_PointOnSurface(cb_f.geom))
-            LIMIT 1
-        ) ab ON TRUE
-        WHERE fb.year_quarter = :quarter
-          AND (:gu IS NULL OR ab.gu_nm = :gu)
-        ORDER BY fb.barrier_score DESC
+            from_comm_cd,
+            to_comm_cd,
+            source_lng,
+            source_lat,
+            target_lng,
+            target_lat
+        FROM ranked
+        ORDER BY bucket_rank ASC, severity_bucket ASC, barrier_score DESC
+        LIMIT :limit
     """)
-    rows = db.execute(sql, {"quarter": quarter, "gu": gu}).fetchall()
+    rows = db.execute(sql, {
+        "quarter": quarter,
+        "gu": gu,
+        "comm_cd": comm_cd,
+        "min_score": min_score,
+        "limit": limit,
+    }).fetchall()
     routes: list[BarrierRouteInput] = []
     for row in rows:
         if (
@@ -151,10 +187,13 @@ def _fetch_barrier_route_inputs(
 def barrier_routes(
     quarter: str = Query("2025Q4", description="Analysis quarter"),
     gu: str | None = Query(None, description="Optional district filter"),
+    comm_cd: str | None = Query(None, description="Optional commerce code endpoint filter"),
+    min_score: float = Query(0.45, ge=0.0, le=1.0, description="Minimum barrier score to route"),
+    limit: int = Query(20, ge=1, le=50, description="Maximum ORS route requests per response"),
     db: Session = Depends(get_session),
     cache=Depends(get_cache),
 ):
-    cache_key = f"barrier-routes:{quarter}:{gu or 'all'}"
+    cache_key = f"barrier-routes:{quarter}:{gu or 'all'}:{comm_cd or 'all'}:{min_score}:{limit}"
 
     if settings.demo_mode:
         snap = load_demo(cache_key)
@@ -174,7 +213,7 @@ def barrier_routes(
         raise HTTPException(status_code=503, detail="OPENROUTESERVICE_API_KEY is not configured")
 
     try:
-        route_inputs = _fetch_barrier_route_inputs(db, quarter, gu)
+        route_inputs = _fetch_barrier_route_inputs(db, quarter, gu, comm_cd, min_score, limit)
     except SQLAlchemyError:
         fallback = _load_route_fallback(cache_key, cache)
         if fallback:

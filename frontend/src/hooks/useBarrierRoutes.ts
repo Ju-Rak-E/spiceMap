@@ -26,6 +26,9 @@ export interface UseBarrierRoutesReturn {
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 const MOCK_ROUTE_URL = '/data/mock_barrier_routes.json'
+const DEFAULT_MIN_SCORE = '0.45'
+const OVERVIEW_ROUTE_LIMIT = '8'
+const SELECTED_ROUTE_LIMIT = '20'
 
 function normalizeRoutes(response: BarrierRoutesResponse): BarrierRoute[] {
   return response.routes
@@ -42,8 +45,13 @@ async function fetchMockRoutes(): Promise<BarrierRoute[]> {
   return normalizeRoutes((await res.json()) as BarrierRoutesResponse)
 }
 
-async function fetchBarrierRoutes(quarter: string): Promise<BarrierRoute[]> {
-  const params = new URLSearchParams({ quarter })
+async function fetchBarrierRoutes(quarter: string, commerceCode?: string | null): Promise<BarrierRoute[]> {
+  const params = new URLSearchParams({
+    quarter,
+    min_score: DEFAULT_MIN_SCORE,
+    limit: commerceCode ? SELECTED_ROUTE_LIMIT : OVERVIEW_ROUTE_LIMIT,
+  })
+  if (commerceCode) params.set('comm_cd', commerceCode)
   try {
     const res = await fetch(`${BASE_URL}/api/barrier-routes?${params.toString()}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -53,7 +61,11 @@ async function fetchBarrierRoutes(quarter: string): Promise<BarrierRoute[]> {
   }
 }
 
-export function useBarrierRoutes(quarter = '2025Q4', enabled = false): UseBarrierRoutesReturn {
+export function useBarrierRoutes(
+  quarter = '2025Q4',
+  enabled = false,
+  commerceCode?: string | null,
+): UseBarrierRoutesReturn {
   const [routes, setRoutes] = useState<BarrierRoute[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +87,7 @@ export function useBarrierRoutes(quarter = '2025Q4', enabled = false): UseBarrie
       setError(null)
     })
 
-    fetchBarrierRoutes(quarter)
+    fetchBarrierRoutes(quarter, commerceCode)
       .then((data) => {
         if (cancelled) return
         setRoutes(data)
@@ -91,7 +103,7 @@ export function useBarrierRoutes(quarter = '2025Q4', enabled = false): UseBarrie
     return () => {
       cancelled = true
     }
-  }, [enabled, quarter])
+  }, [commerceCode, enabled, quarter])
 
   return { routes, isLoading, error }
 }
