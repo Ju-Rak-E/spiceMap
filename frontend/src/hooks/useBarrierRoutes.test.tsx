@@ -45,7 +45,7 @@ describe('useBarrierRoutes', () => {
       expect(result.current.routes).toHaveLength(1)
     })
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/barrier-routes?quarter=2025Q4'))
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('min_score=0.45'))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('min_score=0.2'))
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('limit=8'))
     expect(fetchMock).toHaveBeenCalledWith('/data/mock_barrier_routes.json')
   })
@@ -75,7 +75,7 @@ describe('useBarrierRoutes', () => {
     expect(result.current.routes[0].source).toBe('ors')
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/api/barrier-routes?quarter=2025Q4'))
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('min_score=0.45'))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('min_score=0.2'))
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('limit=8'))
   })
 

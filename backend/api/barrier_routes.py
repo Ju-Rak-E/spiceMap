@@ -139,10 +139,22 @@ def _fetch_barrier_route_inputs(
                 WHERE ST_Contains(geom, ST_PointOnSurface(cb_f.geom))
                 LIMIT 1
             ) ab ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT gu_nm
+                FROM admin_boundary
+                WHERE ST_Contains(geom, ST_PointOnSurface(cb_t.geom))
+                LIMIT 1
+            ) ab_t ON TRUE
             WHERE fb.year_quarter = :quarter
               AND fb.barrier_score >= :min_score
-              AND (:gu IS NULL OR ab.gu_nm = :gu)
+              AND (:gu IS NULL OR ab.gu_nm = :gu OR ab_t.gu_nm = :gu)
               AND (:comm_cd IS NULL OR fb.from_comm_cd = :comm_cd OR fb.to_comm_cd = :comm_cd)
+              AND (
+                  :gu IS NOT NULL
+                  OR :comm_cd IS NOT NULL
+                  OR ab.gu_nm IN ('강남구', '관악구')
+                  OR ab_t.gu_nm IN ('강남구', '관악구')
+              )
         )
         SELECT
             from_comm_cd,
@@ -188,7 +200,7 @@ def barrier_routes(
     quarter: str = Query("2025Q4", description="Analysis quarter"),
     gu: str | None = Query(None, description="Optional district filter"),
     comm_cd: str | None = Query(None, description="Optional commerce code endpoint filter"),
-    min_score: float = Query(0.45, ge=0.0, le=1.0, description="Minimum barrier score to route"),
+    min_score: float = Query(0.2, ge=0.0, le=1.0, description="Minimum barrier score to route"),
     limit: int = Query(20, ge=1, le=50, description="Maximum ORS route requests per response"),
     db: Session = Depends(get_session),
     cache=Depends(get_cache),

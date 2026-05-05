@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCommerceBoundaryApiUrl } from './CommerceBoundaryLayer'
+import { buildCommerceBoundaryApiUrl } from '../utils/commerceBoundaryApi'
 
 describe('buildCommerceBoundaryApiUrl', () => {
   it('uses the Vite proxy path when API base is empty', () => {

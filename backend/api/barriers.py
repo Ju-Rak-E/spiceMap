@@ -56,9 +56,15 @@ def barriers(
             WHERE ST_Contains(geom, ST_PointOnSurface(cb_f.geom))
             LIMIT 1
         ) ab ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT gu_nm
+            FROM admin_boundary
+            WHERE ST_Contains(geom, ST_PointOnSurface(cb_t.geom))
+            LIMIT 1
+        ) ab_t ON TRUE
         WHERE fb.year_quarter = :quarter
           AND fb.barrier_score >= :min_score
-          AND (:gu IS NULL OR ab.gu_nm = :gu)
+          AND (:gu IS NULL OR ab.gu_nm = :gu OR ab_t.gu_nm = :gu)
         ORDER BY fb.barrier_score DESC
     """)
     try:

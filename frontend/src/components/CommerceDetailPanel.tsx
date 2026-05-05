@@ -177,6 +177,7 @@ export default function CommerceDetailPanel({
 }: CommerceDetailPanelProps) {
   const nodeId = node?.id ?? null
   const { series, isLoading, error } = useGriHistory(nodeId, quarter)
+  const policyResult = usePolicyInsights(nodeId, quarter, node?.type ?? null)
   if (!node) {
     return (
       <div
@@ -204,7 +205,6 @@ export default function CommerceDetailPanel({
   const startup = deriveStartupSummary(node)
   const icon = TYPE_ICON[node.type] ?? 'type'
   const riskDelta = getLatestRiskDelta(series)
-  const policyResult = usePolicyInsights(node.id, quarter, node.type)
   const policyInsights = sortPolicyInsightsHeroFirst(policyResult.insights)
 
   return (

@@ -13,7 +13,6 @@ import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import { countCriticalCommerces } from './utils/insightMetrics'
 import type { CommerceNode } from './types/commerce'
-import './App.css'
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
   1: 5, 2: 10, 3: 15, 4: 20, 5: 30,

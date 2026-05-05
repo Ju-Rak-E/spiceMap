@@ -26,7 +26,7 @@ export interface UseBarrierRoutesReturn {
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 const MOCK_ROUTE_URL = '/data/mock_barrier_routes.json'
-const DEFAULT_MIN_SCORE = '0.45'
+const DEFAULT_MIN_SCORE = '0.2'
 const OVERVIEW_ROUTE_LIMIT = '8'
 const SELECTED_ROUTE_LIMIT = '20'
 
@@ -73,9 +73,12 @@ export function useBarrierRoutes(
   useEffect(() => {
     let cancelled = false
     if (!enabled) {
-      setRoutes([])
-      setIsLoading(false)
-      setError(null)
+      queueMicrotask(() => {
+        if (cancelled) return
+        setRoutes([])
+        setIsLoading(false)
+        setError(null)
+      })
       return () => {
         cancelled = true
       }

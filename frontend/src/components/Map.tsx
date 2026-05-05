@@ -352,13 +352,17 @@ export default function Map({
     }
     return routeMap
   }, [barrierRoutes])
+  const displayedNodeIds = useMemo(() => new Set(nodes.map((node) => node.id)), [nodes])
   const visibleBarriers = useMemo(() => {
     if (!showBarriers) return []
-    if (!selectedBarrierNodeId) return selectBalancedBarriers(barriers, OVERVIEW_BARRIER_LIMIT)
-    return selectBalancedBarriers(barriers.filter((barrier) =>
+    const scopedBarriers = barriers.filter((barrier) =>
+      displayedNodeIds.has(barrier.sourceId) || displayedNodeIds.has(barrier.targetId)
+    )
+    if (!selectedBarrierNodeId) return selectBalancedBarriers(scopedBarriers, OVERVIEW_BARRIER_LIMIT)
+    return selectBalancedBarriers(scopedBarriers.filter((barrier) =>
       barrier.sourceId === selectedBarrierNodeId || barrier.targetId === selectedBarrierNodeId,
     ), OVERVIEW_BARRIER_LIMIT)
-  }, [barriers, selectedBarrierNodeId, showBarriers])
+  }, [barriers, displayedNodeIds, selectedBarrierNodeId, showBarriers])
   const barrierLayers = useMemo(
     () => visibleBarriers.length > 0 && barrierRoutePathMap.size > 0
       ? [
