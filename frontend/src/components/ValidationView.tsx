@@ -47,11 +47,14 @@ interface ValidationViewProps {
 const S = {
   container: {
     position: 'absolute' as const,
-    inset: 0,
+    top: 64,
+    right: 0,
+    bottom: 0,
+    left: 0,
     background: '#0E141B',
     color: '#ECEFF1',
     overflow: 'auto',
-    padding: '32px 40px 48px',
+    padding: '24px 40px 48px',
     zIndex: 50,
   },
   header: {

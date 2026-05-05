@@ -123,3 +123,20 @@ class TestTypeMapNewColumns:
         assert "관악구" in cache_key_arg
 
         app.dependency_overrides.clear()
+
+    def test_type_map_returns_wgs84_geometry_sql(self):
+        mock_db = MagicMock()
+        mock_db.execute.return_value.fetchall.return_value = [_row()]
+        app.dependency_overrides[get_session] = lambda: mock_db
+        app.dependency_overrides[get_cache] = _mock_cache
+        client = TestClient(app)
+
+        response = client.get("/api/commerce/type-map?quarter=2025Q4&gu=관악구")
+
+        assert response.status_code == 200
+        sql = str(mock_db.execute.call_args.args[0])
+        assert "ST_AsGeoJSON(ST_Transform(cb.geom, 4326))" in sql
+        assert "ST_Centroid(ST_Transform(cb.geom, 4326))" in sql
+        assert "ST_PointOnSurface(ST_Transform(cb.geom, 4326))" in sql
+
+        app.dependency_overrides.clear()

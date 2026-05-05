@@ -3,13 +3,14 @@ import { type MapTheme } from '../styles/tokens'
 
 const SOURCE_ID = 'commerce-boundary'
 const FILL_LAYER_ID = 'commerce-boundary-fill'
+const LINE_GLOW_LAYER_ID = 'commerce-boundary-line-glow'
 const LINE_LAYER_ID = 'commerce-boundary-line'
 const SELECTED_FILL_LAYER_ID = 'commerce-boundary-selected-fill'
 const SELECTED_LINE_LAYER_ID = 'commerce-boundary-selected-line'
 const DATA_URL = '/data/mock_commerce_boundary.geojson'
 
 const SELECTED_COLOR = '#7BD08D'
-const MIN_VISIBLE_ZOOM = 11
+const MIN_VISIBLE_ZOOM = 10.5
 const SELECTED_MIN_VISIBLE_ZOOM = 11.5
 type BoundaryData = NonNullable<maplibregl.GeoJSONSourceSpecification['data']>
 
@@ -77,20 +78,36 @@ export class CommerceBoundaryLayerManager {
     if (!this.map.isStyleLoaded()) return
 
     if (!this.map.getSource(SOURCE_ID)) {
-      this.addLayers()
-      return
+      this.addSource()
+    }
+
+    if (!this.hasAllLayers()) {
+      this.removeLayerSet()
+      this.addLayerSet()
     }
 
     this.updatePaint()
     this.applySelectedFilter()
   }
 
-  private addLayers() {
+  private addSource() {
     this.map.addSource(SOURCE_ID, {
       type: 'geojson',
       data: this.data,
     })
+  }
 
+  private hasAllLayers(): boolean {
+    return Boolean(
+      this.map.getLayer(FILL_LAYER_ID)
+      && this.map.getLayer(LINE_GLOW_LAYER_ID)
+      && this.map.getLayer(LINE_LAYER_ID)
+      && this.map.getLayer(SELECTED_FILL_LAYER_ID)
+      && this.map.getLayer(SELECTED_LINE_LAYER_ID),
+    )
+  }
+
+  private addLayerSet() {
     this.map.addLayer({
       id: FILL_LAYER_ID,
       type: 'fill',
@@ -100,9 +117,31 @@ export class CommerceBoundaryLayerManager {
         'fill-color': '#90A4AE',
         'fill-opacity': [
           'interpolate', ['linear'], ['zoom'],
-          11, 0.035,
-          12, 0.07,
+          10.5, 0.02,
+          12, 0.055,
           16, 0.13,
+        ],
+      },
+    })
+
+    this.map.addLayer({
+      id: LINE_GLOW_LAYER_ID,
+      type: 'line',
+      source: SOURCE_ID,
+      minzoom: MIN_VISIBLE_ZOOM,
+      paint: {
+        'line-color': SELECTED_COLOR,
+        'line-width': [
+          'interpolate', ['linear'], ['zoom'],
+          10.5, 2.4,
+          13, 3.4,
+          16, 5,
+        ],
+        'line-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          10.5, 0.16,
+          13, 0.22,
+          16, 0.28,
         ],
       },
     })
@@ -116,12 +155,12 @@ export class CommerceBoundaryLayerManager {
         'line-color': lineColor(this.theme),
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
-          11, 0.9,
-          13, 1.4,
-          15, 2.1,
-          17, 3,
+          10.5, 1.1,
+          13, 1.8,
+          15, 2.6,
+          17, 3.4,
         ],
-        'line-opacity': 0.92,
+        'line-opacity': 0.98,
       },
     })
 
@@ -151,6 +190,14 @@ export class CommerceBoundaryLayerManager {
     })
   }
 
+  private removeLayerSet() {
+    if (this.map.getLayer(SELECTED_LINE_LAYER_ID)) this.map.removeLayer(SELECTED_LINE_LAYER_ID)
+    if (this.map.getLayer(SELECTED_FILL_LAYER_ID)) this.map.removeLayer(SELECTED_FILL_LAYER_ID)
+    if (this.map.getLayer(LINE_LAYER_ID)) this.map.removeLayer(LINE_LAYER_ID)
+    if (this.map.getLayer(LINE_GLOW_LAYER_ID)) this.map.removeLayer(LINE_GLOW_LAYER_ID)
+    if (this.map.getLayer(FILL_LAYER_ID)) this.map.removeLayer(FILL_LAYER_ID)
+  }
+
   private updatePaint() {
     if (!this.map.isStyleLoaded()) return
     if (this.map.getLayer(LINE_LAYER_ID)) {
@@ -172,10 +219,7 @@ export class CommerceBoundaryLayerManager {
   private removeLayers() {
     try {
       if (!this.map.isStyleLoaded()) return
-      if (this.map.getLayer(SELECTED_LINE_LAYER_ID)) this.map.removeLayer(SELECTED_LINE_LAYER_ID)
-      if (this.map.getLayer(SELECTED_FILL_LAYER_ID)) this.map.removeLayer(SELECTED_FILL_LAYER_ID)
-      if (this.map.getLayer(LINE_LAYER_ID)) this.map.removeLayer(LINE_LAYER_ID)
-      if (this.map.getLayer(FILL_LAYER_ID)) this.map.removeLayer(FILL_LAYER_ID)
+      this.removeLayerSet()
       if (this.map.getSource(SOURCE_ID)) this.map.removeSource(SOURCE_ID)
     } catch {
       // MapLibre can clear the style before React cleanup runs.

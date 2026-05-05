@@ -2,17 +2,15 @@ import { PathLayer } from '@deck.gl/layers'
 import type { PickingInfo } from '@deck.gl/core'
 import { PathStyleExtension } from '@deck.gl/extensions'
 import type { Barrier } from '../hooks/useBarriers'
-import { getControlPoint, quadBezier } from '../utils/flowBezier'
 
-const SEGMENTS = 32
-const MIN_WIDTH = 4
-const MAX_WIDTH = 9
+const MIN_WIDTH = 5
+const MAX_WIDTH = 12
 const MAX_VOLUME = 10000
 
 const SEVERITY_COLOR: Record<Barrier['severity'], [number, number, number, number]> = {
-  high: [255, 82, 82, 255],
-  medium: [255, 183, 77, 245],
-  low: [255, 235, 59, 235],
+  high: [239, 83, 80, 190],
+  medium: [255, 167, 38, 172],
+  low: [255, 213, 79, 148],
 }
 
 interface BarrierPath {
@@ -22,16 +20,68 @@ interface BarrierPath {
   width: number
 }
 
+export type BarrierRoutePathMap = ReadonlyMap<string, [number, number][]>
+
 export function getBarrierWidth(volume: number): number {
   const ratio = Math.min(volume / MAX_VOLUME, 1)
   return MIN_WIDTH + ratio * (MAX_WIDTH - MIN_WIDTH)
 }
 
-function buildBarrierPath(barrier: Barrier): BarrierPath {
-  const ctrl = getControlPoint(barrier.sourceCoord, barrier.targetCoord)
-  const path = Array.from({ length: SEGMENTS + 1 }, (_, i) =>
-    quadBezier(barrier.sourceCoord, ctrl, barrier.targetCoord, i / SEGMENTS),
-  )
+function fitRouteTemplateToBarrier(
+  template: [number, number][],
+  barrier: Barrier,
+): [number, number][] | null {
+  if (template.length < 2) return null
+
+  const [templateStartLng, templateStartLat] = template[0]
+  const [templateEndLng, templateEndLat] = template[template.length - 1]
+  const templateDx = templateEndLng - templateStartLng
+  const templateDy = templateEndLat - templateStartLat
+  const templateLenSq = templateDx * templateDx + templateDy * templateDy
+  if (templateLenSq <= Number.EPSILON) return null
+
+  const [sourceLng, sourceLat] = barrier.sourceCoord
+  const [targetLng, targetLat] = barrier.targetCoord
+  const barrierDx = targetLng - sourceLng
+  const barrierDy = targetLat - sourceLat
+  const barrierLen = Math.hypot(barrierDx, barrierDy)
+  const templateLen = Math.sqrt(templateLenSq)
+  if (barrierLen <= Number.EPSILON || templateLen <= Number.EPSILON) return null
+
+  const templatePerpX = -templateDy / templateLen
+  const templatePerpY = templateDx / templateLen
+  const barrierPerpX = -barrierDy / barrierLen
+  const barrierPerpY = barrierDx / barrierLen
+  const offsetScale = Math.min(barrierLen / templateLen, 1.2)
+
+  return template.map(([lng, lat]) => {
+    const relX = lng - templateStartLng
+    const relY = lat - templateStartLat
+    const along = (relX * templateDx + relY * templateDy) / templateLenSq
+    const lateral = (relX * templatePerpX + relY * templatePerpY) * offsetScale
+    return [
+      sourceLng + barrierDx * along + barrierPerpX * lateral,
+      sourceLat + barrierDy * along + barrierPerpY * lateral,
+    ] as [number, number]
+  })
+}
+
+export function getBarrierRoutePath(
+  barrier: Barrier,
+  routes: BarrierRoutePathMap,
+): [number, number][] | null {
+  const matched = routes.get(barrier.id)
+    ?? routes.get(`${barrier.sourceId}-${barrier.targetId}`)
+  if (matched && matched.length >= 2) return matched
+
+  const template = routes.values().next().value
+  if (!template) return null
+  return fitRouteTemplateToBarrier(template, barrier)
+}
+
+function buildBarrierPath(barrier: Barrier, routes: BarrierRoutePathMap): BarrierPath | null {
+  const path = getBarrierRoutePath(barrier, routes)
+  if (!path || path.length < 2) return null
   return {
     barrier,
     path,
@@ -42,9 +92,12 @@ function buildBarrierPath(barrier: Barrier): BarrierPath {
 
 export function createFlowBarrierLayer(
   barriers: Barrier[],
+  routes: BarrierRoutePathMap,
   onHover?: (info: PickingInfo<BarrierPath>) => void,
 ): PathLayer<BarrierPath> {
-  const paths = barriers.map(buildBarrierPath)
+  const paths = barriers
+    .map((barrier) => buildBarrierPath(barrier, routes))
+    .filter((path): path is BarrierPath => path !== null)
   return new PathLayer<BarrierPath>({
     id: 'flow-barriers',
     data: paths,

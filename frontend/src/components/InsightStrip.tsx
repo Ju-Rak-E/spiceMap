@@ -37,12 +37,11 @@ export default function InsightStrip(props: InsightStripProps) {
     <div
       data-testid="insight-strip"
       style={{
-        position: 'absolute',
-        top: 56, // 헤더 바 아래
-        right: 16,
         display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-end',
         gap: 8,
-        zIndex: 5,
+        maxWidth: '100%',
         pointerEvents: 'auto',
       }}
     >
@@ -50,6 +49,7 @@ export default function InsightStrip(props: InsightStripProps) {
         label="H1 검증 (r)"
         primary={h1R == null ? '—' : h1R.toFixed(3)}
         secondary={h1P == null ? '순유입×매출' : `p=${formatP(h1P)}`}
+        tertiary="통계적으로 확실 (효과 약함)"
         accent="#90CAF9"
         colors={colors}
         title="H1: 순유입↑→매출↑. 임계 r ≥ 0.5"
@@ -58,6 +58,7 @@ export default function InsightStrip(props: InsightStripProps) {
         label="정책 카드"
         primary={policyCardCount.toLocaleString()}
         secondary="규칙 기반 자동 생성"
+        tertiary="R4~R7 상권별 자동 매칭"
         accent="#FFCC80"
         colors={colors}
         title="Module D R4~R7 결과 (Critical/Medium/Low)"
@@ -66,6 +67,7 @@ export default function InsightStrip(props: InsightStripProps) {
         label="즉시 개입 상권"
         primary={criticalCommerceCount.toLocaleString()}
         secondary={quarter ? `${quarter} GRI ≥ 80` : 'GRI ≥ 80'}
+        tertiary="매출 안정인데 흐름 끊김"
         accent="#EF9A9A"
         colors={colors}
         title="Module B GRI 상위 — 우선순위 80+ 정책 개입 대상"
@@ -78,12 +80,14 @@ interface CardProps {
   label: string
   primary: string
   secondary: string
+  /** 해석 1줄 — 통계 수치를 비전문가 친화적으로 풀어쓴 카피 (선택). */
+  tertiary?: string
   accent: string
   colors: ThemeColors
   title: string
 }
 
-function Card({ label, primary, secondary, accent, colors, title }: CardProps) {
+function Card({ label, primary, secondary, tertiary, accent, colors, title }: CardProps) {
   return (
     <div
       title={title}
@@ -94,6 +98,7 @@ function Card({ label, primary, secondary, accent, colors, title }: CardProps) {
         borderRadius: 8,
         padding: '8px 12px',
         minWidth: 96,
+        maxWidth: 200,
         display: 'flex',
         flexDirection: 'column',
         gap: 1,
@@ -108,6 +113,19 @@ function Card({ label, primary, secondary, accent, colors, title }: CardProps) {
       <div style={{ fontSize: 9, color: colors.secondaryText, marginTop: 2 }}>
         {secondary}
       </div>
+      {tertiary && (
+        <div
+          style={{
+            fontSize: 10,
+            color: colors.panelText,
+            marginTop: 3,
+            lineHeight: 1.3,
+            fontWeight: 500,
+          }}
+        >
+          {tertiary}
+        </div>
+      )}
     </div>
   )
 }

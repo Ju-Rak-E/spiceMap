@@ -42,6 +42,7 @@ export interface UseBarriersReturn {
 }
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
+const EMPTY_DISTRICTS = new Set<string>()
 
 function severityFromScore(score: number): BarrierSeverity {
   if (score >= 0.75) return 'high'
@@ -78,10 +79,9 @@ async function fetchMockBarriers(): Promise<Barrier[]> {
   return res.json() as Promise<Barrier[]>
 }
 
-async function fetchBarriers(quarter: string): Promise<Barrier[]> {
-  if (isDemoMode()) return fetchMockBarriers()
-
+async function fetchBarriers(quarter: string, gu?: string): Promise<Barrier[]> {
   const params = new URLSearchParams({ quarter })
+  if (gu) params.set('gu', gu)
   try {
     const res = await fetch(`${BASE_URL}/api/barriers?${params.toString()}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -92,20 +92,40 @@ async function fetchBarriers(quarter: string): Promise<Barrier[]> {
   }
 }
 
-export function useBarriers(quarter = '2025Q4'): UseBarriersReturn {
+async function fetchBarriersForDistricts(quarter: string, districts: string[]): Promise<Barrier[]> {
+  if (isDemoMode()) return fetchMockBarriers()
+
+  const groupedBarriers = districts.length === 0
+    ? [await fetchBarriers(quarter)]
+    : await Promise.all(districts.map((district) => fetchBarriers(quarter, district)))
+
+  const deduped = new Map<string, Barrier>()
+  for (const barrier of groupedBarriers.flat()) {
+    if (!deduped.has(barrier.id)) deduped.set(barrier.id, barrier)
+  }
+  return [...deduped.values()]
+}
+
+export function useBarriers(
+  quarter = '2025Q4',
+  districts: ReadonlySet<string> = EMPTY_DISTRICTS,
+): UseBarriersReturn {
   const [barriers, setBarriers] = useState<Barrier[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const districtKey = [...districts].sort().join('|')
 
   useEffect(() => {
     let cancelled = false
+    const districtList = districtKey ? districtKey.split('|') : []
+
     queueMicrotask(() => {
       if (cancelled) return
       setIsLoading(true)
       setError(null)
     })
 
-    fetchBarriers(quarter)
+    fetchBarriersForDistricts(quarter, districtList)
       .then((data) => {
         if (cancelled) return
         setBarriers(data)
@@ -121,7 +141,7 @@ export function useBarriers(quarter = '2025Q4'): UseBarriersReturn {
     return () => {
       cancelled = true
     }
-  }, [quarter])
+  }, [districtKey, quarter])
 
   return { barriers, isLoading, error }
 }

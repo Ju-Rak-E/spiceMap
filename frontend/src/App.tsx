@@ -13,7 +13,6 @@ import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import { countCriticalCommerces } from './utils/insightMetrics'
 import type { CommerceNode } from './types/commerce'
-import './App.css'
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
   1: 5, 2: 10, 3: 15, 4: 20, 5: 30,
@@ -22,6 +21,7 @@ const STRENGTH_TO_TOP_N: Record<number, number> = {
 const BOUNDARY_OPACITY = 0.08
 const SCOPE_LABEL = '강남구·관악구 창업 시범'
 const DEFAULT_QUARTER = '2025Q4'
+const MAP_HEADER_CLEARANCE = 64
 // docs/hero_shot_scenario.md §0: ?hero=1 진입 시 신림(gw_001)을 펄싱 강조.
 // 시연 외 일반 동작에는 영향 없음(쿼리 미설정 시 null).
 const HERO_NODE_ID = 'gw_001'
@@ -168,31 +168,6 @@ export default function App() {
           position: 'relative',
         }}
       >
-        <button
-          type="button"
-          onClick={() => setView((v) => (v === 'map' ? 'validation' : 'map'))}
-          data-testid="validation-tab-toggle"
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: viewportMode.isNarrow ? 12 : 332,
-            zIndex: 60,
-            padding: '6px 12px',
-            borderRadius: 999,
-            border: '1px solid #304251',
-            background: view === 'validation' ? '#7BD08D22' : 'rgba(16,22,29,0.92)',
-            color: view === 'validation' ? '#7BD08D' : '#ECEFF1',
-            fontSize: 11,
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-          }}
-        >
-          {view === 'validation' ? '지도' : '검증 보고'}
-        </button>
-
-        {view === 'validation' && <ValidationView onClose={() => setView('map')} />}
-
         <div style={{ flex: 1, position: 'relative', minWidth: 0, minHeight: viewportMode.isNarrow ? 420 : 0 }}>
           <Map
             theme="dark"
@@ -214,6 +189,51 @@ export default function App() {
             onSelectNode={setSelectedNode}
             heroNodeId={heroNodeId}
           />
+          {view === 'map' && (
+            <div
+              style={{
+                position: 'absolute',
+                top: MAP_HEADER_CLEARANCE + 8,
+                right: 16,
+                zIndex: 60,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: 8,
+                maxWidth: 'calc(100% - 32px)',
+                pointerEvents: 'none',
+              }}
+            >
+              <InsightStrip
+                theme="dark"
+                h1R={usingMockData ? null : VERIFICATION_H1_R}
+                h1P={usingMockData ? null : VERIFICATION_H1_P}
+                policyCardCount={POLICY_CARD_COUNT_Q4}
+                criticalCommerceCount={criticalCount}
+                quarter={selectedQuarter}
+              />
+              <button
+                type="button"
+                onClick={() => setView('validation')}
+                data-testid="validation-tab-toggle"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 999,
+                  border: '1px solid #304251',
+                  background: 'rgba(16,22,29,0.92)',
+                  color: '#ECEFF1',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                  pointerEvents: 'auto',
+                }}
+              >
+                검증 보고
+              </button>
+            </div>
+          )}
+          {view === 'validation' && <ValidationView onClose={() => setView('map')} />}
         </div>
 
         <FlowControlPanel
@@ -256,14 +276,6 @@ export default function App() {
           onToggleCompare={() => setCompareMode((prev) => !prev)}
           compact={viewportMode.isTablet}
           stacked={viewportMode.isNarrow}
-        />
-        <InsightStrip
-          theme="dark"
-          h1R={usingMockData ? null : VERIFICATION_H1_R}
-          h1P={usingMockData ? null : VERIFICATION_H1_P}
-          policyCardCount={POLICY_CARD_COUNT_Q4}
-          criticalCommerceCount={criticalCount}
-          quarter={selectedQuarter}
         />
       </div>
       <ToastViewport />

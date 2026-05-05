@@ -51,9 +51,9 @@ def type_map(
                 ab.adm_nm,
                 ca.commerce_type          AS commerce_type,
                 cb.comm_type              AS source_comm_type,
-                ST_AsGeoJSON(cb.geom)::json AS geometry,
-                ST_X(ST_Centroid(cb.geom)) AS centroid_lng,
-                ST_Y(ST_Centroid(cb.geom)) AS centroid_lat,
+                ST_AsGeoJSON(ST_Transform(cb.geom, 4326))::json AS geometry,
+                ST_X(ST_Centroid(ST_Transform(cb.geom, 4326))) AS centroid_lng,
+                ST_Y(ST_Centroid(ST_Transform(cb.geom, 4326))) AS centroid_lat,
                 ca.gri_score,
                 ca.flow_volume,
                 ca.priority_score,
@@ -66,7 +66,7 @@ def type_map(
             LEFT JOIN LATERAL (
                 SELECT adm_cd, adm_nm, gu_nm
                 FROM admin_boundary
-                WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
+                WHERE ST_Contains(geom, ST_PointOnSurface(ST_Transform(cb.geom, 4326)))
                 LIMIT 1
             ) ab ON TRUE
             LEFT JOIN commerce_analysis ca
@@ -85,9 +85,9 @@ def type_map(
                 ab.adm_nm,
                 ca.commerce_type          AS commerce_type,
                 cb.comm_type              AS source_comm_type,
-                ST_AsGeoJSON(cb.geom)::json AS geometry,
-                ST_X(ST_Centroid(cb.geom)) AS centroid_lng,
-                ST_Y(ST_Centroid(cb.geom)) AS centroid_lat,
+                ST_AsGeoJSON(ST_Transform(cb.geom, 4326))::json AS geometry,
+                ST_X(ST_Centroid(ST_Transform(cb.geom, 4326))) AS centroid_lng,
+                ST_Y(ST_Centroid(ST_Transform(cb.geom, 4326))) AS centroid_lat,
                 ca.gri_score,
                 ca.flow_volume,
                 ca.priority_score,
@@ -100,7 +100,7 @@ def type_map(
             LEFT JOIN LATERAL (
                 SELECT adm_cd, adm_nm, gu_nm
                 FROM admin_boundary
-                WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
+                WHERE ST_Contains(geom, ST_PointOnSurface(ST_Transform(cb.geom, 4326)))
                 LIMIT 1
             ) ab ON TRUE
             LEFT JOIN commerce_analysis ca

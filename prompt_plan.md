@@ -122,6 +122,7 @@
 - [x] Hero shot 시연 동선 정밀화 — **2026-05-03 b763b20** PR1 펄싱+R4 강조 (`createHeroPulseLayer` 1.5s halo, `?hero=1` 시 전 zoom 가시 / `CommerceDetailPanel` 정책카드 R4 우선 정렬 / `PolicyCard.highlight` 노란 outline + fadeIn 300ms) + PR2 CSV toast 피드백(`FlowControlPanel`) + 검증 탭(`ValidationView` H1/H3/B1/B3 4카드, `/api/insights/validation` + 정적 fallback `frontend/src/data/validation_results.json`) + `?hero=1` 토글 + `HERO_NODE_ID='gw_001'`(신림) + 단축키 1~4. `docs/hero_shot_scenario.md` 시간축 1:1 정렬, `docs/hero_shot_assets/README.md` 자산 인벤토리. InsightStrip light theme fix(0d8feda). 178 vitest 통과, npm run build 성공.
 - [x] 컴포넌트 회귀 강화 — **2026-05-04** ValidationView 8 tests(`f0e7c81`) + PolicyCard 10 tests(`bf04622`) + `computeHeroPulseFrame` helper 분리 + 7 tests(`1a33bd8`). frontend vitest 178 → 203 (+25).
 - [x] PR #40 main 통합 머지 — **2026-05-04 b3f4c48** PR #38 nik (Dev-A 영역) + PR #39 kbh (Dev-B P0~P3) 충돌 7파일 해결. backend pytest 248 → 260 / frontend vitest 203 → 246 / build 2.0MB / gzip 582KB ✅
+- [x] 흐름단절 파티클 애니메이션 — **2026-05-04 kbh** `DisruptedBarrierParticleLayer` + `barrierRouteAnimation` 신규. showBarriers ON 시 severity 색상 파티클이 경로를 따라 흐르고 t=0.5 단절 지점에서 scatter+fadeout. 44 tests 신규. frontend vitest 246 → 304. FlowBarrierLayer 원래 점선 베지어 복원.
 
 ### Dev-C
 - [x] Module C 시계열 갭 알고리즘 + flow_barriers 적재 — **2026-04-30 PR #29** Module C 풀 구현 대체. `compute_flow_gaps(od_q3, od_q4, mapping, threshold=0.5)` 18 tests. Supabase Q4 200건 적재 (decline 0.587~1.000)

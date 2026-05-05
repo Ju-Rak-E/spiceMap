@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { CommerceBoundaryLayerManager } from './CommerceBoundaryLayerManager'
 
 const LINE_LAYER_ID = 'commerce-boundary-line'
+const FILL_LAYER_ID = 'commerce-boundary-fill'
+const LINE_GLOW_LAYER_ID = 'commerce-boundary-line-glow'
 const SELECTED_FILL_LAYER_ID = 'commerce-boundary-selected-fill'
 const SELECTED_LINE_LAYER_ID = 'commerce-boundary-selected-line'
 
@@ -54,7 +56,8 @@ describe('CommerceBoundaryLayerManager', () => {
       type: 'geojson',
       data: '/data/mock_commerce_boundary.geojson',
     })
-    expect(map.addLayer).toHaveBeenCalledTimes(4)
+    expect(map.addLayer).toHaveBeenCalledTimes(5)
+    expect(map.addLayer.mock.calls.some(([layer]) => layer.id === LINE_GLOW_LAYER_ID)).toBe(true)
   })
 
   it('waits for styledata before adding layers', () => {
@@ -66,7 +69,7 @@ describe('CommerceBoundaryLayerManager', () => {
     map.isStyleLoaded.mockReturnValue(true)
     emit('styledata')
 
-    expect(map.addLayer).toHaveBeenCalledTimes(4)
+    expect(map.addLayer).toHaveBeenCalledTimes(5)
   })
 
   it('applies selected commerce filter to selected fill and line layers', () => {
@@ -104,5 +107,23 @@ describe('CommerceBoundaryLayerManager', () => {
     manager.setData(data)
 
     expect(setData).toHaveBeenCalledWith(data)
+  })
+
+  it('recreates missing layers while keeping the existing source', () => {
+    const { map, emit } = createMockMap(true)
+
+    new CommerceBoundaryLayerManager(map as never, 'dark', 'gc_001')
+    map.addSource.mockClear()
+    map.addLayer.mockClear()
+
+    map.removeLayer(SELECTED_LINE_LAYER_ID)
+    map.removeLayer(SELECTED_FILL_LAYER_ID)
+    map.removeLayer(LINE_LAYER_ID)
+    map.removeLayer(LINE_GLOW_LAYER_ID)
+    map.removeLayer(FILL_LAYER_ID)
+    emit('idle')
+
+    expect(map.addSource).not.toHaveBeenCalled()
+    expect(map.addLayer).toHaveBeenCalledTimes(5)
   })
 })

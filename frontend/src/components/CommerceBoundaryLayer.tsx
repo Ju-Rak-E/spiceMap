@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import { type MapTheme } from '../styles/tokens'
 import { CommerceBoundaryLayerManager } from '../utils/CommerceBoundaryLayerManager'
+import { buildCommerceBoundaryApiUrl } from '../utils/commerceBoundaryApi'
 import type { CommerceTypeMapResponse } from '../types/commerce'
 
 interface CommerceBoundaryLayerProps {
@@ -16,12 +17,10 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 const FALLBACK_BOUNDARY_URL = '/data/mock_commerce_boundary.geojson'
 
 async function fetchCommerceBoundary(quarter: string, districts: readonly string[]) {
-  if (!API_BASE) throw new Error('API base URL is not configured')
   if (districts.length === 0) throw new Error('No districts selected')
 
   const responses = await Promise.all(districts.map(async (district) => {
-    const params = new URLSearchParams({ quarter, gu: district })
-    const res = await fetch(`${API_BASE}/api/commerce/type-map?${params.toString()}`)
+    const res = await fetch(buildCommerceBoundaryApiUrl(API_BASE, quarter, district))
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return (await res.json()) as CommerceTypeMapResponse
   }))

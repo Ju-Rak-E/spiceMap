@@ -7,7 +7,7 @@ spiceMap FastAPI 앱 진입점
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api import barriers, commerce, data_sources, export, insights, od, validation
+from backend.api import barrier_routes, barriers, commerce, data_sources, export, insights, od, validation
 
 app = FastAPI(
     title="spiceMap API",
@@ -31,6 +31,7 @@ def health():
 app.include_router(commerce.router, prefix="/api", tags=["commerce"])
 app.include_router(od.router, prefix="/api", tags=["od"])
 app.include_router(barriers.router, prefix="/api", tags=["barriers"])
+app.include_router(barrier_routes.router, prefix="/api", tags=["barriers"])
 app.include_router(insights.router, prefix="/api", tags=["insights"])
 app.include_router(validation.router, prefix="/api", tags=["validation"])
 app.include_router(export.router, prefix="/api", tags=["export"])

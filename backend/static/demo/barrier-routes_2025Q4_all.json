@@ -1,0 +1,53 @@
+{
+  "quarter": "2025Q4",
+  "total": 5,
+  "routes": [
+    {
+      "barrierId": "b1",
+      "sourceId": "GW_BONGCHEON",
+      "targetId": "GC_YEOKSAM",
+      "path": [[126.952, 37.477], [126.956, 37.481], [126.973, 37.487], [126.995, 37.492], [127.017, 37.497], [127.036, 37.5]],
+      "distanceM": 8900,
+      "durationS": 1420,
+      "source": "mock"
+    },
+    {
+      "barrierId": "b2",
+      "sourceId": "GW_SILLIM",
+      "targetId": "GC_YEOKSAM",
+      "path": [[126.929, 37.484], [126.936, 37.482], [126.956, 37.481], [126.978, 37.489], [127.011, 37.496], [127.036, 37.5]],
+      "distanceM": 10800,
+      "durationS": 1710,
+      "source": "mock"
+    },
+    {
+      "barrierId": "b3",
+      "sourceId": "GC_CHEONGDAM",
+      "targetId": "GC_SINSA",
+      "path": [[127.047, 37.524], [127.041, 37.524], [127.035, 37.523], [127.029, 37.524], [127.024, 37.526], [127.02, 37.526]],
+      "distanceM": 3100,
+      "durationS": 520,
+      "source": "mock"
+    },
+    {
+      "barrierId": "b4",
+      "sourceId": "GW_BONGCHEON",
+      "targetId": "GW_SILLIM",
+      "path": [[126.952, 37.477], [126.947, 37.478], [126.941, 37.48], [126.935, 37.482], [126.929, 37.484]],
+      "distanceM": 2600,
+      "durationS": 430,
+      "source": "mock"
+    },
+    {
+      "barrierId": "b5",
+      "sourceId": "GC_YEOKSAM",
+      "targetId": "GW_SILLIM",
+      "path": [[127.036, 37.5], [127.017, 37.497], [126.995, 37.492], [126.973, 37.487], [126.951, 37.483], [126.929, 37.484]],
+      "distanceM": 11000,
+      "durationS": 1760,
+      "source": "mock"
+    }
+  ],
+  "from_cache": false,
+  "cache_warning": null
+}
