@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-05-04 (Week 4 Day 6)
+> 최종 갱신: 2026-05-06 (Week 4 Day 8 / D-6)
 
 ---
 
@@ -123,6 +123,11 @@
 - [x] 컴포넌트 회귀 강화 — **2026-05-04** ValidationView 8 tests(`f0e7c81`) + PolicyCard 10 tests(`bf04622`) + `computeHeroPulseFrame` helper 분리 + 7 tests(`1a33bd8`). frontend vitest 178 → 203 (+25).
 - [x] PR #40 main 통합 머지 — **2026-05-04 b3f4c48** PR #38 nik (Dev-A 영역) + PR #39 kbh (Dev-B P0~P3) 충돌 7파일 해결. backend pytest 248 → 260 / frontend vitest 203 → 246 / build 2.0MB / gzip 582KB ✅
 - [x] 흐름단절 파티클 애니메이션 — **2026-05-04 kbh** `DisruptedBarrierParticleLayer` + `barrierRouteAnimation` 신규. showBarriers ON 시 severity 색상 파티클이 경로를 따라 흐르고 t=0.5 단절 지점에서 scatter+fadeout. 44 tests 신규. frontend vitest 246 → 304. FlowBarrierLayer 원래 점선 베지어 복원.
+- [x] 흐름단절 실 도로 경로 — **2026-05-05 PR #41 kbh** `backend/api/barrier_routes.py` 신규 + `/api/barrier-routes` 엔드포인트 + ORS(Openrouteservice) 호출 + fallback (직선 대체). `useBarrierRoutes` hook + FlowBarrierLayer 도로 매칭/fitting + DisruptedBarrierParticleLayer 도로 polyline 파티클. `OPENROUTESERVICE_API_KEY` 미등록 시 mock 고정. 11 신규 회귀 테스트 (`barrier_route_coverage` + `useBarrierRoutes`). `docs/openrouteservice_key_note.md` 운영 가이드.
+- [x] commerce type-map geom WGS84 정규화 — **2026-05-05 46a5287** `backend/api/commerce.py` SRID 4326 강제. 잘못된 좌표계 노드 차단.
+- [x] 검증 보고 토글 헤더 클리어런스 — **2026-05-05 299a0ab** ValidationView 토글이 상단 헤더를 가리지 않도록 위치 조정.
+- [x] commerce boundary URL 빌더 추출 + 빈 API_BASE 허용 — **2026-05-05 1a4bff0** refactor + 단위 테스트.
+- [x] 미사용 컴포넌트/구 GRI 유틸 정리 — **2026-05-05 9d13e04** gri.ts → percentile.ts 마이그레이션. 빈 스타일 파일 삭제. 런타임 미사용 확인 후 제거.
 
 ### Dev-C
 - [x] Module C 시계열 갭 알고리즘 + flow_barriers 적재 — **2026-04-30 PR #29** Module C 풀 구현 대체. `compute_flow_gaps(od_q3, od_q4, mapping, threshold=0.5)` 18 tests. Supabase Q4 200건 적재 (decline 0.587~1.000)
