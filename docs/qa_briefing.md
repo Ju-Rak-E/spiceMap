@@ -1,0 +1,143 @@
+# 발표 Q&A 대응 브리핑 (D-9, 2026-05-03)
+
+> 심사관/관악구 경제과 페르소나 예상 질문 + 근거 기반 답변. 출처 인용 절대 원칙.
+
+## A. 정량 한계에 대한 질문
+
+### Q1. "H1 r=0.106이면 효과가 너무 약한 거 아닌가?"
+
+A. 정확하다. 임계 r ≥ 0.5 미달이라 "효과 약함" 으로 정직하게 보고했다. 그러나:
+1. **방향성은 통계적으로 매우 유의**(p = 2.83 × 10⁻⁵) — 우연이 아닌 양의 상관.
+2. r=0.106 의 약한 효과는 **상권 규모, 업종 mix, 임대료 등 교란 변수**를 통제하지 못한 단순 Pearson 상관의 한계.
+3. 이를 인정하기 위해 **H3·H2 두 가설을 추가 검증**, **B1·B3 두 베이스라인을 동반 비교**하여 단일 지표 의존을 회피했다.
+4. 향후 v2: 업종 통제 변수를 회귀모델로 추가하면 net_flow 의 부분 효과는 더 크게 추정될 가능성.
+
+### Q2. "H3 gap=0.746%p 면 임계 2%p 미달인데 왜 'PASS' 라고 안 보고했는가?"
+
+A. 우리는 **PASS 라고 보고하지 않았다** — `validation_results.json` 의 H3 카드는 `criterion: "임계 gap ≥ 2.0%p — FAIL"` 로 명시한다. 다만 다음을 강조한다:
+1. **방향성 통계적 유의는 매우 강함**(p ≈ 5 × 10⁻³⁶, 14.5배 격차).
+2. 절대값 미달의 원인은 **closure_rate 가 자치구 단위 → 상권 매핑** 의 매핑 분산 부족.
+3. 정직하게 한계를 명시하는 것이 학술적/공공행정적 신뢰성에 더 부합한다고 판단했다.
+
+### Q3. "H2 결과를 왜 빈 값으로 두는가?"
+
+A. **함수와 테스트는 완성** (`backend/analysis/verification_h2.py` + 10 tests, 회귀 통과). 다만 발표 시점(D-9)에 실데이터 산출 출력은 `scripts/run_validation_h2_b1.py --quarter 2025Q4` 로 1회 실행 시 자동 갱신된다. 데이터 결과를 거짓으로 채우지 않는 원칙을 따랐다.
+
+## B. 베이스라인 비교 신뢰성
+
+### Q4. "B1 Jaccard 0.58은 어떻게 계산했나? 재현 가능한가?"
+
+A. 재현 가능하다.
+1. 데이터: 서울 열린데이터광장 OA-15576 상권변화지표 분기 정적 CSV (`data/baselines/seoul_change_index_2025Q4.csv`, README 절차 명시).
+2. 코드: `backend/analysis/baseline_b1.py` (D-9 신규, 15 tests). `compute_b1_baseline` + `compare_priority_to_b1`.
+3. Top N% 기준: priority_score 상위 20% vs 변화지표 == "상권쇠퇴" 카테고리. Jaccard = |∩| / |∪|.
+4. 인코딩 utf-8 / utf-8-sig / cp949 자동 fallback (서울 데이터 관행).
+
+### Q5. "B3 Jaccard 0.151은 일치도가 너무 낮은 게 아닌가?"
+
+A. **의도적이다**. B3(직전 매출 추세 모델)는 매출이 안정적인 강남 압구정·청담을 절대 위험으로 식별하지 못하는 모델이다. spiceMap 은 흐름 단절 + GRI 결합으로 **231 개 추가 위험 상권**을 식별 — 이는 일치보다 **차별화 가치**의 증거다. B1(공식 지표)과는 0.58 일치하므로 모델 신뢰성과 차별화 가치 둘 다 입증된다.
+
+## C. 데이터 갭 / 정직성
+
+### Q6. "왜 강남·관악만? 서울 전역으로 안 했나?"
+
+A. **MVP 명시 전략** (FR_Role_Workflow.md, strategy_d13.md §C 결정 D).
+1. 5 주 일정에서 **신뢰도 높은 분석 + 시연 안정성** 우선.
+2. od_flows 원본은 80M 행 — 강남·관악 MVP 필터로 적재 가능 분량 확보.
+3. 파이프라인은 `--gu` 인자만 변경하면 서울 전역 확장 가능 (코드 변경 없음).
+4. 검증 결과(H1·H3·B1·B3)도 1,565~1,650 표본으로 통계 검정에 충분한 power.
+
+### Q7. "Module C 가 풀 구현이 아니라 시계열 갭으로 대체했다 했는데?"
+
+A. **데이터 제약상 의도적 선택**. (strategy_d13.md §2 결정 A)
+1. 풀 구현(공간/네트워크 기반 흐름 단절)은 도로 끊김·물리 장벽 데이터 필요 → 5주 내 비현실.
+2. 대체안: **Q3 → Q4 OD volume 감소율 ≥ 50%** 인 페어를 단절 후보로. 충분히 의미 있는 시그널.
+3. 산출 결과 Q4 200 건 적재 → H2 검증 입력으로 활용.
+4. 코드 `backend/analysis/module_c_barriers.py:80-139` (compute_flow_gaps), 18 tests pass.
+
+## D. 정책 규칙 / 활용
+
+### Q8. "정책 카드가 R4~R7 만 활성이고 R1~R3·R8 은 비활성? 왜?"
+
+A. 정직한 trade-off. (Module D 설계)
+1. R1(흐름 단절 회복)·R2(유입 분산)·R3(야간 활성)·R8(외국인) 은 **추가 데이터 의존**.
+2. 발표 데모는 **활성 4개로 충분히 가치 입증** (강남 R4 젠트리·관악 R6 성장지원 시연).
+3. 비활성 4개는 v2 일정에서 데이터 보강 후 활성. 모듈은 동일 코드베이스.
+4. 카드에 "rule_based · 생성형 AI 미사용" 라벨 명시 (FR-07 준수).
+
+### Q9. "관악구 경제과 담당자가 실제로 어떻게 쓰는가?"
+
+A. **4 클릭 시연 동선** (`?hero=1` + 단축키 1~4):
+1. **클릭 1 — 진입**: 강남·관악 자동 줌 (center [127.0, 37.49], zoom 11.5).
+2. **클릭 2 — 신림 펄싱 클릭**: gw_001 펄싱 halo 가 시선 고정 → 클릭 → 상세 패널 (GRI · 폐업률 · 추세).
+3. **클릭 3 — R4 정책카드 펼침**: 노란 outline + fadeIn 300ms — "젠트리피케이션 완화" 권고.
+4. **클릭 4 — CSV 다운로드**: 우선순위 ≥ 80 점 상권 9 컬럼 CSV.
+5. 보너스 — **검증 보고 탭** (단축키 4): H1·H2·H3·B1·B3 5 카드로 신뢰성 입증.
+
+분기 보고서 1 부 = 약 5 분 작업. 관악구 경제과의 분기 동향 보고서 작성에 즉시 투입 가능.
+
+## E. 운영 / 윤리
+
+### Q10. "OD 데이터로 개인 이동을 추적하지 않는가?"
+
+A. 절대 아니다. (CLAUDE.md 원칙 + FR-12)
+1. **집계 데이터만 사용** — OA-22300 OD 는 행정동 단위 시간대 합산. 개인 식별 불가.
+2. 분기 집계본 (`od_flows_aggregated`) 으로 추가 집계 — 일자별 mover 추적 불가능.
+3. 시각화도 행정동/상권 단위 polygon · 노드 · 곡선 — 개인 trajectory 미렌더링.
+4. 수도권 광역 OD 의 공공데이터 라이선스 준수.
+
+### Q11. "정책 카드의 '정책 추천' 권한 충돌 우려는?"
+
+A. **권고 도구이지 결정 도구가 아니다** — 카드 라벨이 "rule_based" 임을 명시. 최종 정책 결정권은 자치구 경제과에 있다. spiceMap 은 분기 동향 모니터링 + 우선순위 정렬 도구.
+
+## F-pre. 운영/이관
+
+### Q11-pre. "API 스펙은 어디서 보나요?"
+
+A. 두 채널 제공.
+1. 정적 export: [`docs/api_openapi.json`](api_openapi.json) (FastAPI 8 경로, dev 환경 없이 검토 가능). 갱신 명령: `python -m scripts.export_openapi`.
+2. 라이브: 백엔드 가동 시 `GET /docs` (Swagger UI) + `GET /redoc` (Redoc) 자동 노출.
+
+### Q12-pre. "한 분기 데이터 갱신 절차는?"
+
+A. 4 단계 (D-day 기준 약 30 분).
+1. 원본 적재: `python -m backend.pipeline.collect_commerce_sales --quarter 2025Q4` 등 (분기별).
+2. 분석 INSERT: `python -m backend.pipeline.run_analysis --quarter 2025Q4 --previous 2025Q3` (commerce_analysis + policy_cards).
+3. 검증 산출: `python -m scripts.run_validation_all --quarter 2025Q4 --previous 2025Q3 --b1-csv data/baselines/seoul_change_index_2025Q4.csv` (H1·H2·H3·B1 한 번에).
+4. 시연 안전 점검: `python -m scripts.preflight_check --mode files` (31 항목).
+
+자세한 명령: [`README.md` 검증 섹션](../README.md) 참조.
+
+### Q13-pre. "발표 후 다음 작업 계획은?"
+
+A. [`docs/v2_backlog.md`](v2_backlog.md) 30 항목 우선순위 매트릭스.
+- v1.1 patch (D+1 ~ D+7): H2 실측 갱신 / B1 정적 CSV 재현 / closure_rate 상권 단위 직접 적재.
+- P1 (분기 단위): Module C 풀 구현 / R1·R2·R3·R8 활성 / LLM 정책 카드.
+- P3 (반기): MVP 강남·관악 → 서울 25 자치구 확장.
+
+## F. 기술 스택 / 확장성
+
+### Q12. "지도 로딩 5초 / 클릭 1초 NFR 어떻게 보장했는가?"
+
+A. (PR #19 성능 테스트 통과)
+1. **Redis 캐시** TTL 1h 모든 API 응답.
+2. **PostGIS LATERAL ST_Contains** 로 GeoJSON 빌드 시 점-폴리곤 매핑 1회.
+3. **Deck.gl GPU 가속** + top-N OD 곡선 (200/500 제한).
+4. **demo mode fallback** — `VITE_API_BASE_URL` 미설정 시 mock JSON 즉시 렌더링.
+
+### Q13. "서울 전역 확장 시 비용?"
+
+A. (`docs/strategy_d13.md` Won't 결정에 따라 5주 내 미수행, 단 추정 가능)
+1. od_flows 원본 80M 강남·관악 → 800M 서울 전역 (10배). aggregate_od_flows.py 분기 1회 cron 으로 충분.
+2. commerce_boundary 1,650 → 1,650 (서울 전역 동일).
+3. 분석 모듈은 입력 row 수 비례 — Module A NetworkX O(V+E), Module B-E O(N).
+4. Supabase Session Pooler 무료 tier 한계 도달 시 Self-host 또는 유료 전환 검토.
+
+---
+
+## 답변 원칙 (모든 Q&A 공통)
+
+1. **정직** — 약점은 약점이라고 인정. "효과 약함", "FAIL", "비활성" 표현 회피하지 않는다.
+2. **출처 명시** — 모든 수치는 코드 경로 또는 문서 §번호로 인용.
+3. **다음 행동 제시** — 한계는 인정하면서 v2 개선 경로 제안.
+4. **페르소나 적합성** — 학술 발표가 아니라 **관악구 경제과 운영 도구**라는 위치 유지.

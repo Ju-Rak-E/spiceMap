@@ -1,0 +1,1247 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "spiceMap API",
+    "description": "서울 상권 불균형 분석 플랫폼",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/commerce/type-map": {
+      "get": {
+        "tags": [
+          "commerce"
+        ],
+        "summary": "Type Map",
+        "operationId": "type_map_api_commerce_type_map_get",
+        "parameters": [
+          {
+            "name": "gu",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "자치구 필터 (예: 강남구)",
+              "title": "Gu"
+            },
+            "description": "자치구 필터 (예: 강남구)"
+          },
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "분기 (예: 2025Q4)",
+              "default": "2025Q4",
+              "title": "Quarter"
+            },
+            "description": "분기 (예: 2025Q4)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypeMapResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gri/history": {
+      "get": {
+        "tags": [
+          "commerce"
+        ],
+        "summary": "Gri History",
+        "operationId": "gri_history_api_gri_history_get",
+        "parameters": [
+          {
+            "name": "comm_cd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "상권 코드",
+              "title": "Comm Cd"
+            },
+            "description": "상권 코드"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GriHistoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/od/flows": {
+      "get": {
+        "tags": [
+          "od"
+        ],
+        "summary": "Od Flows",
+        "operationId": "od_flows_api_od_flows_get",
+        "parameters": [
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "분기 (예: 2025Q4)",
+              "default": "2025Q4",
+              "title": "Quarter"
+            },
+            "description": "분기 (예: 2025Q4)"
+          },
+          {
+            "name": "gu",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "자치구 필터 (예: 강남구)",
+              "title": "Gu"
+            },
+            "description": "자치구 필터 (예: 강남구)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "반환할 최대 OD 흐름 수",
+              "default": 200,
+              "title": "Limit"
+            },
+            "description": "반환할 최대 OD 흐름 수"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OdFlowsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/barriers": {
+      "get": {
+        "tags": [
+          "barriers"
+        ],
+        "summary": "Barriers",
+        "operationId": "barriers_api_barriers_get",
+        "parameters": [
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "분기 (예: 2025Q4)",
+              "default": "2025Q4",
+              "title": "Quarter"
+            },
+            "description": "분기 (예: 2025Q4)"
+          },
+          {
+            "name": "gu",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "자치구 필터 (예: 강남구)",
+              "title": "Gu"
+            },
+            "description": "자치구 필터 (예: 강남구)"
+          },
+          {
+            "name": "min_score",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 0.0,
+              "description": "단절 강도 하한",
+              "default": 0.0,
+              "title": "Min Score"
+            },
+            "description": "단절 강도 하한"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BarriersResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/policy": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Policy Insights",
+        "operationId": "policy_insights_api_insights_policy_get",
+        "parameters": [
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "분기 (예: 2025Q4)",
+              "default": "2025Q4",
+              "title": "Quarter"
+            },
+            "description": "분기 (예: 2025Q4)"
+          },
+          {
+            "name": "gu",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "자치구 필터 (예: 강남구)",
+              "title": "Gu"
+            },
+            "description": "자치구 필터 (예: 강남구)"
+          },
+          {
+            "name": "comm_cd",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "특정 상권 코드 (상세 패널용)",
+              "title": "Comm Cd"
+            },
+            "description": "특정 상권 코드 (상세 패널용)"
+          },
+          {
+            "name": "min_priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 0.0,
+              "description": "우선순위 하한",
+              "default": 0.0,
+              "title": "Min Priority"
+            },
+            "description": "우선순위 하한"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Critical/High/Medium/Low 필터",
+              "title": "Severity"
+            },
+            "description": "Critical/High/Medium/Low 필터"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyCardsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/validation": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Get Validation Results",
+        "description": "H1·H2·H3 + B1·B3 검증 카드 5종 반환.\n\n실데이터 기반 갱신은 `scripts/run_validation_h2_b1.py` 산출 결과를 fixture 에\n수동 반영하는 절차를 따른다 (docs/verification_h2.md §7-3).",
+        "operationId": "get_validation_results_api_insights_validation_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResults"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/export/csv": {
+      "get": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Export Csv",
+        "operationId": "export_csv_api_export_csv_get",
+        "parameters": [
+          {
+            "name": "quarter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "분기 (예: 2025Q4)",
+              "default": "2025Q4",
+              "title": "Quarter"
+            },
+            "description": "분기 (예: 2025Q4)"
+          },
+          {
+            "name": "gu",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "자치구 필터 (예: 강남구)",
+              "title": "Gu"
+            },
+            "description": "자치구 필터 (예: 강남구)"
+          },
+          {
+            "name": "min_priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 0.0,
+              "description": "우선순위 하한 (기본 80)",
+              "default": 80.0,
+              "title": "Min Priority"
+            },
+            "description": "우선순위 하한 (기본 80)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BarrierItem": {
+        "properties": {
+          "from_comm_cd": {
+            "type": "string",
+            "title": "From Comm Cd"
+          },
+          "from_comm_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Comm Nm"
+          },
+          "to_comm_cd": {
+            "type": "string",
+            "title": "To Comm Cd"
+          },
+          "to_comm_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Comm Nm"
+          },
+          "barrier_score": {
+            "type": "number",
+            "title": "Barrier Score"
+          },
+          "barrier_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Barrier Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from_comm_cd",
+          "to_comm_cd",
+          "barrier_score"
+        ],
+        "title": "BarrierItem"
+      },
+      "BarriersResponse": {
+        "properties": {
+          "quarter": {
+            "type": "string",
+            "title": "Quarter"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "barriers": {
+            "items": {
+              "$ref": "#/components/schemas/BarrierItem"
+            },
+            "type": "array",
+            "title": "Barriers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quarter",
+          "total",
+          "barriers"
+        ],
+        "title": "BarriersResponse"
+      },
+      "CommerceProperties": {
+        "properties": {
+          "comm_cd": {
+            "type": "string",
+            "title": "Comm Cd"
+          },
+          "comm_nm": {
+            "type": "string",
+            "title": "Comm Nm"
+          },
+          "gu_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gu Nm"
+          },
+          "commerce_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commerce Type"
+          },
+          "source_comm_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Comm Type"
+          },
+          "comm_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comm Type"
+          },
+          "gri_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gri Score"
+          },
+          "flow_volume": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Volume"
+          },
+          "close_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close Rate"
+          },
+          "dominant_origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dominant Origin"
+          },
+          "analysis_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Note"
+          },
+          "centroid_lng": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Centroid Lng"
+          },
+          "centroid_lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Centroid Lat"
+          },
+          "priority_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority Score"
+          },
+          "net_flow": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Flow"
+          },
+          "degree_centrality": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degree Centrality"
+          },
+          "closure_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closure Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "comm_cd",
+          "comm_nm",
+          "gri_score",
+          "flow_volume",
+          "dominant_origin",
+          "analysis_note"
+        ],
+        "title": "CommerceProperties"
+      },
+      "Feature": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "Feature"
+          },
+          "geometry": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Geometry"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/CommerceProperties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "geometry",
+          "properties"
+        ],
+        "title": "Feature"
+      },
+      "FlowItem": {
+        "properties": {
+          "origin_adm_cd": {
+            "type": "string",
+            "title": "Origin Adm Cd"
+          },
+          "origin_adm_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Adm Nm"
+          },
+          "dest_adm_cd": {
+            "type": "string",
+            "title": "Dest Adm Cd"
+          },
+          "dest_adm_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dest Adm Nm"
+          },
+          "trip_count": {
+            "type": "number",
+            "title": "Trip Count"
+          },
+          "move_purpose": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move Purpose"
+          },
+          "sourceCoord": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcecoord"
+          },
+          "targetCoord": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetcoord"
+          }
+        },
+        "type": "object",
+        "required": [
+          "origin_adm_cd",
+          "origin_adm_nm",
+          "dest_adm_cd",
+          "dest_adm_nm",
+          "trip_count",
+          "move_purpose"
+        ],
+        "title": "FlowItem"
+      },
+      "GriHistoryResponse": {
+        "properties": {
+          "comm_cd": {
+            "type": "string",
+            "title": "Comm Cd"
+          },
+          "comm_nm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comm Nm"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/GriPoint"
+            },
+            "type": "array",
+            "title": "History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "comm_cd",
+          "comm_nm",
+          "history"
+        ],
+        "title": "GriHistoryResponse"
+      },
+      "GriPoint": {
+        "properties": {
+          "quarter": {
+            "type": "string",
+            "title": "Quarter"
+          },
+          "gri_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gri Score"
+          },
+          "flow_volume": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Volume"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quarter",
+          "gri_score",
+          "flow_volume"
+        ],
+        "title": "GriPoint"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "OdFlowsResponse": {
+        "properties": {
+          "quarter": {
+            "type": "string",
+            "title": "Quarter"
+          },
+          "total_flows": {
+            "type": "integer",
+            "title": "Total Flows"
+          },
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowItem"
+            },
+            "type": "array",
+            "title": "Flows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quarter",
+          "total_flows",
+          "flows"
+        ],
+        "title": "OdFlowsResponse"
+      },
+      "PolicyCard": {
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id",
+            "description": "규칙 식별자 (예: R4)"
+          },
+          "commerce_code": {
+            "type": "string",
+            "title": "Commerce Code"
+          },
+          "commerce_name": {
+            "type": "string",
+            "title": "Commerce Name"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "Critical",
+              "High",
+              "Medium",
+              "Low"
+            ],
+            "title": "Severity"
+          },
+          "policy_text": {
+            "type": "string",
+            "title": "Policy Text",
+            "description": "정책 템플릿 한글 출력 (UI 카드 제목)"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale",
+            "description": "근거 1문장 (UI 카드 상세 표시)"
+          },
+          "triggering_metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Triggering Metrics",
+            "description": "규칙 발동에 기여한 지표 값"
+          },
+          "generation_mode": {
+            "type": "string",
+            "const": "rule_based",
+            "title": "Generation Mode",
+            "default": "rule_based"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_id",
+          "commerce_code",
+          "commerce_name",
+          "severity",
+          "policy_text",
+          "rationale"
+        ],
+        "title": "PolicyCard",
+        "description": "정책 추천 카드 — 규칙 1건 발동당 1개 생성."
+      },
+      "PolicyCardsResponse": {
+        "properties": {
+          "quarter": {
+            "type": "string",
+            "title": "Quarter"
+          },
+          "total_cards": {
+            "type": "integer",
+            "title": "Total Cards"
+          },
+          "generation_mode": {
+            "type": "string",
+            "title": "Generation Mode",
+            "default": "rule_based"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyCard"
+            },
+            "type": "array",
+            "title": "Cards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quarter",
+          "total_cards",
+          "cards"
+        ],
+        "title": "PolicyCardsResponse"
+      },
+      "TypeMapResponse": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "FeatureCollection"
+          },
+          "quarter": {
+            "type": "string",
+            "title": "Quarter"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "type": "array",
+            "title": "Features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quarter",
+          "total",
+          "features"
+        ],
+        "title": "TypeMapResponse"
+      },
+      "ValidationCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "카드 식별자 (예: H1, H2, H3, B1, B3)"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "metric_primary": {
+            "type": "string",
+            "title": "Metric Primary"
+          },
+          "metric_secondary": {
+            "type": "string",
+            "title": "Metric Secondary"
+          },
+          "sample_size": {
+            "type": "string",
+            "title": "Sample Size"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "결과 산출 근거 코드/문서 경로"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "headline",
+          "metric_primary",
+          "metric_secondary",
+          "sample_size",
+          "summary",
+          "criterion",
+          "source"
+        ],
+        "title": "ValidationCard",
+        "description": "가설/베이스라인 카드 1건."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationResults": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "quarter": {
+            "type": "string",
+            "title": "Quarter"
+          },
+          "previous_quarter": {
+            "type": "string",
+            "title": "Previous Quarter"
+          },
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationCard"
+            },
+            "type": "array",
+            "title": "Cards"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "quarter",
+          "previous_quarter",
+          "cards"
+        ],
+        "title": "ValidationResults",
+        "description": "검증 보고 응답."
+      }
+    }
+  }
+}

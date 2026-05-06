@@ -1,0 +1,67 @@
+[
+  {
+    "id": "b1",
+    "sourceId": "GW_BONGCHEON",
+    "targetId": "GC_YEOKSAM",
+    "sourceName": "관악구 봉천동 일대",
+    "targetName": "강남구 역삼동 일대",
+    "sourceCoord": [126.952, 37.477],
+    "targetCoord": [127.036, 37.500],
+    "affectedVolume": 8500,
+    "score": 0.86,
+    "severity": "high",
+    "type": "강남대로 도로 공사 (2026Q1~)"
+  },
+  {
+    "id": "b2",
+    "sourceId": "GW_SILLIM",
+    "targetId": "GC_YEOKSAM",
+    "sourceName": "관악구 신림동 일대",
+    "targetName": "강남구 역삼동 일대",
+    "sourceCoord": [126.929, 37.484],
+    "targetCoord": [127.036, 37.500],
+    "affectedVolume": 6200,
+    "score": 0.78,
+    "severity": "high",
+    "type": "2호선 환승 동선 단절"
+  },
+  {
+    "id": "b3",
+    "sourceId": "GC_CHEONGDAM",
+    "targetId": "GC_SINSA",
+    "sourceName": "강남구 청담동 일대",
+    "targetName": "강남구 신사동 일대",
+    "sourceCoord": [127.047, 37.524],
+    "targetCoord": [127.020, 37.526],
+    "affectedVolume": 4100,
+    "score": 0.58,
+    "severity": "medium",
+    "type": "압구정역 출구 폐쇄로 인한 보행 동선 우회"
+  },
+  {
+    "id": "b4",
+    "sourceId": "GW_BONGCHEON",
+    "targetId": "GW_SILLIM",
+    "sourceName": "관악구 봉천동 일대",
+    "targetName": "관악구 신림동 일대",
+    "sourceCoord": [126.952, 37.477],
+    "targetCoord": [126.929, 37.484],
+    "affectedVolume": 2400,
+    "score": 0.50,
+    "severity": "medium",
+    "type": "신림선 공사 구간 보행자 단절"
+  },
+  {
+    "id": "b5",
+    "sourceId": "GC_YEOKSAM",
+    "targetId": "GW_SILLIM",
+    "sourceName": "강남구 역삼동 일대",
+    "targetName": "관악구 신림동 일대",
+    "sourceCoord": [127.036, 37.500],
+    "targetCoord": [126.929, 37.484],
+    "affectedVolume": 1200,
+    "score": 0.32,
+    "severity": "low",
+    "type": "강남순환로 IC 진출 제한"
+  }
+]

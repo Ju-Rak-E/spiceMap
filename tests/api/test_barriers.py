@@ -28,6 +28,8 @@ class TestBarriers:
                 to_comm_cd="3110021", to_comm_nm="서울대입구역 상권",
                 to_centroid_lng=126.952, to_centroid_lat=37.481,
                 barrier_score=0.82, barrier_type="주말 쇼핑 유입 부족",
+                source_lng=126.9291, source_lat=37.4844,
+                target_lng=126.9527, target_lat=37.4812,
             )
         ]
         app.dependency_overrides[get_session] = lambda: mock_db
@@ -43,6 +45,8 @@ class TestBarriers:
         assert data["barriers"][0]["from_centroid_lat"] == 37.484
         assert data["barriers"][0]["to_centroid_lng"] == 126.952
         assert data["barriers"][0]["to_centroid_lat"] == 37.481
+        assert data["barriers"][0]["sourceCoord"] == [126.9291, 37.4844]
+        assert data["barriers"][0]["targetCoord"] == [126.9527, 37.4812]
         app.dependency_overrides.clear()
 
     def test_empty_when_no_data(self):

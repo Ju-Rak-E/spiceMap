@@ -30,6 +30,8 @@ def _row(**overrides):
         comm_cd="3110053",
         comm_nm="신림 골목상권",
         gu_nm="관악구",
+        adm_cd="1162010100",
+        adm_nm="신림동",
         source_comm_type="골목상권",  # PR #20: cb.comm_type 원천 보존
         geometry={"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
         centroid_lng=126.93,
@@ -65,6 +67,8 @@ class TestTypeMapNewColumns:
         assert props["net_flow"] == 3200.0
         assert props["degree_centrality"] == 0.65
         assert props["closure_rate"] == 8.1
+        assert props["adm_cd"] == "1162010100"
+        assert props["adm_nm"] == "신림동"
 
         app.dependency_overrides.clear()
 
@@ -117,5 +121,22 @@ class TestTypeMapNewColumns:
         cache_key_arg = cache.get.call_args[0][0]
         assert "2025Q4" in cache_key_arg
         assert "관악구" in cache_key_arg
+
+        app.dependency_overrides.clear()
+
+    def test_type_map_returns_wgs84_geometry_sql(self):
+        mock_db = MagicMock()
+        mock_db.execute.return_value.fetchall.return_value = [_row()]
+        app.dependency_overrides[get_session] = lambda: mock_db
+        app.dependency_overrides[get_cache] = _mock_cache
+        client = TestClient(app)
+
+        response = client.get("/api/commerce/type-map?quarter=2025Q4&gu=관악구")
+
+        assert response.status_code == 200
+        sql = str(mock_db.execute.call_args.args[0])
+        assert "ST_AsGeoJSON(ST_Transform(cb.geom, 4326))" in sql
+        assert "ST_Centroid(ST_Transform(cb.geom, 4326))" in sql
+        assert "ST_PointOnSurface(ST_Transform(cb.geom, 4326))" in sql
 
         app.dependency_overrides.clear()

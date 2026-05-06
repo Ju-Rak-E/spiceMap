@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-04-29 (Week 3 마감일 / Week 4 시작)
+> 최종 갱신: 2026-05-04 (Week 4 Day 6)
 
 ---
 
@@ -97,7 +97,8 @@
 - [x] closure_rate spatial join 정밀화 — **2026-04-29 PR #23** signgu_cd 기반(adm_cd 앞 5자리), PostGIS LATERAL ST_Contains, fallback 휴리스틱 유지. Supabase 검증: 1,650 commerces 매핑 + 178 closure 결합
 - [x] admin_boundary.gu_nm 백필 + 자동 도출 — **2026-04-29 PR #24** Supabase 425/425 자치구 채워짐, `load_spatial.py`에 `SEOUL_SIGUNGU_CD_TO_NM` 추가로 향후 재적재 자동화. type-map gu 필터 정상 작동(강남 104·관악 74)
 - [x] 수상 전략 + 실용성 강화 플랜(D-13) — **2026-04-29 PR #22** `docs/strategy_d13.md`. 핵심 의사결정 5건 + 13일 일정 + 평가축 매핑
-- [ ] 2025Q3 od_flows_aggregated 적재 — Dev-C 진행 중 (서울 OA-22300 일별 ZIP 92일 자동 다운로드 + MVP 필터 + 분기 집계 + Supabase MCP 적재 파이프라인)
+- [x] 2025Q3 od_flows_aggregated 적재 — **2026-04-29** 서울 OA-22300 일별 ZIP 92일(7/1~9/30) 자동 다운로드 + MVP 필터 + 분기 집계 + psycopg2 `execute_values` 업로드. 인코딩 fallback(cp949→utf-8), 5일마다 rolling 컴팩트+체크포인트로 메모리 35MB 제한. 결과 183,506행 (median 256.4, max 3,059,390, total 415M)
+- [x] 2025Q4 od_flows_aggregated 재적재 — **2026-04-29** Q3 적재 후 검증에서 Q4 `trip_count_sum` 단위 불일치 발견(median 3.5 vs Q3 256). 동일 파이프라인으로 92일(10/1~12/31) 재처리 + `ON CONFLICT DO UPDATE` 덮어쓰기. 결과 182,971행 (median 256.8, max 2,898,398, total 405M). Q3·Q4 비율 0.94~1.05로 동등 척도 확보 → trend_penalty/H2/H3/Hero shot 모두 활성
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작.
 
@@ -106,20 +107,34 @@
 ## Week 4 (4/29 ~ 5/5) — 완성도 + 검증
 
 ### Dev-A
-- [ ] 데이터 출처 아이콘 API 연동 (각 지표별 공공데이터포털 OA-ID 매핑)
-- [ ] 캐시 데이터 폴백 + "캐시 데이터로 표시 중" 안내
-- [ ] 재생 모드 (정적 캐시 데이터 시연용)
+- [x] 데이터 출처 아이콘 API 연동 — **PR #38 nik** `backend/api/data_sources.py` 신규 (`/api/data_sources`), 각 지표별 OA-ID 매핑
+- [x] 캐시 데이터 폴백 + "캐시 데이터로 표시 중" 안내 — **PR #38 nik** `backend/api/cache_utils.py`
+- [x] 재생 모드 (정적 캐시 데이터 시연용) — **PR #38 nik**
 
 ### Dev-B
-- [ ] 흐름 단절 레이어 토글 (점선 강조 + 툴팁)
-- [ ] 분기 비교 뷰 (두 핸들 슬라이더 → 나란히 비교)
-- [ ] 접근성 검토 (색각 이상 시뮬레이션) + 수정
+- [x] 흐름 단절 레이어 토글 (점선 강조 + 툴팁) — **PR #39 kbh 3-1** `BarrierLayer` + 토글 + hover 카드 (Claude-E + 직접 통합)
+- [x] 분기 비교 뷰 (두 핸들 슬라이더 → 나란히 비교) — **PR #39 kbh 3-2** `kpiDelta` 표시 + `compareMode` (Claude-F)
+- [x] 접근성 검토 (색각 이상 시뮬레이션) + 수정 — **PR #39 kbh** Codex aria-label 보강 + 색각 구분 수동 확인
+- [x] P0 발표 임팩트 5종 — **PR #39 kbh** 해설바·초기 자치구·정책카드·GRI 테두리·OD 강조
+- [x] P1 신뢰 보강 — **PR #39 kbh** Toast 알림(`ToastProvider`/`ToastContext`) + placeholder 문구 정리
+- [x] P3 폴리시 4종 — **PR #39 kbh** 상권경계·시각화상수·성능측정·태블릿반응형 (`useViewportMode`)
+- [x] API 데이터 계약 align + commerce boundary visibility — **PR #39 kbh** `0436665` `ed249e3`
+- [x] Hero shot 시연 동선 정밀화 — **2026-05-03 b763b20** PR1 펄싱+R4 강조 (`createHeroPulseLayer` 1.5s halo, `?hero=1` 시 전 zoom 가시 / `CommerceDetailPanel` 정책카드 R4 우선 정렬 / `PolicyCard.highlight` 노란 outline + fadeIn 300ms) + PR2 CSV toast 피드백(`FlowControlPanel`) + 검증 탭(`ValidationView` H1/H3/B1/B3 4카드, `/api/insights/validation` + 정적 fallback `frontend/src/data/validation_results.json`) + `?hero=1` 토글 + `HERO_NODE_ID='gw_001'`(신림) + 단축키 1~4. `docs/hero_shot_scenario.md` 시간축 1:1 정렬, `docs/hero_shot_assets/README.md` 자산 인벤토리. InsightStrip light theme fix(0d8feda). 178 vitest 통과, npm run build 성공.
+- [x] 컴포넌트 회귀 강화 — **2026-05-04** ValidationView 8 tests(`f0e7c81`) + PolicyCard 10 tests(`bf04622`) + `computeHeroPulseFrame` helper 분리 + 7 tests(`1a33bd8`). frontend vitest 178 → 203 (+25).
+- [x] PR #40 main 통합 머지 — **2026-05-04 b3f4c48** PR #38 nik (Dev-A 영역) + PR #39 kbh (Dev-B P0~P3) 충돌 7파일 해결. backend pytest 248 → 260 / frontend vitest 203 → 246 / build 2.0MB / gzip 582KB ✅
+- [x] 흐름단절 파티클 애니메이션 — **2026-05-04 kbh** `DisruptedBarrierParticleLayer` + `barrierRouteAnimation` 신규. showBarriers ON 시 severity 색상 파티클이 경로를 따라 흐르고 t=0.5 단절 지점에서 scatter+fadeout. 44 tests 신규. frontend vitest 246 → 304. FlowBarrierLayer 원래 점선 베지어 복원.
 
 ### Dev-C
-- [ ] H2 검증: 흐름 단절 → 폐업 정합도
-- [ ] H3 검증: GRI 고위험 → 다음 분기 임대료/프랜차이즈 방향성
-- [ ] 베이스라인 B1~B3 vs 제안 모델 성능 비교 표
-- [ ] 검증 결과 패널 콘텐츠 작성 (상관계수·방향성 일치 수치)
+- [x] Module C 시계열 갭 알고리즘 + flow_barriers 적재 — **2026-04-30 PR #29** Module C 풀 구현 대체. `compute_flow_gaps(od_q3, od_q4, mapping, threshold=0.5)` 18 tests. Supabase Q4 200건 적재 (decline 0.587~1.000)
+- [x] commerce_type 분류기 v1.1 임계 조정 — **2026-04-30 PR #31** unclassified 902→687(-13.1%p), 방출형 0→117 / 안정형 1→98 신규 분류
+- [x] commerce_sales 2025Q3 적재 + run_analysis Q3 실행 — **2026-04-30** Q3 commerce_analysis 1650 + policy_cards 419 적재 (trend_penalty/H3 활성)
+- [x] H1 검증 실데이터 — **2026-04-30 PR #30** Q4 net_flow vs Q4 sales Pearson **r=0.106 / p=2.83e-05 / n=1565** (방향 ✓ 효과 약함, FAIL r<0.5)
+- [x] H3 검증 실데이터 — **2026-04-30 PR #30** Q3 GRI 상위 20% Q4 폐업률 vs 하위 80% **gap=0.75pp / p=5.26e-36 / n=1650** (방향 ✓ 절대 격차 작음, FAIL gap<2.0pp). 한계: closure_rate 자치구 단위 매핑 → 분산 부족
+- [x] H2 검증 함수 구현 — **2026-05-03** `backend/analysis/verification_h2.py` (`aggregate_barrier_intensity` + `compute_h2_alignment`, Pearson/Spearman, 임계 r ≥ 0.3 + p < 0.05). 10 tests pass. 실데이터 산출은 `scripts/run_validation_all.py --quarter 2025Q4 --previous 2025Q3` (H1·H2·H3·B1 통합) 또는 `scripts/run_validation_h2_b1.py` (H2+B1 좁은 범위)
+- [x] 베이스라인 B1 코드 구현 — **2026-05-03** `backend/analysis/baseline_b1.py` (`load_change_index_csv` utf-8/utf-8-sig/cp949 자동 + `compute_b1_baseline` 상권쇠퇴 binary + `compare_priority_to_b1` Jaccard). 15 tests pass. 정적 CSV 절차 `data/baselines/README.md`. 기존 산출(Jaccard 0.58, 14건) 재현 가능
+- [x] 베이스라인 B3 (기존 매출 추세 모델) — **PR #36** Jaccard 0.151 (PASS, 추가 위험 231건)
+- [x] 검증 결과 패널 콘텐츠 작성 — **2026-05-03 b763b20+88adc9f** `ValidationView` 5카드 (H1 r=0.106 / H2 함수+카드 / H3 gap=0.746%p / B1 J=0.58 / B3 J=0.151) + 백엔드 `GET /api/insights/validation` (`backend/api/validation.py`, 5 tests, env override 가능). 단일 소스 `frontend/src/data/validation_results.json` — backend 가 동일 파일 응답
+- [x] 프론트 Tier 1 — **2026-04-30 PR #32** 가치 명제 헤더 2단 + MVP 강남·관악 자동 줌 (center [127.0, 37.49], zoom 11.5)
 
 **주차 완료 기준**: 3분 발표 시나리오 1회 시연 통과, H1~H3 수치 확정.
 
@@ -134,12 +149,12 @@
 - [ ] 태블릿 반응형 최종 확인 (Dev-B)
 
 ### 제출 산출물
-- [ ] 웹 데모 최종 버전 배포 (Dev-B)
+- [~] 웹 데모 최종 버전 배포 — **2026-05-03** Vercel(`frontend/vercel.json`) + Netlify(`frontend/netlify.toml`) 정적 호스팅 설정 + `.env.production.example` + `docs/deployment_guide.md` (절차/검증/일정) + `scripts/preflight_check.py` (시연 안전 점검 25 항목, files/files+server/remote 모드, 10 tests) + `scripts/export_openapi.py` → `docs/api_openapi.json` 8 경로. D-3 preview, D-1 production promote 권장. 실제 배포는 V-World 도메인 등록 후 Dev-B 수동
 - [ ] 시연 영상 녹화 (Dev-B 주도)
-- [ ] PDF 정책 요약 리포트 예시 2종 (Dev-C)
-- [ ] 데이터 결합 구조도 1장 (Dev-C)
-- [ ] KPI/검증 결과 표 1장 (Dev-C)
-- [ ] 발표 Q&A 대응 자료 (Dev-C)
+- [x] PDF 정책 요약 리포트 예시 2종 — **2026-05-03** `docs/policy_report_gangnam_apgujeong.md` (R4 젠트리피케이션) + `docs/policy_report_gwanak_sillim.md` (Hero shot 기준 상권, R4 흐름 단절 회복). pandoc 변환으로 PDF 산출 가능
+- [x] 데이터 결합 구조도 1장 — **2026-05-03** `docs/data_integration_diagram.md` (Mermaid: 공공API 6 → PostGIS 11 테이블 → 분석 5모듈 → API 6 → 프론트)
+- [x] KPI/검증 결과 표 1장 — **2026-05-03** `docs/kpi_summary.md` (가설 H1·H2·H3, 베이스라인 B1·B3, 시스템 KPI, 정책 규칙 활성표, 한계 보고)
+- [x] 발표 Q&A 대응 자료 — **2026-05-03** `docs/qa_briefing.md` (13개 예상 질문 + 출처 인용 답변, A 정량 한계 / B 베이스라인 신뢰성 / C 데이터 갭 / D 정책 규칙 / E 운영·윤리 / F 기술 스택)
 
 ---
 
@@ -147,3 +162,116 @@
 
 - 2026-04-16: Dev-A 응답 대기 시한 (od_flows 등 3종 적재)
 - 2026-04-17: 미완료 시 범위 축소 검토 조건 (서울 전역 → 강남·관악만)
+
+---
+
+## 진행 중 작업 (Dev-B): 상권 유형별 색상 구분 복원 (2026-04-29)
+
+### 문제
+
+지도 노드들이 `commerce type`이 아닌 `startup fitColor`(4단계)로 색칠되고, 후보 필터(`fitLevel === 'recommended'`)로 인해 표시 노드 다수가 녹색 1색으로 수렴 → 범례의 6 유형 색상 약속과 불일치.
+
+### 근본 원인
+
+`frontend/src/layers/CommerceNodeLayer.ts:22-26` `getCandidateColor()`가 `deriveStartupSummary(node).fitColor`를 사용 (startup fit 색상). 컨텍스트 레이어도 고정 회색(`[92,111,128,60]`)이라 유형 식별 불가.
+
+### 설계 결정
+
+| 시각 채널 | 인코딩 |
+|---|---|
+| 색상 | 상권 유형 (6종, `COMMERCE_COLORS[node.type].fill`) |
+| 크기 | 창업 적합도 (`deriveStartupSummary().fitScore`, 후보만 8~16px) |
+| 테두리 | 선택 상태 (기존 유지) |
+
+색각 이상 대응(FR-11): 1차에서는 색+크기+테두리 + 호버 카드의 심볼로 대응, 항시 IconLayer 심볼은 후속.
+
+### 단계
+
+- [x] Phase 1: `colorUtils.ts` 추출 (hexToRgb 분리 + 단위 테스트)
+- [x] Phase 2: `CommerceNodeLayer.ts` 색상 로직 변경 + 테스트
+  - 후보 노드: `COMMERCE_COLORS[type].fill` (alpha 230, 선택 시 255)
+  - 컨텍스트 노드: 동일 유형색 (alpha 90)
+- [ ] Phase 3: 시각 검증 (`npm run dev`)
+
+### 영향 파일
+
+- `frontend/src/utils/colorUtils.ts` (신규)
+- `frontend/src/utils/colorUtils.test.ts` (신규)
+- `frontend/src/layers/CommerceNodeLayer.ts` (수정)
+- `frontend/src/layers/griNodeStyle.test.ts` (확장)
+
+---
+
+## Week 4 후반 — Dev-B 보완·미완성 분담 계획 (2026-05-03 확정)
+
+> CommerceLegend / CLASSIFIED_TYPES는 보류. 보완 10항 + 미완성 5항을 Codex와 Claude가 분담.
+> 마감: P0 5/5, P1 5/7, P2 5/10, P3 5/12 (대회 제출일).
+
+### Phase 1 — P0 발표 임팩트 (5/4~5/5)
+
+| ID | 작업 | 담당 | 추정 |
+|----|------|------|------|
+| 1-1 | 상단 해설바 통일 (Map.tsx → summaryFormatter) | Codex-1 | 30분 |
+| 1-2 | 초기 자치구 선택 (강남·관악 기본 선택) | Codex-2 | 30분 |
+| 1-3 | PolicyCard 상세 패널 연결 | Claude-A | 1.5시간 |
+| 1-4 | GRI 위험도 테두리 (70+/40~69/<40 임계값) | Codex-3 | 1시간 |
+| 1-5 | 선택 상권 OD 강조 (admCd 매핑 설계 포함) | Claude-B | 2~3시간 |
+
+### Phase 2 — P1 신뢰 보강 (5/6~5/7)
+
+| ID | 작업 | 담당 | 추정 |
+|----|------|------|------|
+| 2-1 | "준비중"/"데이터 없음" 문구 정리 | Claude-C | 1시간 |
+| 2-2 | CSV 다운로드 실패 토스트 | Claude-D (컴포넌트) → Codex-8 (통합) | 1.5시간 |
+| 2-3 | 색각 시뮬 검증 | Claude-H 수동 | 1.5시간 |
+| 2-4 | aria-label 보강 | Codex-4 | 1시간 |
+
+### Phase 3 — P2 신규 기능 (5/8~5/10)
+
+| ID | 작업 | 담당 | 추정 |
+|----|------|------|------|
+| 3-1 | 흐름 단절 레이어 (toggle/점선/툴팁) | Claude-E (훅·통합) → Codex-9 (mock·Layer) | 4~5시간 |
+| 3-2 | 분기 비교 KPI delta (듀얼 슬라이더는 미룸) | Claude-F | 4시간 |
+
+### Phase 4 — P3 발표용 폴리시 (5/11~5/12)
+
+| ID | 작업 | 담당 | 추정 |
+|----|------|------|------|
+| 4-1 | 상권 경계 폴리곤 (BoundaryLayerManager 패턴 복제) | Codex-5 | 2시간 |
+| 4-2 | 시각화 상수 재조정 (실데이터 분포 기준) | Codex-6 | 1시간 |
+| 4-3 | 지도 로딩 성능 측정 (performance.mark) | Codex-7 | 30분 |
+| 4-4 | 발표 시나리오 애니메이션 (?demo=scenario) | Claude-G | 3시간 |
+| 4-5 | 태블릿 1024px / 실데이터 E2E | Claude-H 수동 | 2시간 |
+
+### 분담 원칙
+
+- Codex: 단일 파일·기계적 변경·테스트 추가·mock JSON. 발주문에 "Surgical change. 요청 외 변경 금지" 명시.
+- Claude: 멀티 파일 통합·데이터 매핑 설계·신규 컴포넌트 아키텍처·UX 판단.
+
+### 의존성 / 블로커
+
+- 1-5 OD 강조: `CommerceNode.admCd` 추가 후 `OD.sourceId/targetId`(adm_cd)와 매칭. Dev-A 응답에 adm_cd 추가 요청 동반 (그동안 mock 우선).
+- 3-1 흐름 단절: `/api/barriers` 가용성. 미가용 시 mock 우선.
+- 4-1 상권 경계: `commerce_boundary` 적재 (Dev-A 블로커). 그 전에는 mock GeoJSON.
+
+### 진행 상태
+
+- [x] 1-1 (Codex) / [x] 1-2 (Codex) / [x] 1-3 (Claude-A) / [x] 1-4 (Codex) / [x] 1-5 (Claude-B) — **2026-05-03 P0 전체 완료**
+- [x] 2-1 (Claude-C) / [x] 2-2 (Claude-D + 직접 통합) / [x] 2-3 (수동 색각 확인) / [x] 2-4 (Codex) — **2026-05-03 P1 완료**
+- [x] 3-1 (Claude-E + 직접 통합) / [x] 3-2 (Claude-F) — **2026-05-03 P2 완료**
+- [x] 4-1 (Codex) / [x] 4-2 (Codex) / [x] 4-3 (Codex) / [x] 4-4 (직접 통합) / [x] 4-5 (1024px·실사용 확인) — **2026-05-03 P3 완료**
+
+---
+
+## Dev-B 종료 검토 메모 (2026-05-03)
+
+- [x] 색각 구분 수동 확인 완료
+- [x] CSV 다운로드 확인 완료
+- [x] 흐름 단절 카드 겹침 수정 확인 완료
+- [x] 상권 경계 폴리곤 레이어 구현 및 선택 하이라이트 보완
+- [x] `/api/barriers` live row 좌표 보존 보완
+- [x] OD 하이라이트용 `adm_cd` 계약 보완
+- [x] API 상권 경계 선택 매칭 `comm_cd` 대응
+- [x] `commerce_analysis` NaN metric NULL 변환 보완
+
+남은 항목은 발표 준비와 운영 DB 기준 최종 확인입니다.

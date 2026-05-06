@@ -2,6 +2,7 @@
 
 > 작성: 2026-04-22 / 김광오 (Dev-C)
 > 갱신: 2026-04-29 — Week 3 PR 2 (Supabase 이전) 시점 메시지로 교체
+> 갱신: 2026-05-03 — D-9 patch 추가 (발표 준비 시점 적재 현황·잔여 협의)
 > 수신: 남인경 (Dev-A, @Ninky0, 2020113392@dgu.ac.kr)
 > 근거: `docs/week2_decisions.md` Section 1, `docs/od_flows_aggregation.md`, `prompt_plan.md` Week 3 PR 2
 
@@ -139,3 +140,52 @@ PR 2 머지 목표: 2026-04-29 EOD (Week 3 마감 4/28 +1일).
 | `run_analysis.py` 분석 INSERT 파이프라인 | ✅ 완료 (4/29) | `backend/pipeline/run_analysis.py` |
 | `/api/commerce/type-map` 5컬럼 노출 | ✅ 완료 (4/29) | 응답 properties 확장 |
 | `/api/insights/policy` policy_cards 어댑터 | ✅ 완료 (PR #19) | 기존 구현 |
+
+---
+
+## D-9 patch (2026-05-03, 발표 준비 시점)
+
+상황 변화: 4/29 메시지 발송 전후 Dev-C 가 우회 절차로 다음 항목을 직접 적재 완료. Dev-A 회신 없이 종결.
+
+### 적재 완료 항목
+
+| 항목 | 행 수 | 출처 |
+|------|------|------|
+| `od_flows_aggregated` Q3 | 183,506 | prompt_plan L100 (서울 OA-22300 92일 집계, 5일 rolling) |
+| `od_flows_aggregated` Q4 | 182,971 | prompt_plan L101 (Q3 比 median 0.94~1.05, 동등 척도) |
+| `admin_boundary` | 425/425 | PR #24 (gu_nm 백필 + SEOUL_SIGUNGU_CD_TO_NM 자동화) |
+| `commerce_boundary` | 1,650 | (서울 전역) |
+| `adm_comm_mapping` | 1,650 | PR #23 (signgu_cd 기반, LATERAL ST_Contains) |
+| `store_info` Q3+Q4 | 5,599 (2019Q1~2025Q4) | (분기 폐업률 산출 가능) |
+| `commerce_sales` Q3+Q4 | Q3+Q4 적재 | prompt_plan L122 (Q3 추가 적재 2026-04-30) |
+| `flow_barriers` Q4 | 200 건 | PR #29 Module C 시계열 갭 (decline 0.587~1.000) |
+| `commerce_analysis` Q3 | 1,650 | PR #19 + 2026-04-30 run_analysis Q3 실행 |
+| `policy_cards` Q3 | 419 | 동상 (R4~R7 활성) |
+
+### 잔여 (Dev-C 자체 처리)
+
+| 항목 | 절차 |
+|------|------|
+| `commerce_analysis` Q4 | `python -m backend.pipeline.run_analysis --quarter 2025Q4 --previous 2025Q3` 1회 실행 |
+| `policy_cards` Q4 | run_analysis 동시 산출 |
+| H2/B1 실데이터 산출 | `python -m scripts.run_validation_h2_b1 --quarter 2025Q4` |
+| OA-15576 정적 CSV (B1) | `data/baselines/seoul_change_index_2025Q4.csv` 다운로드 |
+
+### Dev-A 잔여 협의 사항
+
+1. **발표용 시연 서버** (D-3 ~ D-1)
+   - Dev-C 가 Vercel 정적 + demo mode 자체 진행 (백엔드 의존 없음).
+   - 풀 백엔드 호스팅 옵션: `docs/deployment_guide.md §3` 참조.
+   - Dev-A 별도 협의 **불요**.
+
+2. **서울 전역 확장** (Week 5 또는 발표 후)
+   - Dev-C 가 강남·관악 MVP 로 발표 진행. 전역 확장은 v2 일정.
+   - 본 발표(2026-05-12) 이후 협의.
+
+3. **D-1 감사 메시지** (5/11)
+   - 발표 전 PR 머지 + Supabase 적재 협조에 대한 별도 감사 메시지 발송 예정.
+
+### 본 메시지 종결 상태
+
+기존 PR 2 (Supabase 이전) 메시지는 **Dev-A 회신 없이 Dev-C 우회로 사실상 종결**.
+v2 기획 단계 (발표 후) 에서 별도 메시지로 재시작.

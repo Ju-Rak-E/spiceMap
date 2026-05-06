@@ -13,6 +13,9 @@ class BarrierItem(BaseModel):
     to_centroid_lat: float | None = None
     barrier_score: float
     barrier_type: str | None = None
+    sourceCoord: tuple[float, float] | None = None
+    targetCoord: tuple[float, float] | None = None
+    affected_volume: int | None = None
 
 
 class BarriersResponse(BaseModel):

@@ -1,11 +1,12 @@
 # FastAPI 엔드포인트 명세 (spiceMap)
 
-> 기준일: 2026-04-29
-> 기준: 실제 코드 구현 상태 (Week 4 완료 기준)
-> 서버: `http://localhost:8000`
+
+> 기준일: 2026-05-03  
+> 기준: 현재 `backend/` 코드와 Dev-B 프론트 연동 상태  
+> 서버: `http://localhost:8000`  
 > Swagger UI: `http://localhost:8000/docs`
 
-기획 명세가 아니라 현재 `backend/` 코드 기준으로 정리한 API 문서입니다.
+기획 명세가 아니라 현재 코드 기준의 API 계약 문서입니다.
 
 ---
 
@@ -13,14 +14,14 @@
 
 | 엔드포인트 | 상태 | 설명 |
 |-----------|------|------|
-| `GET /health` | ✅ 완료 | 헬스체크 |
-| `GET /api/commerce/type-map` | ✅ 완료 | GeoJSON FeatureCollection 반환 |
-| `GET /api/gri/history` | ✅ 완료 | 상권 GRI 시계열 반환 |
-| `GET /api/od/flows` | ✅ 완료 | OD 이동 흐름 목록 반환 |
-| `GET /api/barriers` | ✅ 완료 | 흐름 단절 구간 목록 반환 |
-| `GET /api/insights/policy` | ✅ 완료 | 정책 추천 카드 + 우선순위 목록 반환 |
-| `GET /api/export/csv` | ✅ 완료 | 우선순위 상권 CSV 다운로드 |
-| `GET /api/data-sources` | ✅ 완료 | 공공데이터 출처 매핑 (FR-06) |
+| `GET /health` | 구현 완료 | 헬스체크 |
+| `GET /api/commerce/type-map` | 구현 완료 | 상권 GeoJSON, 유형, 행정동 키, 분석 지표 반환 |
+| `GET /api/gri/history` | 구현 완료 | 상권 GRI 시계열 반환 |
+| `GET /api/od/flows` | 구현 완료 | 행정동 OD 흐름과 좌표 반환 |
+| `GET /api/barriers` | 구현 완료 | 흐름 단절 구간과 좌표 반환 |
+| `GET /api/insights/policy` | 구현 완료 | 규칙 기반 정책 카드 반환 |
+| `GET /api/export/csv` | 구현 완료 | 우선순위 상권 CSV 다운로드 |
+| `GET /api/data-sources` | 구현 완료 | 공공데이터 출처 매핑 (FR-06) |
 
 ### 공통 오류 처리 (Week 4 추가)
 
@@ -41,8 +42,6 @@
 
 헬스체크 엔드포인트.
 
-**응답**
-
 ```json
 { "status": "ok" }
 ```
@@ -51,7 +50,7 @@
 
 ## `GET /api/commerce/type-map`
 
-상권 경계와 분석 결과를 GeoJSON `FeatureCollection` 형태로 반환합니다.
+상권 경계와 분석 결과를 GeoJSON `FeatureCollection`으로 반환합니다.
 
 ### Query Parameters
 
@@ -60,7 +59,7 @@
 | `gu` | string | 아니오 | `null` | 자치구명 (예: 강남구). 설정 시 PostGIS 공간 결합으로 필터링 |
 | `quarter` | string | 아니오 | `2025Q4` | 조회 분기 |
 
-### 응답 예시
+### 응답 주요 필드
 
 ```json
 {
@@ -77,6 +76,8 @@
         "comm_cd": "3110008",
         "comm_nm": "배화여자대학교",
         "gu_nm": "종로구",
+        "adm_cd": "11110515",
+        "adm_nm": "청운효자동",
         "commerce_type": "방출형_침체",
         "source_comm_type": "골목상권",
         "comm_type": "방출형_침체",
@@ -97,10 +98,13 @@
 }
 ```
 
-### 캐시
+### 프론트 연동 메모
 
 - Redis key: `type-map:{gu|all}:{quarter}`
 - TTL: 1시간 (fallback: 24시간)
+- 프론트 `CommerceNode.id`는 `comm_cd`를 사용합니다.
+- OD 하이라이트는 `properties.adm_cd`를 `admKey`로 사용합니다.
+- 상권 경계 선택 매칭은 API `comm_cd`, mock GeoJSON `comm_id`를 모두 허용합니다.
 
 ---
 
@@ -114,8 +118,6 @@
 |---------|------|------|------|
 | `comm_cd` | string | 예 | 상권 코드 |
 
-### 응답 예시
-
 ```json
 {
   "comm_cd": "3110008",
@@ -128,8 +130,6 @@
   ]
 }
 ```
-
-### 캐시
 
 - Redis key: `gri-history:{comm_cd}`
 - TTL: 1시간 (fallback: 24시간)
@@ -209,7 +209,9 @@
       "to_centroid_lng": 126.952,
       "to_centroid_lat": 37.481,
       "barrier_score": 0.82,
-      "barrier_type": "주말 쇼핑 유입 부족"
+      "barrier_type": "주말 쇼핑 유입 부족",
+      "sourceCoord": [126.929, 37.484],
+      "targetCoord": [126.952, 37.481]
     }
   ]
 }
@@ -223,6 +225,7 @@
 ### 비고
 
 - `flow_barriers` 테이블은 Dev-C Module C 결과 적재 후 데이터가 채워짐. 현재 0행.
+- 프론트는 `sourceCoord`와 `targetCoord`가 있는 row만 렌더링합니다. API 요청이 성공했지만 결과가 비어 있으면 mock barrier로 대체하지 않습니다.
 
 ---
 
@@ -329,7 +332,7 @@ DB·Redis 의존 없이 항상 즉시 반환.
 
 ---
 
-## 프론트 연동 메모
+## 프론트-백엔드 계약 정합
 
 2026-04-29 기준 백엔드 구현 완료. 프론트와의 계약 정합 필요 항목:
 

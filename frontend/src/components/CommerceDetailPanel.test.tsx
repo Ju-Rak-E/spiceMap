@@ -28,6 +28,21 @@ vi.mock('../hooks/useGriHistory', () => ({
   }),
 }))
 
+vi.mock('../hooks/usePolicyInsights', () => ({
+  usePolicyInsights: () => ({
+    insights: [],
+    insight: {
+      nodeId: 'gc_001',
+      priority: '즉시개입',
+      title: '과열 상권 모니터링 강화',
+      rationale: 'GRI 82, 흡수형_과열',
+      source: 'Module D R5',
+    },
+    isLoading: false,
+    error: null,
+  }),
+}))
+
 afterEach(() => {
   cleanup()
 })

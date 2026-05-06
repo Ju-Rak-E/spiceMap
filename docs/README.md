@@ -1,7 +1,7 @@
 # spiceMap 문서 인덱스
 
 > 문서 카테고리별 정리
-> 최종 갱신: 2026-04-21
+> 최종 갱신: 2026-05-03 (D-9, Week 4 Day 5)
 
 ---
 
@@ -32,7 +32,7 @@
 | [week3_implementation_plan.md](week3_implementation_plan.md) | Module E 설계 + Module D R4~R7 구현 계획 |
 | [od_flows_aggregation.md](od_flows_aggregation.md) | od_flows 분기 집계본 스키마·집계 SQL·Module A 어댑터 |
 
-> Module C (흐름 단절 탐지) 설계 문서는 `od_flows` 적재 후 추가.
+> Module C 풀 구현은 시계열 갭 알고리즘으로 대체 (`backend/analysis/module_c_barriers.py:80-139`, strategy_d13.md §2 결정 A).
 
 ## API / UI 설계
 
@@ -54,11 +54,33 @@
 | [data_quality_report.md](data_quality_report.md) | 데이터 품질 검토 리포트 (2026-04-15) |
 | [quarter_coverage_report.md](quarter_coverage_report.md) | 분기 커버리지 실측 (2026-04-22) |
 
+## 발표 산출물 (D-9, 2026-05-03)
+
+| 문서 | 설명 |
+|------|------|
+| [hero_shot_scenario.md](hero_shot_scenario.md) | 3 분 발표 시간축 (단일 진실 문서) |
+| [hero_shot_assets/README.md](hero_shot_assets/README.md) | PNG/MP4 자산 인벤토리 |
+| [data_integration_diagram.md](data_integration_diagram.md) | 데이터 결합 구조도 (Mermaid) |
+| [kpi_summary.md](kpi_summary.md) | KPI / 검증 결과 표 1 장 |
+| [qa_briefing.md](qa_briefing.md) | 발표 Q&A 13 종 대응 자료 |
+| [policy_report_gangnam_apgujeong.md](policy_report_gangnam_apgujeong.md) | 강남 압구정 정책 리포트 (R4 젠트리피케이션) |
+| [policy_report_gwanak_sillim.md](policy_report_gwanak_sillim.md) | 관악 신림 정책 리포트 (R4 흐름 단절 회복) |
+| [strategy_d13.md](strategy_d13.md) | D-13 수상 전략 + 실용성 강화 플랜 |
+| [verification_h2.md](verification_h2.md) | H2 가설 검증 설계 (흐름 단절 → 폐업 상관) |
+| [deployment_guide.md](deployment_guide.md) | 발표/심사용 웹 데모 배포 (Vercel/Netlify 정적 + 풀 옵션) |
+| [api_openapi.json](api_openapi.json) | FastAPI app.openapi() 정적 export (8 경로, scripts/export_openapi.py) |
+| [csv_schema.md](csv_schema.md) | `/api/export/csv` 9 컬럼 스키마 + 활용 시나리오 |
+| [v2_backlog.md](v2_backlog.md) | 발표 후 v2 작업 P0~P5 (30 항목, 우선순위 매트릭스) |
+| [PR_DRAFT.md](PR_DRAFT.md) | PR 본문 템플릿 (옵션 A/B 머지 전략) |
+| [../CHANGELOG.md](../CHANGELOG.md) | Keep a Changelog 형식 변경 이력 |
+
 ## 작업 이력 / 에스컬레이션
 
 | 문서 | 설명 |
 |------|------|
-| [dev_a_escalation_draft.md](dev_a_escalation_draft.md) | Dev-A 블로커 해제 요청 메시지 초안 |
+| [dev_a_escalation_draft.md](dev_a_escalation_draft.md) | Dev-A 블로커 해제 요청 메시지 초안 (D-9 patch 포함) |
+| [team_report_dev_a_d8.md](team_report_dev_a_d8.md) | Dev-A D-8 진행 보고 (적재 완료 + 협의 3건) |
+| [team_report_dev_b_d8.md](team_report_dev_b_d8.md) | Dev-B D-8 진행 보고 (Hero shot + 배포 + 잔여 작업) |
 
 ## 브레인스토밍
 

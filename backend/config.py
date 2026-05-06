@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # API keys
     public_data_api_key: str = ""   # 공공데이터포털 (data.go.kr)
     seoul_api_key: str = ""         # 서울 열린데이터광장 (data.seoul.go.kr)
+    openrouteservice_api_key: str = ""
 
     # Database
     db_host: str = "localhost"

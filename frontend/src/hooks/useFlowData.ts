@@ -108,8 +108,8 @@ export function normalizeBackendFlows(response: BackendOdFlowsResponse): ODFlow[
     if (!sourceCoord || !targetCoord) continue
     flows.push({
       id: `${flow.origin_adm_cd}-${flow.dest_adm_cd}`,
-      sourceId: flow.origin_adm_nm ?? flow.origin_adm_cd,
-      targetId: flow.dest_adm_nm ?? flow.dest_adm_cd,
+      sourceId: flow.origin_adm_cd,
+      targetId: flow.dest_adm_cd,
       sourceCoord,
       targetCoord,
       volume: Math.round(flow.trip_count),

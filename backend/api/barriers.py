@@ -55,7 +55,11 @@ def barriers(
             cb_t.lng     AS to_centroid_lng,
             cb_t.lat     AS to_centroid_lat,
             fb.barrier_score,
-            fb.barrier_type
+            fb.barrier_type,
+            ST_X(ST_PointOnSurface(cb_f.geom)) AS source_lng,
+            ST_Y(ST_PointOnSurface(cb_f.geom)) AS source_lat,
+            ST_X(ST_PointOnSurface(cb_t.geom)) AS target_lng,
+            ST_Y(ST_PointOnSurface(cb_t.geom)) AS target_lat
         FROM flow_barriers fb
         LEFT JOIN cb cb_f ON cb_f.comm_cd = fb.from_comm_cd
         LEFT JOIN cb cb_t ON cb_t.comm_cd = fb.to_comm_cd
@@ -65,9 +69,15 @@ def barriers(
             WHERE ST_Contains(geom, ST_PointOnSurface(cb_f.geom))
             LIMIT 1
         ) ab ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT gu_nm
+            FROM admin_boundary
+            WHERE ST_Contains(geom, ST_PointOnSurface(cb_t.geom))
+            LIMIT 1
+        ) ab_t ON TRUE
         WHERE fb.year_quarter = :quarter
           AND fb.barrier_score >= :min_score
-          AND (:gu IS NULL OR ab.gu_nm = :gu)
+          AND (:gu IS NULL OR ab.gu_nm = :gu OR ab_t.gu_nm = :gu)
         ORDER BY fb.barrier_score DESC
     """)
     try:
@@ -90,6 +100,17 @@ def barriers(
             to_centroid_lat=row.to_centroid_lat,
             barrier_score=row.barrier_score,
             barrier_type=row.barrier_type,
+            sourceCoord=(
+                (float(row.source_lng), float(row.source_lat))
+                if row.source_lng is not None and row.source_lat is not None
+                else None
+            ),
+            targetCoord=(
+                (float(row.target_lng), float(row.target_lat))
+                if row.target_lng is not None and row.target_lat is not None
+                else None
+            ),
+            affected_volume=round(float(row.barrier_score or 0) * 10000),
         )
         for row in rows
     ]

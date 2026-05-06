@@ -1,4 +1,5 @@
 import type { CommerceNode } from '../types/commerce'
+import { clamp } from './math'
 
 type StartupCommerceNode = CommerceNode & {
   sourceCommType?: string | null
@@ -23,10 +24,6 @@ export interface StartupSummary {
   flowLabel: string
   dataConfidence: StartupDataConfidence
   dataConfidenceLabel: string
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
 }
 
 function includesAny(value: string, keywords: string[]): boolean {
@@ -58,7 +55,7 @@ function deriveCharacter(node: StartupCommerceNode): Pick<StartupSummary, 'chara
   if (source.includes('발달')) {
     return { characterLabel: '광역상권형', characterBasis: '서울시 원본 상권 구분 기준' }
   }
-  return { characterLabel: '일반상권', characterBasis: '세부 성격 데이터 부족' }
+  return { characterLabel: '일반상권', characterBasis: '세부 성격 근거 미수신' }
 }
 
 function deriveFitLevel(score: number, node: StartupCommerceNode): StartupFitLevel {
@@ -77,14 +74,14 @@ function fitMeta(level: StartupFitLevel): Pick<StartupSummary, 'fitLabel' | 'fit
     case 'not_recommended':
       return { fitLabel: '비추천', fitColor: '#E53935' }
     case 'unknown':
-      return { fitLabel: '데이터 부족', fitColor: '#78909C' }
+      return { fitLabel: '분석 대기', fitColor: '#78909C' }
   }
 }
 
 function flowLabel(netFlow: number): string {
   if (netFlow > 0) return '유입 우세'
   if (netFlow < 0) return '유출 우세'
-  return '유입 판단 보류'
+  return '유입 근거 미확정'
 }
 
 function confidence(node: StartupCommerceNode): Pick<StartupSummary, 'dataConfidence' | 'dataConfidenceLabel'> {
@@ -149,7 +146,7 @@ export function deriveStartupSummary(node: StartupCommerceNode): StartupSummary 
   if (node.netFlow < 0) risks.push('순유출이 나타나 고객 유입 동선 확인이 필요합니다.')
   if (node.closeRate != null && node.closeRate >= 10) risks.push('폐업률이 높아 동종 업종 진입은 신중해야 합니다.')
   if (risks.length === 0) risks.push('현재 데이터 기준 뚜렷한 고위험 신호는 제한적입니다.')
-  if (reasons.length === 0) reasons.push('판단에 필요한 보조 데이터가 아직 부족합니다.')
+  if (reasons.length === 0) reasons.push('판단 보조 지표가 아직 충분히 적재되지 않았습니다.')
 
   const headline = fitLevel === 'recommended'
     ? '창업 후보지로 검토할 만한 상권입니다.'
