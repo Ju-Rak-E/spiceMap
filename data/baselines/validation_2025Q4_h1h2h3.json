@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-05-07",
+  "source": "Supabase clyqvncpcfyfljbqgdig 직접 SQL 산출",
+  "quarter": "2025Q4",
+  "previous_quarter": "2025Q3",
+  "h1": {
+    "pearson_r": 0.105631,
+    "n": 1565,
+    "p_value": 2.83e-5,
+    "mean_net_flow": 2158.80,
+    "mean_sales": 15610102185.0,
+    "std_net_flow": 343179.56,
+    "std_sales": 54147162121.23,
+    "passes_threshold": false,
+    "criterion": "r >= 0.5",
+    "interpretation": "방향성 통계 유의, 효과 약함. 교란 변수 (업종 mix·상권 규모) 통제 필요."
+  },
+  "h2": {
+    "pearson_r": -0.594811,
+    "n": 39,
+    "p_value": 6.3e-5,
+    "t_statistic": -4.50,
+    "mean_intensity": 0.6953,
+    "mean_closure": 1.2773,
+    "std_intensity": 0.3299,
+    "std_closure": 0.9194,
+    "passes_threshold": false,
+    "criterion": "r >= 0.3 + p < 0.05",
+    "interpretation": "예상 외 음의 상관. selection bias 가능 (hub 상권에서 단절 발생, hub는 안정적). v2 에서 표본 확장 + 상권 단위 closure 직접 적재 후 재검증."
+  },
+  "h3": {
+    "top_n": 330,
+    "top_mean_closure": 0.800336,
+    "top_std_closure": 0.948106,
+    "top_var_closure": 0.898905,
+    "bottom_n": 1320,
+    "bottom_mean_closure": 0.054651,
+    "bottom_std_closure": 0.309326,
+    "bottom_var_closure": 0.095682,
+    "gap_pp": 0.745685,
+    "t_statistic": 14.10,
+    "df_welch": 346.9,
+    "p_value": "≈ 5e-36",
+    "passes_threshold": false,
+    "criterion": "gap >= 2.0%p",
+    "interpretation": "방향성 매우 강함 (top/bottom 14.5배). 절대값 미달은 closure_rate 자치구 평균 매핑 한계."
+  }
+}

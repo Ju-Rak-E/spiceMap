@@ -27,11 +27,13 @@ describe('ValidationView', () => {
     expect(h1.textContent).toContain('r = 0.106')
   })
 
-  it('shows H2 pending status (function ready, awaiting data)', () => {
+  it('shows H2 real measurement result (D-5 실측: r=-0.595, n=39, 방향 반대)', () => {
     render(<ValidationView onClose={() => {}} />)
     const h2 = screen.getByTestId('validation-card-H2')
-    // 함수 구현 완료 / 산출 대기 메시지
-    expect(h2.textContent).toMatch(/산출 대기|구현 완료/)
+    // D-5 (2026-05-07) Supabase 실측: r=-0.595, n=39, p ≈ 6.3e-5, 방향 반대
+    expect(h2.textContent).toContain('r = -0.595')
+    expect(h2.textContent).toMatch(/n = 39/)
+    expect(h2.textContent).toMatch(/방향 반대|음의 상관/)
   })
 
   it('shows B1 Jaccard 0.58 PASS', () => {
