@@ -5,7 +5,7 @@ import { hexToRgba } from '../utils/colorUtils'
 import { COMMERCE_COLORS } from '../styles/tokens'
 import { getMetricValue, normalizeElevation } from '../utils/threeDUtils'
 
-const MAX_ELEVATION = 500
+const MAX_ELEVATION = 3000
 
 interface PolygonDatum {
   id: string

@@ -50,7 +50,7 @@ export function use3DView(
       const map = mapRef.current
       if (!map) return
       if (newMode !== 'off') {
-        map.flyTo({ pitch: 45, duration: 800 })
+        map.flyTo({ pitch: 45, bearing: -20, duration: 800 })
       } else {
         map.flyTo({ pitch: 0, bearing: 0, duration: 600 })
       }

@@ -25,11 +25,11 @@ describe('buildPolygonExtrusionData', () => {
     const low  = data.find(d => d.id === 'gc_002')!
     expect(high.elevation).toBeGreaterThan(low.elevation)
   })
-  it('elevation은 0~500 범위', () => {
+  it('elevation은 0~3000 범위', () => {
     const data = buildPolygonExtrusionData(nodes, boundaries, 'griScore')
     for (const d of data) {
       expect(d.elevation).toBeGreaterThanOrEqual(0)
-      expect(d.elevation).toBeLessThanOrEqual(500)
+      expect(d.elevation).toBeLessThanOrEqual(3000)
     }
   })
   it('매핑 없는 boundary 제외', () => {

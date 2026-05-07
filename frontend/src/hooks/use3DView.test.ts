@@ -27,7 +27,7 @@ describe('use3DView', () => {
     const { result } = renderHook(() => use3DView(mapRef))
     act(() => { result.current.setMode('polygon') })
     expect(result.current.mode).toBe('polygon')
-    expect(mockFlyTo).toHaveBeenCalledWith({ pitch: 45, duration: 800 })
+    expect(mockFlyTo).toHaveBeenCalledWith({ pitch: 45, bearing: -20, duration: 800 })
   })
 
   it('off로 setMode → flyTo pitch 0 호출', () => {
@@ -41,7 +41,7 @@ describe('use3DView', () => {
     const { result } = renderHook(() => use3DView(mapRef))
     act(() => { result.current.setMode('polygon') })
     act(() => { result.current.setMode('column') })
-    expect(mockFlyTo).toHaveBeenLastCalledWith({ pitch: 45, duration: 800 })
+    expect(mockFlyTo).toHaveBeenLastCalledWith({ pitch: 45, bearing: -20, duration: 800 })
   })
 
   it('setMetric → metric 상태 변경', () => {

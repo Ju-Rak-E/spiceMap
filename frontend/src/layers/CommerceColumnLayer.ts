@@ -5,7 +5,7 @@ import { hexToRgba } from '../utils/colorUtils'
 import { COMMERCE_COLORS } from '../styles/tokens'
 import { getMetricValue, normalizeElevation } from '../utils/threeDUtils'
 
-const MAX_ELEVATION = 400
+const MAX_ELEVATION = 2000
 const COLUMN_RADIUS = 80
 const DISK_RESOLUTION = 6
 
