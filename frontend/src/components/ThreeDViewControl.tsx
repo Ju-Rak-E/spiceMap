@@ -12,7 +12,7 @@ const METRIC_OPTIONS: Array<{ value: HeightMetric; label: string; icon: string; 
 const MODE_LABELS: Record<ThreeDMode, string> = {
   off: 'OFF',
   polygon: '폴리곤',
-  column: '기둥',
+  column: '이미지',
 }
 
 interface ThreeDViewControlProps {

@@ -194,13 +194,13 @@ export default function App() {
               style={{
                 position: 'absolute',
                 top: MAP_HEADER_CLEARANCE + 8,
-                right: 16,
+                right: 72,
                 zIndex: 60,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-end',
                 gap: 8,
-                maxWidth: 'calc(100% - 32px)',
+                maxWidth: 'calc(100% - 88px)',
                 pointerEvents: 'none',
               }}
             >

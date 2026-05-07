@@ -40,11 +40,11 @@ describe('ThreeDViewControl', () => {
     onMetricChange: vi.fn(),
   }
 
-  it('OFF/폴리곤/기둥 버튼 렌더링', () => {
+  it('OFF/폴리곤/이미지 버튼 렌더링', () => {
     render(<ThreeDViewControl {...defaultProps} />)
     expect(screen.getByText('OFF')).toBeTruthy()
     expect(screen.getByText('폴리곤')).toBeTruthy()
-    expect(screen.getByText('기둥')).toBeTruthy()
+    expect(screen.getByText('이미지')).toBeTruthy()
   })
 
   it('mode=off 시 지표 드롭다운 미표시', () => {
