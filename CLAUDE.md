@@ -67,7 +67,7 @@ cd frontend && npm run dev                        # 프론트엔드
 - **Week 2 (4/15~4/21)**: 완료.
 - **Week 3 (4/22~4/28)**: 완료. API 5종, Module A/B/D/E, run_analysis 파이프라인, closure_rate spatial join, admin_boundary 백필, type-map gu 필터, Dev-B 상세패널·타임라인·자치구필터.
 - **Week 4 (4/29~5/5)**: 완료. Module C·H1·H3·분류기 v1.1·프론트 Tier 1·B1/B3·검증 5카드·Hero shot 동선·H2/B1 코드+25 tests·`/api/insights/validation`·통합 검증·배포 인프라·발표 자료·흐름단절 실 도로 경로(`/api/barrier-routes` ORS+fallback, `useBarrierRoutes`, polyline 파티클).
-- **Week 5 (5/6~5/12)**: 진행 중 (Day 1 / D-6). 사용자 잔여: H2/B1 실측 산출(scripts/run_validation_all)·OA-15576 CSV·Hero shot PNG 5종·시연 영상·Vercel 배포·`OPENROUTESERVICE_API_KEY` 등록 결정. backend pytest 266 / frontend vitest 323 / preflight 31/31 ALL PASS.
+- **Week 5 (5/6~5/12)**: 진행 중 (Day 2 / D-5). 사용자 잔여: H2/B1 실측 산출(scripts/run_validation_all)·OA-15576 CSV·Hero shot PNG 5종·시연 영상·Vercel 배포·`OPENROUTESERVICE_API_KEY` 등록 결정. backend pytest 266 / frontend vitest 323 / preflight 31/31 ALL PASS.
 - **이월 블로커**: 원본 `od_flows`만 Dev-A 로컬 (집계본으로 우회). admin/commerce boundary 모두 Supabase 적재 완료.
 
 ## 원칙
