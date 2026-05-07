@@ -208,9 +208,13 @@ export default function Map({
       zoom: 11.5,
       minZoom: 9,
       maxZoom: 18,
+      dragRotate: true,
+      pitchWithRotate: true,
+      touchPitch: true,
+      maxPitch: 70,
     })
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
 
     const overlay = new MapboxOverlay({ interleaved: false, layers: [] })
     map.addControl(overlay)
@@ -1177,6 +1181,7 @@ export default function Map({
       <ThreeDViewControl
         mode={threeDView.mode}
         metric={threeDView.metric}
+        nodes={nodes}
         onModeChange={threeDView.setMode}
         onMetricChange={threeDView.setMetric}
       />
