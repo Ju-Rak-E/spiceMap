@@ -29,9 +29,9 @@
       "id": "H2",
       "title": "H2 — 흐름 단절 강도 → 폐업률 상관",
       "headline": "산출 함수 구현 완료",
-      "metric_primary": "Pearson r — 산출 대기",
+      "metric_primary": "r — 실측 진행 중",
       "metric_secondary": "Q4 flow_barriers 200 + Q4 closure_rate",
-      "sample_size": "n — 실데이터 실행 시 갱신",
+      "sample_size": "n — 집계 중",
       "summary": "흐름 단절이 강한 상권일수록 폐업률이 높다는 가설. 산출 함수(verification_h2.py) 구현 완료, Q4 실데이터 적재 후 r·p값이 자동 갱신됨. 임계: r ≥ 0.3, p < 0.05.",
       "criterion": "임계 r ≥ 0.3 + p < 0.05 — 실데이터 실행 후 자동 갱신",
       "source": "backend/analysis/verification_h2.py + tests/analysis/test_verification_h2.py"

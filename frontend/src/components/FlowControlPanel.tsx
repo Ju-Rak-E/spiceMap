@@ -856,7 +856,7 @@ export default function FlowControlPanel({
           </button>
         </div>
         <div style={S.switchRow}>
-          <span style={S.switchLabel}>OD flow 표시</span>
+          <span style={S.switchLabel}>흐름 궤적 표시</span>
           <button
             type="button"
             role="switch"
