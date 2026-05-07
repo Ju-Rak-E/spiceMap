@@ -47,11 +47,10 @@ export function createPolygonExtrusionLayer(
     id: 'commerce-polygon-extrusion',
     data,
     extruded: true,
+    stroked: false,
     getPolygon:   (d) => d.polygon,
     getElevation: (d) => d.elevation,
     getFillColor: (d) => d.color,
-    getLineColor: [255, 255, 255, 30],
-    lineWidthMinPixels: 1,
     pickable: false,
     updateTriggers: {
       getElevation: [metric, nodes.length],

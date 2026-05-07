@@ -897,13 +897,15 @@ export default function Map({
             districtFilters={selectedDistrictCodes}
             fillOpacity={boundaryOpacity}
           />
-          <CommerceBoundaryLayer
-            map={mapInstance}
-            theme={theme}
-            selectedId={selectedNode?.id ?? null}
-            quarter={selectedQuarter}
-            districts={[...(selectedDistricts ?? new Set<string>())]}
-          />
+          {threeDView.mode !== 'polygon' && (
+            <CommerceBoundaryLayer
+              map={mapInstance}
+              theme={theme}
+              selectedId={selectedNode?.id ?? null}
+              quarter={selectedQuarter}
+              districts={[...(selectedDistricts ?? new Set<string>())]}
+            />
+          )}
         </>
       )}
 
