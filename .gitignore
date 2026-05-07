@@ -49,3 +49,4 @@ htmlcov/
 .claude/
 frontend/prompt_plan.md
 docs/commerce_analysis_load_review.md
+.superpowers/

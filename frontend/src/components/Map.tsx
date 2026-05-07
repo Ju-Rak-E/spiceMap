@@ -4,6 +4,10 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
 import { MAP_THEME, COMMERCE_COLORS, type CommerceType, type MapTheme } from '../styles/tokens'
+import { use3DView } from '../hooks/use3DView'
+import ThreeDViewControl from './ThreeDViewControl'
+import { createPolygonExtrusionLayer } from '../layers/PolygonExtrusionLayer'
+import { createCommerceColumnLayer } from '../layers/CommerceColumnLayer'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceBoundaryLayer from './CommerceBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
@@ -145,6 +149,7 @@ export default function Map({
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const threeDView = use3DView(mapRef)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
   const heroPulseRef = useRef(0)
@@ -203,9 +208,13 @@ export default function Map({
       zoom: 11.5,
       minZoom: 9,
       maxZoom: 18,
+      dragRotate: true,
+      pitchWithRotate: true,
+      touchPitch: true,
+      maxPitch: 70,
     })
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
 
     const overlay = new MapboxOverlay({ interleaved: false, layers: [] })
     map.addControl(overlay)
@@ -418,13 +427,25 @@ export default function Map({
       : [],
     [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage],
   )
+  const threeDLayers = useMemo(() => {
+    if (threeDView.mode === 'off' || nodes.length === 0) return []
+    if (threeDView.mode === 'polygon' && threeDView.boundaries && threeDView.boundaries.length > 0) {
+      return [createPolygonExtrusionLayer(nodes, threeDView.boundaries, threeDView.metric)]
+    }
+    if (threeDView.mode === 'column') {
+      return [createCommerceColumnLayer(nodes, threeDView.metric)]
+    }
+    return []
+  }, [threeDView.mode, threeDView.metric, threeDView.boundaries, nodes])
+
   const baseDeckLayers = useMemo(
     () => [
       ...(staticFlowLayer ? [staticFlowLayer] : []),
       ...barrierLayers,
       ...commerceLayers,
+      ...threeDLayers,
     ],
-    [barrierLayers, commerceLayers, staticFlowLayer],
+    [barrierLayers, commerceLayers, staticFlowLayer, threeDLayers],
   )
 
   useEffect(() => {
@@ -1156,6 +1177,14 @@ export default function Map({
           onClose={() => setClosedDetailNodeId(selectedNode?.id ?? null)}
         />
       )}
+
+      <ThreeDViewControl
+        mode={threeDView.mode}
+        metric={threeDView.metric}
+        nodes={nodes}
+        onModeChange={threeDView.setMode}
+        onMetricChange={threeDView.setMetric}
+      />
 
       {usingMockData && (
         <div
