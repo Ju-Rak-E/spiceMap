@@ -9,6 +9,8 @@ import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
 import { useViewportMode } from './hooks/useViewportMode'
+import { useStartupAdvisor, type AdvisorResult } from './hooks/useStartupAdvisor'
+import type { AdvisorTierMap } from './layers/CommerceNodeLayer'
 import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import { countCriticalCommerces } from './utils/insightMetrics'
@@ -60,6 +62,12 @@ export default function App() {
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
+  const advisor = useStartupAdvisor(selectedQuarter)
+  const advisorTiers = useMemo<AdvisorTierMap | null>(() => {
+    if (!advisor.result) return null
+    return new Map(advisor.result.commerces.map((c) => [c.comm_cd, c.tier]))
+  }, [advisor.result])
+
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
   const previousQuarter = useMemo(
     () => getPreviousQuarter(selectedQuarter, QUARTERS),
@@ -89,6 +97,10 @@ export default function App() {
     return computeKpiDelta(current, previous)
   }, [compareEnabled, nodes, compareNodes, flowData.totalVolume, compareFlowData.totalVolume])
   const criticalCount = useMemo(() => countCriticalCommerces(nodes), [nodes])
+  const handleSelectAdvisorCommerce = useCallback((commCd: string) => {
+    const node = nodes.find((n) => n.id === commCd)
+    if (node) setSelectedNode(node)
+  }, [nodes])
 
   useEffect(() => {
     if (!selectedNode) return
@@ -188,6 +200,7 @@ export default function App() {
             selectedNode={selectedNode}
             onSelectNode={setSelectedNode}
             heroNodeId={heroNodeId}
+            advisorTiers={advisorTiers}
           />
           {view === 'map' && (
             <div
@@ -276,6 +289,13 @@ export default function App() {
           onToggleCompare={() => setCompareMode((prev) => !prev)}
           compact={viewportMode.isTablet}
           stacked={viewportMode.isNarrow}
+          advisorIndustries={advisor.industries}
+          advisorLoading={advisor.isLoading}
+          advisorResult={advisor.result}
+          advisorError={advisor.error}
+          onAdvisorAnalyze={advisor.analyze}
+          onAdvisorReset={advisor.reset}
+          onSelectAdvisorCommerce={handleSelectAdvisorCommerce}
         />
       </div>
       <ToastViewport />

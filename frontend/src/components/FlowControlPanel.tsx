@@ -1,4 +1,4 @@
-import { type CSSProperties } from 'react'
+import { type CSSProperties, useState } from 'react'
 import type { FlowPurpose, FlowStats, PurposeVolumeMap } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { COMMERCE_COLORS, MAP_THEME } from '../styles/tokens'
@@ -7,6 +7,7 @@ import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
 import { deltaTone, formatDelta, type QuarterKpiDelta } from '../utils/quarterDelta'
 import { useToast } from './ToastContext'
+import type { AdvisorResult } from '../hooks/useStartupAdvisor'
 
 const PURPOSE_OPTIONS: Array<{ value: FlowPurpose; label: string; peak: string }> = [
   { value: '출근', label: '출근', peak: '오전 피크' },
@@ -62,6 +63,13 @@ interface FlowControlPanelProps {
   onToggleCompare: () => void
   compact?: boolean
   stacked?: boolean
+  advisorIndustries: string[]
+  advisorLoading: boolean
+  advisorResult: AdvisorResult | null
+  advisorError: string | null
+  onAdvisorAnalyze: (industry: string) => void
+  onAdvisorReset: () => void
+  onSelectAdvisorCommerce: (commCd: string) => void
 }
 
 function formatVolume(value: number): string {
@@ -564,7 +572,15 @@ export default function FlowControlPanel({
   onToggleCompare,
   compact = false,
   stacked = false,
+  advisorIndustries,
+  advisorLoading,
+  advisorResult,
+  advisorError,
+  onAdvisorAnalyze,
+  onAdvisorReset,
+  onSelectAdvisorCommerce,
 }: FlowControlPanelProps) {
+  const [selectedAdvisorIndustry, setSelectedAdvisorIndustry] = useState<string>('')
   const densityLabel = DENSITY_LABELS[flowStrength] ?? '보통'
   const priorityNodes = getPriorityNodes(nodes)
   const totalPurposeVolume = Object.values(purposeTotals).reduce((sum, value) => sum + value, 0)
@@ -614,6 +630,105 @@ export default function FlowControlPanel({
           {selectedNode && <span style={S.statusTag}>선택: {selectedNode.name}</span>}
         </div>
       </div>
+
+      {/* AI 창업 입지 분석 섹션 */}
+      <section style={{ ...S.section, background: '#141c28', borderRadius: 10, padding: '12px', border: '1px solid #f9731633' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ ...S.sectionTitle, color: '#f97316' }}>🤖 AI 창업 입지 분석</div>
+          {advisorResult && (
+            <button
+              onClick={onAdvisorReset}
+              style={{ background: 'none', border: 'none', color: COLORS.mutedText, cursor: 'pointer', fontSize: 11 }}
+            >
+              초기화
+            </button>
+          )}
+        </div>
+
+        {advisorIndustries.length === 0 ? (
+          <div style={{ ...S.subLabel, color: COLORS.mutedText }}>백엔드 연결 후 업종 목록이 로드됩니다.</div>
+        ) : (
+          <>
+            <select
+              value={selectedAdvisorIndustry || advisorIndustries[0]}
+              onChange={(e) => setSelectedAdvisorIndustry(e.target.value)}
+              disabled={advisorLoading}
+              style={{
+                width: '100%', background: '#0d1117', border: `1px solid ${COLORS.panelBorder}`,
+                borderRadius: 6, padding: '7px 10px', fontSize: 12, color: COLORS.panelText,
+                cursor: advisorLoading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {advisorIndustries.map((ind) => <option key={ind} value={ind}>{ind}</option>)}
+            </select>
+            <button
+              onClick={() => onAdvisorAnalyze(selectedAdvisorIndustry || advisorIndustries[0] || '')}
+              disabled={advisorLoading}
+              style={{
+                width: '100%', background: advisorLoading ? '#7c3c1a' : '#f97316',
+                border: 'none', borderRadius: 6, padding: '8px',
+                color: 'white', fontSize: 12, fontWeight: 700,
+                cursor: advisorLoading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {advisorLoading ? '분석 중...' : '분석하기'}
+            </button>
+          </>
+        )}
+
+        {advisorError && (
+          <div style={{ fontSize: 11, color: '#f87171' }}>{advisorError}</div>
+        )}
+
+        {advisorResult && (
+          <>
+            {advisorResult.summary ? (
+              <div style={{ background: '#0d1117', borderRadius: 6, padding: 8, fontSize: 10, color: '#cbd5e1', lineHeight: 1.6 }}>
+                {advisorResult.summary}
+              </div>
+            ) : (
+              <div style={{ fontSize: 10, color: COLORS.mutedText }}>AI 해설 없음 — 통계 기반 결과만 표시됩니다.</div>
+            )}
+            {advisorResult.caution && (
+              <div style={{ background: '#431407', border: '1px solid #9a3412', borderRadius: 6, padding: '6px 8px', fontSize: 10, color: '#fdba74' }}>
+                ⚠️ {advisorResult.caution}
+              </div>
+            )}
+            <div style={{ ...S.sectionTitle, marginTop: 4 }}>상권 랭킹</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {advisorResult.commerces.slice(0, 6).map((c, i) => {
+                const tierColor = c.tier === '추천' ? '#4ade80' : c.tier === '주의' ? '#fbbf24' : '#f87171'
+                const tierBg = c.tier === '추천' ? '#14532d22' : c.tier === '주의' ? '#78350f22' : '#7f1d1d22'
+                const tierBorder = c.tier === '추천' ? '#166534' : c.tier === '주의' ? '#92400e' : '#991b1b'
+                const badgeBg = c.tier === '추천' ? '#16a34a' : c.tier === '주의' ? '#d97706' : '#dc2626'
+                return (
+                  <div
+                    key={c.comm_cd}
+                    onClick={() => onSelectAdvisorCommerce(c.comm_cd)}
+                    style={{
+                      background: tierBg, border: `1px solid ${tierBorder}`, borderRadius: 4,
+                      padding: '5px 8px', display: 'flex', justifyContent: 'space-between',
+                      alignItems: 'center', cursor: 'pointer',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 11, color: tierColor, fontWeight: 700 }}>
+                        {i + 1}. {c.comm_nm}
+                      </div>
+                      <div style={{ fontSize: 9, color: COLORS.mutedText }}>
+                        GRI {c.gri_score ?? 'N/A'} · 유동 {c.flow_volume?.toLocaleString() ?? 'N/A'}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 9, background: badgeBg, color: 'white', padding: '2px 5px', borderRadius: 3 }}>
+                      {c.tier}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </section>
 
       <section style={S.section}>
         <div style={S.sectionTitle}>창업 검토 추천 상권</div>

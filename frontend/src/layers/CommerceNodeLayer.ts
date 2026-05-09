@@ -62,6 +62,14 @@ export function getGriBorderWidth(griScore: number, isSelected: boolean): number
   return 1
 }
 
+export type AdvisorTierMap = Map<string, '추천' | '주의' | '비추천'>
+
+export function getAdvisorFillColor(tier: '추천' | '주의' | '비추천'): [number, number, number, number] {
+  if (tier === '추천') return [22, 163, 74, 220]
+  if (tier === '주의') return [217, 119, 6, 220]
+  return [220, 38, 38, 220]
+}
+
 export function getCandidateNodes(nodes: CommerceNode[], selectedId: string | null): CommerceNode[] {
   const candidates = nodes
     .filter((node) => deriveStartupSummary(node).fitLevel !== 'unknown')
@@ -81,6 +89,7 @@ export function createCommerceNodeLayers(
   onHover: (info: PickingInfo<CommerceNode>) => void,
   onClick: (info: PickingInfo<CommerceNode>) => void,
   selectedId: string | null,
+  advisorTiers?: AdvisorTierMap | null,
 ): ScatterplotLayer<CommerceNode>[] {
   const candidateNodes = getCandidateNodes(nodes, selectedId)
   const visualScores = normalizeVisualScores(candidateNodes)
@@ -94,11 +103,18 @@ export function createCommerceNodeLayers(
     stroked: false,
     getPosition: (node) => node.coordinates,
     getRadius: CONTEXT_RADIUS,
-    getFillColor: (node) => getContextFillColor(node),
+    getFillColor: (node) => {
+      if (advisorTiers) {
+        const tier = advisorTiers.get(node.id)
+        if (tier) return getAdvisorFillColor(tier)
+        return [100, 100, 100, 40]
+      }
+      return getContextFillColor(node)
+    },
     radiusUnits: 'pixels',
     updateTriggers: {
       getPosition: contextNodes,
-      getFillColor: contextNodes,
+      getFillColor: [contextNodes, advisorTiers],
     },
   })
 
@@ -109,7 +125,14 @@ export function createCommerceNodeLayers(
     stroked: true,
     getPosition: (node) => node.coordinates,
     getRadius: (node) => getCandidateRadius(node, node.id === selectedId, visualScores),
-    getFillColor: (node) => getCandidateFillColor(node, node.id === selectedId),
+    getFillColor: (node) => {
+      if (advisorTiers) {
+        const tier = advisorTiers.get(node.id)
+        if (tier) return getAdvisorFillColor(tier)
+        return [100, 100, 100, 60]
+      }
+      return getCandidateFillColor(node, node.id === selectedId)
+    },
     getLineColor: (node) =>
       getGriBorderColor(node.griScore, node.id === selectedId),
     getLineWidth: (node) =>
@@ -120,7 +143,7 @@ export function createCommerceNodeLayers(
     onClick,
     updateTriggers: {
       getRadius: [candidateNodes, selectedId, visualScores],
-      getFillColor: [candidateNodes, selectedId],
+      getFillColor: [candidateNodes, selectedId, advisorTiers],
       getLineColor: [candidateNodes, selectedId],
       getLineWidth: [candidateNodes, selectedId],
     },
