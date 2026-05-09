@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     public_data_api_key: str = ""   # 공공데이터포털 (data.go.kr)
     seoul_api_key: str = ""         # 서울 열린데이터광장 (data.seoul.go.kr)
     openrouteservice_api_key: str = ""
+    anthropic_api_key: str = ""  # Claude API (Startup Advisor)
 
     # Database
     db_host: str = "localhost"

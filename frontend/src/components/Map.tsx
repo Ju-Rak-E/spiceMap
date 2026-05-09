@@ -13,7 +13,7 @@ import { createDistrictPinLayer } from '../layers/DistrictPinLayer'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceBoundaryLayer from './CommerceBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
-import { createCommerceNodeLayers, createHeroPulseLayer } from '../layers/CommerceNodeLayer'
+import { createCommerceNodeLayers, createHeroPulseLayer, type AdvisorTierMap } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
@@ -93,6 +93,7 @@ interface MapProps {
   onSelectNode?: (node: CommerceNode | null) => void
   // docs/hero_shot_scenario.md §1-2: ?hero=1 진입 시 신림(gw_001)을 펄싱으로 강조.
   heroNodeId?: string | null
+  advisorTiers?: AdvisorTierMap | null
 }
 
 interface HoveredNode {
@@ -145,6 +146,7 @@ export default function Map({
   selectedNode = null,
   onSelectNode,
   heroNodeId = null,
+  advisorTiers = null,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -422,9 +424,10 @@ export default function Map({
           handleNodeHover,
           handleNodeClick,
           selectedNode?.id ?? null,
+          advisorTiers,
         )
       : [],
-    [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage],
+    [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage, advisorTiers],
   )
   const threeDLayers = useMemo(() => {
     if (nodes.length === 0) return []
