@@ -22,7 +22,7 @@ from typing import TypedDict
 import pandas as pd
 
 DEFAULT_TOP_PCT = 0.20
-B1_DECLINE_LABEL = "상권쇠퇴"
+B1_DECLINE_LABEL = "상권축소"
 B1_LABEL_COLUMN_CANDIDATES = ("TRDAR_CHNG_IX_NM", "trdar_chng_ix_nm")
 B1_CODE_COLUMN_CANDIDATES = ("TRDAR_CD", "trdar_cd")
 

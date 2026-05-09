@@ -1,0 +1,38 @@
+{
+  "quarter": "2025Q4",
+  "previous_quarter": "2025Q3",
+  "h1": {
+    "pearson_r": 0.10563055899754187,
+    "p_value": 2.82499990969343e-05,
+    "n": 1565,
+    "passes_threshold": false
+  },
+  "h2": {
+    "n_total": 39,
+    "pearson_r": -0.5948107705457106,
+    "pearson_p": 6.514103450030541e-05,
+    "spearman_r": -0.8124477991933897,
+    "spearman_p": 3.39012261298509e-10,
+    "passes_threshold": false
+  },
+  "h3": {
+    "n_total": 1650,
+    "n_top": 330,
+    "n_bottom": 1320,
+    "top_avg_closure": 0.8003363636363636,
+    "bottom_avg_closure": 0.05465075757575758,
+    "gap_pp": 0.7456856060606061,
+    "t_stat": 14.101097853779814,
+    "p_value": 5.260147591674687e-36,
+    "passes_threshold": false
+  },
+  "b1": {
+    "n_total": 46200,
+    "n_top_b1": 722,
+    "n_top_priority": 330,
+    "n_intersect": 143,
+    "jaccard": 0.1573157315731573,
+    "new_in_priority": 187,
+    "new_in_b1": 579
+  }
+}

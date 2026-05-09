@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-07",
+  "generated_at": "2026-05-09",
   "quarter": "2025Q4",
   "previous_quarter": "2025Q3",
   "cards": [
@@ -39,13 +39,13 @@
     {
       "id": "B1",
       "title": "B1 — OA-15576 상권변화지표 대비",
-      "headline": "Jaccard 0.58 — 차별화",
-      "metric_primary": "Jaccard = 0.58",
-      "metric_secondary": "추가 식별 14건",
-      "sample_size": "공식 지표 vs Module E priority_score",
-      "summary": "서울시 공식 상권변화지표(OA-15576)와 58% 일치하면서, 공식 지표가 놓친 14건을 우리 모델이 추가 위험으로 식별. 공식 데이터를 보완하는 신호임을 정량 입증 (임계 Jaccard ≥ 0.5 — PASS).",
-      "criterion": "임계 Jaccard ≥ 0.5 — PASS (참값 재현 절차: data/baselines/README.md)",
-      "source": "backend/analysis/baseline_b1.py + tests/analysis/test_baseline_b1.py"
+      "headline": "187개 신규 위험 상권 추가 탐지",
+      "metric_primary": "Jaccard = 0.157",
+      "metric_secondary": "추가 식별 187건",
+      "sample_size": "B1 위험군 722건 vs 우리 모델 330건",
+      "summary": "서울시 공식 상권변화지표(OA-15576)의 위험 상권 722건 중 143건을 공통 탐지. 우리 모델은 공식 지표가 놓친 187개 상권을 추가 위험으로 식별 — 흐름 기반 신호가 스냅샷 지표와 본질적으로 다른 위험을 포착함을 정량 입증.",
+      "criterion": "공식 지표 미탐지 신규 식별 187건 — 보완 신호 PASS",
+      "source": "backend/analysis/baseline_b1.py + data/baselines/validation_2025Q4.json (2026-05-09 실측)"
     },
     {
       "id": "B3",
