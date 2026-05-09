@@ -74,3 +74,14 @@ class TestAssignTiers:
         scored = [{"comm_cd": "A", "advisor_score": 50.0}]
         result = _assign_tiers(scored)
         assert result[0]["tier"] == "추천"
+
+
+from backend.api.advisor import _build_llm_context
+
+
+def test_llm_context_includes_comm_cd():
+    scored = [{"comm_cd": "A001", "comm_nm": "역삼1동", "gu_nm": "강남구",
+               "gri_score": 30.0, "flow_volume": 12000, "closure_rate": 1.0}]
+    ctx = _build_llm_context("커피음료", scored)
+    assert "A001" in ctx
+    assert "커피음료" in ctx

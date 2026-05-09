@@ -94,7 +94,7 @@ def _build_llm_context(industry_nm: str, scored: list[dict]) -> str:
     lines.append("[추천 후보 상권 (상위 5개)]")
     for item in top5:
         lines.append(
-            f"- {item['comm_nm']} ({item['gu_nm']}): "
+            f"- [{item['comm_cd']}] {item['comm_nm']} ({item['gu_nm']}): "
             f"GRI {item['gri_score'] or 'N/A'}, "
             f"유동인구 {item['flow_volume'] or 'N/A'}, "
             f"폐업률 {item['closure_rate'] or 'N/A'}%"
@@ -102,7 +102,7 @@ def _build_llm_context(industry_nm: str, scored: list[dict]) -> str:
     lines.append("\n[비추천 상권 (하위 3개)]")
     for item in bottom3:
         lines.append(
-            f"- {item['comm_nm']} ({item['gu_nm']}): "
+            f"- [{item['comm_cd']}] {item['comm_nm']} ({item['gu_nm']}): "
             f"GRI {item['gri_score'] or 'N/A'}, "
             f"유동인구 {item['flow_volume'] or 'N/A'}, "
             f"폐업률 {item['closure_rate'] or 'N/A'}%"

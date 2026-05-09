@@ -1,4 +1,5 @@
 """POST /api/advisor/startup 엔드포인트 테스트 (통계 전용)."""
+import pytest
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from backend.main import app
@@ -28,6 +29,12 @@ def _make_commerce_rows():
     ]
 
 
+@pytest.fixture(autouse=True)
+def _clear_overrides():
+    yield
+    app.dependency_overrides.clear()
+
+
 class TestAdvisorStartup:
     def _setup(self, rows):
         mock_db = MagicMock()
@@ -47,7 +54,6 @@ class TestAdvisorStartup:
         data = response.json()
         assert data["industry_nm"] == "커피음료"
         assert len(data["commerces"]) == 3
-        app.dependency_overrides.clear()
 
     def test_first_commerce_is_recommended(self):
         self._setup(_make_commerce_rows())
@@ -60,7 +66,6 @@ class TestAdvisorStartup:
         data = response.json()
         assert data["commerces"][0]["tier"] == "추천"
         assert data["commerces"][-1]["tier"] == "비추천"
-        app.dependency_overrides.clear()
 
     def test_returns_422_when_no_commerces(self):
         self._setup([])
@@ -70,7 +75,6 @@ class TestAdvisorStartup:
             json={"industry_nm": "커피음료", "quarter": "2024Q1"},
         )
         assert response.status_code == 422
-        app.dependency_overrides.clear()
 
     def test_llm_failure_returns_empty_summary(self):
         """Claude API 실패 시 summary/caution이 빈 문자열이고 200 반환."""
@@ -86,7 +90,6 @@ class TestAdvisorStartup:
         assert data["summary"] == ""
         assert data["caution"] == ""
         assert data["model_used"] == "none"
-        app.dependency_overrides.clear()
 
     def test_llm_success_fills_summary(self):
         """Claude API 성공 시 summary/caution/llm_reason이 채워짐."""
@@ -107,4 +110,3 @@ class TestAdvisorStartup:
         assert data["model_used"] == "claude-haiku-4-5"
         first = next(c for c in data["commerces"] if c["comm_cd"] == "A001")
         assert first["llm_reason"] == "유동인구가 많아 유리합니다."
-        app.dependency_overrides.clear()
