@@ -63,10 +63,6 @@ export default function App() {
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
 
   const advisor = useStartupAdvisor(selectedQuarter)
-  const advisorTiers = useMemo<AdvisorTierMap | null>(() => {
-    if (!advisor.result) return null
-    return new Map(advisor.result.commerces.map((c) => [c.comm_cd, c.tier]))
-  }, [advisor.result])
 
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
   const previousQuarter = useMemo(
@@ -167,6 +163,10 @@ export default function App() {
       return next
     })
   }, [])
+
+  const advisorTiers: AdvisorTierMap | null = advisor.result
+    ? new Map(advisor.result.commerces.map((c) => [c.comm_cd, c.tier]))
+    : null
 
   return (
     <ToastProvider>
