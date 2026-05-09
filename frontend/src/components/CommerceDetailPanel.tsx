@@ -89,6 +89,19 @@ const S = {
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
   },
+  sectionTitleSub: {
+    fontSize: 10,
+    color: '#546E7A',
+    fontWeight: 600,
+    marginBottom: 4,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+  },
+  sectionDivider: {
+    border: 'none' as const,
+    borderTop: '1px solid #1E2D3D',
+    margin: '0',
+  },
   summaryCard: {
     background: '#263238',
     borderRadius: 8,
@@ -310,33 +323,32 @@ export default function CommerceDetailPanel({
         </div>
       </div>
 
-      <div>
-        <div style={S.sectionTitle}>전 분기 대비</div>
-        <div style={S.kpiGrid}>
-          <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>상권 위험도 변화</div>
-            <div style={S.kpiValue(deltaColor(riskDelta))}>
-              {riskDelta == null ? '-' : formatSignedFixed2(riskDelta)}
+      <hr style={S.sectionDivider} />
+
+      {riskDelta != null && (
+        <div>
+          <div style={S.sectionTitleSub}>전 분기 대비</div>
+          <div style={S.kpiGrid}>
+            <div style={S.kpiCard}>
+              <div style={S.kpiLabel}>상권 위험도 변화</div>
+              <div style={S.kpiValue(deltaColor(riskDelta))}>
+                {formatSignedFixed2(riskDelta)}
+              </div>
+              <div style={S.sourceLabel}>GRI 최근 2개 분기 기준</div>
             </div>
-            <div style={S.sourceLabel}>GRI 최근 2개 분기 기준</div>
-          </div>
-          <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>순유입 변화</div>
-            <div style={S.kpiValue()} title="Q3·Q4 OD 적재 완료 — 비교 API 연결 후 활성">분기 비교 API 대기</div>
-            <div style={S.sourceLabel}>od_flows_aggregated Q3·Q4 적재됨, 비교 엔드포인트 미구현</div>
           </div>
         </div>
-      </div>
+      )}
 
       <div style={S.chartBox}>
-        <div style={S.sectionTitle}>상권 위험도 추세</div>
+        <div style={S.sectionTitleSub}>상권 위험도 추세</div>
         {isLoading && <div style={S.loadingText}>불러오는 중...</div>}
         {error && <div style={S.errorText}>{error}</div>}
         {!isLoading && !error && <TrendChart series={series} width={296} height={110} />}
       </div>
 
       <div>
-        <div style={S.sectionTitle}>주의 신호</div>
+        <div style={S.sectionTitleSub}>주의 신호</div>
         <div style={S.summaryCard}>
           <ul style={S.list}>
             {startup.risks.map((risk) => (
@@ -367,7 +379,7 @@ export default function CommerceDetailPanel({
       </div>
 
       <div>
-        <div style={S.sectionTitle}>업종 힌트</div>
+        <div style={S.sectionTitleSub}>업종 힌트</div>
         <div style={S.hintGrid}>
           <div style={S.hintBox}>
             <div style={S.kpiLabel}>검토 업종</div>

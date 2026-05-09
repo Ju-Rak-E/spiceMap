@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { isDemoMode } from '../utils/demoMode'
+import { SEOUL_DISTRICT_NAMES } from '../utils/seoulDistricts'
 
 export type BarrierSeverity = 'high' | 'medium' | 'low'
 
@@ -42,8 +43,6 @@ export interface UseBarriersReturn {
 }
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
-const EMPTY_DISTRICTS = new Set<string>()
-
 function severityFromScore(score: number): BarrierSeverity {
   if (score >= 0.75) return 'high'
   if (score >= 0.45) return 'medium'
@@ -95,7 +94,9 @@ async function fetchBarriers(quarter: string, gu?: string): Promise<Barrier[]> {
 async function fetchBarriersForDistricts(quarter: string, districts: string[]): Promise<Barrier[]> {
   if (isDemoMode()) return fetchMockBarriers()
 
-  const groupedBarriers = districts.length === 0
+  if (districts.length === 0) return []
+
+  const groupedBarriers = districts.length >= SEOUL_DISTRICT_NAMES.length
     ? [await fetchBarriers(quarter)]
     : await Promise.all(districts.map((district) => fetchBarriers(quarter, district)))
 
@@ -108,16 +109,20 @@ async function fetchBarriersForDistricts(quarter: string, districts: string[]): 
 
 export function useBarriers(
   quarter = '2025Q4',
-  districts: ReadonlySet<string> = EMPTY_DISTRICTS,
+  districts?: ReadonlySet<string>,
 ): UseBarriersReturn {
   const [barriers, setBarriers] = useState<Barrier[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const districtKey = [...districts].sort().join('|')
+  const districtKey = districts ? [...districts].sort().join('|') : '__all__'
 
   useEffect(() => {
     let cancelled = false
-    const districtList = districtKey ? districtKey.split('|') : []
+    const districtList = districtKey === '__all__'
+      ? [...SEOUL_DISTRICT_NAMES]
+      : districtKey
+        ? districtKey.split('|')
+        : []
 
     queueMicrotask(() => {
       if (cancelled) return

@@ -25,6 +25,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 
+import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -80,6 +81,103 @@ def _zero_degree_metrics(commerce_codes: list[str]) -> pd.DataFrame:
     )
 
 
+def _percentile_score(series: pd.Series) -> pd.Series:
+    values = pd.to_numeric(series, errors="coerce")
+    if values.empty:
+        return pd.Series(dtype="float64", index=series.index)
+    finite = values[np.isfinite(values)]
+    if finite.empty:
+        return pd.Series(0.0, index=series.index)
+    filled = values.fillna(float(finite.median()))
+    return filled.rank(method="average", pct=True) * 100.0
+
+
+def _quarter_sales_by_code(sales_df: pd.DataFrame, quarter: str | None) -> pd.Series:
+    if not quarter or sales_df.empty:
+        return pd.Series(dtype="float64")
+    target = sales_df[sales_df["year_quarter"] == quarter]
+    if target.empty:
+        return pd.Series(dtype="float64")
+    return target.groupby("trdar_cd")["sales_amount"].sum().astype(float)
+
+
+def _quantile_or_default(series: pd.Series, q: float, default: float) -> float:
+    values = pd.to_numeric(series, errors="coerce").dropna()
+    if values.empty:
+        return default
+    return float(values.quantile(q))
+
+
+def _classify_non_od_types(df: pd.DataFrame) -> pd.Series:
+    p75_closure = _quantile_or_default(df["closure_rate"], 0.75, 0.0)
+    p25_sales = _quantile_or_default(df["target_sales"], 0.25, 0.0)
+    p75_sales = _quantile_or_default(df["target_sales"], 0.75, 0.0)
+    p75_decline = _quantile_or_default(df["sales_decline_rate"], 0.75, 0.0)
+
+    def classify(row: pd.Series) -> str:
+        has_sales = pd.notna(row.get("target_sales"))
+        closure = float(row.get("closure_rate") or 0.0)
+        gri = float(row.get("gri_score") or 0.0)
+        sales = float(row.get("target_sales") or 0.0)
+        decline = float(row.get("sales_decline_rate") or 0.0)
+
+        if not has_sales and closure <= 0:
+            return "unclassified"
+        if closure >= p75_closure and decline >= max(0.05, p75_decline):
+            return "방출형_침체"
+        if has_sales and sales >= p75_sales and closure >= p75_closure:
+            return "흡수형_과열"
+        if has_sales and sales >= p75_sales and gri < 50.0:
+            return "흡수형_성장"
+        if gri < 40.0 and decline <= 0:
+            return "안정형"
+        if has_sales and sales <= p25_sales and closure < p75_closure:
+            return "고립형_단절"
+        return "unclassified"
+
+    return df.apply(classify, axis=1)
+
+
+def _compute_non_od_analysis(
+    base: pd.DataFrame,
+    sales_df: pd.DataFrame,
+    target_quarter: str,
+    previous_quarter: str | None,
+) -> pd.DataFrame:
+    """Compute analysis rows without reading or using OD flow inputs."""
+    out = base.copy()
+    codes = out["commerce_code"].astype(str)
+    current_sales = _quarter_sales_by_code(sales_df, target_quarter)
+    previous_sales = _quarter_sales_by_code(sales_df, previous_quarter)
+
+    out["target_sales"] = codes.map(current_sales).astype(float)
+    out["previous_sales"] = codes.map(previous_sales).astype(float)
+    out["sales_decline_rate"] = np.where(
+        out["previous_sales"].fillna(0.0) > 0,
+        (out["previous_sales"] - out["target_sales"].fillna(0.0)) / out["previous_sales"],
+        0.0,
+    )
+    out["sales_decline_rate"] = pd.to_numeric(
+        out["sales_decline_rate"], errors="coerce"
+    ).fillna(0.0).clip(lower=0.0, upper=1.0)
+
+    closure_score = _percentile_score(out["closure_rate"])
+    if out["target_sales"].notna().any():
+        sales_size_score = _percentile_score(out["target_sales"])
+        low_sales_score = 100.0 - sales_size_score
+        raw_gri = (
+            0.65 * closure_score
+            + 0.25 * (out["sales_decline_rate"] * 100.0)
+            + 0.10 * low_sales_score
+        )
+    else:
+        raw_gri = closure_score
+
+    out["gri_score"] = _percentile_score(raw_gri)
+    out["commerce_type"] = _classify_non_od_types(out)
+    return out
+
+
 def compose_analysis(
     inputs: AnalysisInputs,
     target_quarter: str,
@@ -91,7 +189,8 @@ def compose_analysis(
         return AnalysisResult()
 
     # 1) Module A — degree metrics
-    if inputs.od_flows.empty or inputs.mapping.empty:
+    has_od_metrics = not inputs.od_flows.empty and not inputs.mapping.empty
+    if not has_od_metrics:
         degree = _zero_degree_metrics(commerce_meta["comm_cd"].astype(str).tolist())
     else:
         graph = build_commerce_flow_graph(inputs.od_flows, inputs.mapping)
@@ -113,15 +212,29 @@ def compose_analysis(
     )
     base["closure_rate"] = base["closure_rate"].fillna(0.0)
     base["quarter"] = target_quarter
-    gri_df = compute_gri(base[DEGREE_COLUMNS + ["closure_rate", "quarter"]])
+    if has_od_metrics:
+        gri_df = compute_gri(base[DEGREE_COLUMNS + ["closure_rate", "quarter"]])
 
     # 3) 분류기 (Module D 입력) — commerce_meta로 이름 결합
-    classify_input = gri_df.merge(
-        commerce_meta.rename(columns={"comm_cd": "commerce_code", "comm_nm": "commerce_name"}),
-        on="commerce_code",
-        how="left",
-    )
-    classified = classify_commerce_types(classify_input)
+        classify_input = gri_df.merge(
+            commerce_meta.rename(columns={"comm_cd": "commerce_code", "comm_nm": "commerce_name"}),
+            on="commerce_code",
+            how="left",
+        )
+        classified = classify_commerce_types(classify_input)
+        analysis_note = None
+    else:
+        classified = _compute_non_od_analysis(
+            base,
+            inputs.sales,
+            target_quarter,
+            previous_quarter,
+        ).merge(
+            commerce_meta.rename(columns={"comm_cd": "commerce_code", "comm_nm": "commerce_name"}),
+            on="commerce_code",
+            how="left",
+        )
+        analysis_note = "non_od_v1: closure_rate+sales_trend+sales_size; od_flow_excluded"
 
     # 4) Module D — 정책 카드
     policy_cards = generate_policy_cards(classified)
@@ -156,7 +269,7 @@ def compose_analysis(
                 "net_flow": _to_float_or_none(row.get("net_flow")),
                 "degree_centrality": _to_float_or_none(row.get("degree_centrality")),
                 "closure_rate": _to_float_or_none(row.get("closure_rate")),
-                "analysis_note": None,
+                "analysis_note": analysis_note,
             }
         )
 
@@ -180,11 +293,19 @@ def _to_int_or_none(value) -> int | None:
 # ────────────────────────────────────────────────────────────
 
 
-def collect_inputs(engine: Engine, target_quarter: str) -> AnalysisInputs:
+def collect_inputs(
+    engine: Engine,
+    target_quarter: str,
+    exclude_od_flow: bool = False,
+) -> AnalysisInputs:
     """SQL을 통해 분석 입력을 모은다."""
     legacy_q = quarter_to_legacy(target_quarter)
 
-    od_flows = _safe_load_od_flows(engine, target_quarter)
+    od_flows = (
+        pd.DataFrame(columns=["origin_adm_cd", "dest_adm_cd", "trip_count"])
+        if exclude_od_flow
+        else _safe_load_od_flows(engine, target_quarter)
+    )
     mapping = pd.read_sql(
         text("SELECT adm_cd, comm_cd, comm_area_ratio FROM adm_comm_mapping"),
         engine,
@@ -414,17 +535,46 @@ def run_analysis(
     engine: Engine,
     target_quarter: str,
     previous_quarter: str | None = None,
+    exclude_od_flow: bool = False,
+    build_non_od_barriers: bool | None = None,
 ) -> dict[str, int]:
     """전체 파이프라인 실행."""
-    inputs = collect_inputs(engine, target_quarter)
+    inputs = collect_inputs(engine, target_quarter, exclude_od_flow=exclude_od_flow)
     result = compose_analysis(inputs, target_quarter, previous_quarter)
-    return write_results(engine, target_quarter, result)
+    counts = write_results(engine, target_quarter, result)
+
+    should_build_barriers = (
+        build_non_od_barriers
+        if build_non_od_barriers is not None
+        else exclude_od_flow
+    )
+    if should_build_barriers:
+        from backend.pipeline.build_non_od_barriers import build_and_replace_non_od_barriers
+
+        barrier_counts = build_and_replace_non_od_barriers(
+            engine,
+            quarter=target_quarter,
+            previous_quarter=previous_quarter,
+        )
+        counts["flow_barriers"] = barrier_counts["loaded"]
+
+    return counts
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="분기 입력 → 분석 INSERT 파이프라인")
     p.add_argument("--quarter", required=True, help="대상 분기 (예: 2025Q4)")
     p.add_argument("--previous", default=None, help="추세 비교 분기 (예: 2025Q3)")
+    p.add_argument(
+        "--exclude-od-flow",
+        action="store_true",
+        help="Do not read od_flows_aggregated; compute non-OD analysis from sales and store metrics.",
+    )
+    p.add_argument(
+        "--skip-non-od-barriers",
+        action="store_true",
+        help="When --exclude-od-flow is used, skip rebuilding non-OD flow_barriers.",
+    )
     p.add_argument("--dry-run", action="store_true", help="DB 변경 없이 행 수만 보고")
     return p.parse_args()
 
@@ -433,7 +583,7 @@ def main() -> int:
     args = parse_args()
     engine = create_engine(settings.database_url)
     if args.dry_run:
-        inputs = collect_inputs(engine, args.quarter)
+        inputs = collect_inputs(engine, args.quarter, exclude_od_flow=args.exclude_od_flow)
         result = compose_analysis(inputs, args.quarter, args.previous)
         print(
             f"[run_analysis] dry-run quarter={args.quarter}: "
@@ -441,10 +591,17 @@ def main() -> int:
         )
         return 0
 
-    counts = run_analysis(engine, args.quarter, args.previous)
+    counts = run_analysis(
+        engine,
+        args.quarter,
+        args.previous,
+        exclude_od_flow=args.exclude_od_flow,
+        build_non_od_barriers=args.exclude_od_flow and not args.skip_non_od_barriers,
+    )
     print(
         f"[run_analysis] quarter={args.quarter} previous={args.previous}: "
-        f"analysis_rows={counts['analysis_rows']} policy_cards={counts['policy_cards']}"
+        f"analysis_rows={counts['analysis_rows']} policy_cards={counts['policy_cards']} "
+        f"flow_barriers={counts.get('flow_barriers', 0)}"
     )
     return 0
 
