@@ -21,17 +21,26 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _to_store_info_quarter(quarter: str) -> str:
+    """'2025Q4' → '20254' 형식으로 변환 (store_info 테이블 STDR_YYQU_CD 형식)."""
+    if "Q" in quarter:
+        year, q = quarter.split("Q", 1)
+        return year + q
+    return quarter
+
+
 @router.get("/advisor/industries", response_model=IndustriesResponse)
 def list_industries(
     quarter: str = "2025Q4",
     db: Session = Depends(get_session),
 ):
+    store_quarter = _to_store_info_quarter(quarter)
     rows = db.execute(
         text(
             "SELECT DISTINCT industry_nm FROM store_info "
             "WHERE year_quarter = :q ORDER BY industry_nm"
         ),
-        {"q": quarter},
+        {"q": store_quarter},
     ).fetchall()
     return IndustriesResponse(quarter=quarter, industries=[r.industry_nm for r in rows])
 
