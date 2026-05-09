@@ -143,6 +143,12 @@ def _call_claude(industry_nm: str, scored: list[dict]) -> tuple[str, str, dict[s
             messages=[{"role": "user", "content": _build_llm_context(industry_nm, scored)}],
         )
         raw = message.content[0].text.strip()
+        # 마크다운 코드블록 제거 (```json ... ``` 또는 ``` ... ```)
+        if raw.startswith("```"):
+            raw = raw.split("```", 2)[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
         data = json.loads(raw)
         reasons = {r["comm_cd"]: r["reason"] for r in data.get("reasons", [])}
         return data.get("summary", ""), data.get("caution", ""), reasons
