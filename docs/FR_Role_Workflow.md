@@ -1,7 +1,7 @@
 # spiceMap 기능·요구 명세서 및 5주 개발 계획
 
 > 작성일: 2026-04-08 / 최종 수정: 2026-04-11  
-> 대상: 2026 서울시 빅데이터 활용 경진대회 시각화 부문  
+> 대상: 2026 서울시 빅데이터 활용 경진대회 
 > 팀 구성: 개발자 3인 / 5주 개발
 
 ---
@@ -470,6 +470,8 @@ spiceMap/
 
 **주차 완료 기준**: 필터 작동, 상세 패널 데이터 연동, 우선순위 80+ 목록 표시, CSV 다운로드 동작
 
+> ✅ **전체 완료** (실제 완료: 2026-04-28) — API 5종 완성 (`/api/od/flows`, `/api/barriers`, `/api/insights/policy`, `/api/export/csv`, `/api/barrier-routes`), Module A/B/D/E 구현, closure_rate spatial join, admin_boundary 백필, type-map gu 필터, Dev-B 상세패널·타임라인·자치구필터 연동 완료
+
 ---
 
 ### Week 4 (4/29 ~ 5/5) — 완성도 + 검증
@@ -483,6 +485,8 @@ spiceMap/
 | 재생 모드 (정적 캐시 데이터 시연용) 구현 | 접근성 검토 (색각 이상 시뮬레이션) + 수정 | 검증 결과 패널 콘텐츠 작성 (상관계수, 방향성 일치 수치) |
 
 **주차 완료 기준**: 3분 발표 시나리오 1회 전체 시연 통과, H1~H3 결과 수치 확정
+
+> ✅ **전체 완료** (실제 완료: 2026-05-05) — Module C·H1·H3·분류기 v1.1·프론트 Tier 1·B1/B3·검증 5카드·Hero shot 동선·H2/B1 코드+25 tests·`/api/insights/validation`·통합 검증·배포 인프라·발표 자료·흐름단절 실 도로 경로(`/api/barrier-routes` ORS+fallback, `useBarrierRoutes`, polyline 파티클). backend pytest 266 / frontend vitest 323 / preflight 31/31 ALL PASS.
 
 ---
 
@@ -498,6 +502,21 @@ spiceMap/
 | — | 인터랙티브 웹 데모 최종 버전 배포 | 발표 Q&A 대응 자료 준비 |
 
 **주차 완료 기준**: 제출 산출물 전체 완성 (웹 데모, 시연 영상, 리포트 2종, 구조도, KPI표)
+
+> 🔄 **진행 중** (D-3, 2026-05-09 기준)
+>
+> **완료**
+> - ✅ 배포: Railway (FastAPI) + Vercel (React) — `spice-map.vercel.app` / `spicemap-production.up.railway.app`
+> - ✅ OA-15576 상권변화지표 CSV 수집 → `data/baselines/seoul_change_index_2025Q4.csv`
+> - ✅ `scripts/run_validation_all` 실행 → H1·H2·H3·B1 실측 수치 확정
+> - ✅ `frontend/src/data/validation_results.json` 실측 반영 (B1 Jaccard 0.157, 추가 식별 187건)
+> - ✅ Supabase 전 테이블 적재 확인 (commerce_analysis 3,300행 / policy_cards 833행 / od_flows_aggregated 366,477행 등)
+>
+> **잔여 (D-3 이내)**
+> - 🔲 Hero shot PNG 5종 (`docs/hero_shot_assets/`)
+> - 🔲 30초 시연 영상 (`docs/hero_shot_assets/hero_shot_30s.mp4`)
+> - 🔲 정책 요약 리포트 예시 2종
+> - 🔲 데이터 결합 구조도 1장
 
 ---
 
@@ -529,8 +548,8 @@ Week 5  [마감]   발표 시나리오 / 배포 / 제출 산출물 전체 완성
 
 ## 7. 최종 제출 산출물 체크리스트
 
-- [ ] 인터랙티브 웹 데모 (배포 URL 또는 Docker 이미지)
-- [ ] 3분 시연 영상
+- [x] 인터랙티브 웹 데모 — `https://spice-map.vercel.app` (Railway + Vercel, 2026-05-09 배포)
+- [ ] 3분 시연 영상 (`docs/hero_shot_assets/hero_shot_30s.mp4`)
 - [ ] 정책 요약 리포트 예시 2종 (강남구 과열 상권 / 관악구 침체 상권)
 - [ ] 데이터 결합 구조도 1장
-- [ ] KPI·검증 결과 표 1장 (H1~H3, 베이스라인 비교)
+- [x] KPI·검증 결과 표 — H1 r=0.106(p<0.001) / H3 gap 0.746%p(14.5배, p≈5×10⁻³⁶) / B1 Jaccard 0.157(추가 187건) / B3 Jaccard 0.151 (`frontend/src/data/validation_results.json`, 2026-05-09 실측)
