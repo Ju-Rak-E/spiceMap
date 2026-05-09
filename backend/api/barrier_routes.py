@@ -155,12 +155,6 @@ def _fetch_barrier_route_inputs(
               AND fb.barrier_score >= :min_score
               AND (:gu IS NULL OR ab.gu_nm = :gu OR ab_t.gu_nm = :gu)
               AND (:comm_cd IS NULL OR fb.from_comm_cd = :comm_cd OR fb.to_comm_cd = :comm_cd)
-              AND (
-                  :gu IS NOT NULL
-                  OR :comm_cd IS NOT NULL
-                  OR ab.gu_nm IN ('강남구', '관악구')
-                  OR ab_t.gu_nm IN ('강남구', '관악구')
-              )
         )
         SELECT
             from_comm_cd,

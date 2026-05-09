@@ -20,3 +20,19 @@ export function getMetricValue(node: CommerceNode, metric: HeightMetric): number
     case 'degreeCentrality': return node.degreeCentrality
   }
 }
+
+export function easeOutCubic(t: number): number {
+  const clamped = Math.max(0, Math.min(1, t))
+  return 1 - Math.pow(1 - clamped, 3)
+}
+
+export function interpolateProgress(
+  start: number,
+  target: number,
+  elapsedMs: number,
+  durationMs: number,
+): number {
+  if (durationMs <= 0) return target
+  const t = Math.min(1, elapsedMs / durationMs)
+  return start + (target - start) * easeOutCubic(t)
+}

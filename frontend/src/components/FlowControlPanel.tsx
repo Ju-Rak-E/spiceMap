@@ -1,4 +1,4 @@
-import { type CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import type { FlowPurpose, FlowStats, PurposeVolumeMap } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { COMMERCE_COLORS, MAP_THEME } from '../styles/tokens'
@@ -6,6 +6,7 @@ import { formatQuarter } from '../utils/quarter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
 import { deltaTone, formatDelta, type QuarterKpiDelta } from '../utils/quarterDelta'
+import { SEOUL_DISTRICT_GROUPS, SEOUL_DISTRICT_NAMES } from '../utils/seoulDistricts'
 import { useToast } from './ToastContext'
 
 const PURPOSE_OPTIONS: Array<{ value: FlowPurpose; label: string; peak: string }> = [
@@ -23,7 +24,7 @@ const DENSITY_LABELS: Record<number, string> = {
   5: '매우 높음',
 }
 
-const DISTRICTS = ['강남구', '관악구'] as const
+const DISTRICTS = SEOUL_DISTRICT_NAMES
 const COLORS = MAP_THEME.dark
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
@@ -48,6 +49,7 @@ interface FlowControlPanelProps {
   speed: 1 | 2 | 4
   showFlows: boolean
   showBarriers: boolean
+  flowControlsEnabled?: boolean
   onPlay: () => void
   onPause: () => void
   onToggleSpeed: () => void
@@ -55,6 +57,9 @@ interface FlowControlPanelProps {
   onToggleBarriers: () => void
   selectedDistricts: Set<string>
   onToggleDistrict: (d: string) => void
+  onSelectAllDistricts: () => void
+  onClearDistricts: () => void
+  onSetDistricts: (districts: Set<string>) => void
   onSelectNode: (node: CommerceNode) => void
   compareMode: boolean
   compareQuarter: string | null
@@ -383,6 +388,61 @@ const S = {
     cursor: 'pointer',
     textAlign: 'left',
   }),
+  filterHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  } satisfies CSSProperties,
+  filterSummary: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    minWidth: 0,
+  } satisfies CSSProperties,
+  filterActions: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8,
+  } satisfies CSSProperties,
+  compactButton: (active = false): CSSProperties => ({
+    padding: '7px 9px',
+    borderRadius: 8,
+    border: active ? '1.5px solid #42A5F5' : `1px solid ${COLORS.panelBorder}`,
+    background: active ? 'rgba(66,165,245,0.18)' : COLORS.panelSurface,
+    color: active ? '#BBDEFB' : COLORS.secondaryText,
+    fontSize: 12,
+    fontWeight: active ? 750 : 600,
+    cursor: 'pointer',
+    textAlign: 'center',
+  }),
+  expandButton: {
+    padding: '6px 9px',
+    borderRadius: 999,
+    border: `1px solid ${COLORS.panelBorder}`,
+    background: COLORS.panelSurface,
+    color: COLORS.secondaryText,
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: 'pointer',
+    flexShrink: 0,
+  } satisfies CSSProperties,
+  presetGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8,
+  } satisfies CSSProperties,
+  searchInput: {
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: '8px 10px',
+    borderRadius: 8,
+    border: `1px solid ${COLORS.panelBorder}`,
+    background: COLORS.panelSurface,
+    color: COLORS.panelText,
+    fontSize: 12,
+    outline: 'none',
+  } satisfies CSSProperties,
   districtGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
@@ -550,6 +610,7 @@ export default function FlowControlPanel({
   speed,
   showFlows,
   showBarriers,
+  flowControlsEnabled = true,
   onPlay,
   onPause,
   onToggleSpeed,
@@ -557,6 +618,9 @@ export default function FlowControlPanel({
   onToggleBarriers,
   selectedDistricts,
   onToggleDistrict,
+  onSelectAllDistricts,
+  onClearDistricts,
+  onSetDistricts,
   onSelectNode,
   compareMode,
   compareQuarter,
@@ -565,11 +629,29 @@ export default function FlowControlPanel({
   compact = false,
   stacked = false,
 }: FlowControlPanelProps) {
+  const [districtFilterOpen, setDistrictFilterOpen] = useState(false)
+  const [districtSearch, setDistrictSearch] = useState('')
   const densityLabel = DENSITY_LABELS[flowStrength] ?? '보통'
   const priorityNodes = getPriorityNodes(nodes)
   const totalPurposeVolume = Object.values(purposeTotals).reduce((sum, value) => sum + value, 0)
   const selectedPurposeVolume = purpose ? purposeTotals[purpose] ?? 0 : totalPurposeVolume
   const toast = useToast()
+  const selectedDistrictCount = selectedDistricts.size
+  const allDistrictsSelected = selectedDistrictCount >= DISTRICTS.length
+  const districtSummary = allDistrictsSelected
+    ? '서울 전체'
+    : selectedDistrictCount === 0
+      ? '선택 없음'
+      : `${selectedDistrictCount}개 자치구`
+  const filteredDistricts = useMemo(() => {
+    const query = districtSearch.trim()
+    if (!query) return DISTRICTS
+    return DISTRICTS.filter((district) => district.includes(query))
+  }, [districtSearch])
+
+  function selectDistrictGroup(districts: readonly string[]) {
+    onSetDistricts(new Set(districts))
+  }
 
   // docs/hero_shot_scenario.md §1-3: CSV 다운로드 시 toast 컨텍스트로 결과 피드백.
   // 메시지에 "추천 상권 N건 + 정책 R4~R7 한 줄 요약" 명시 (hero shot 시간축 대사와 일치).
@@ -668,7 +750,7 @@ export default function FlowControlPanel({
               )
             })}
           </div>
-          <div style={S.subLabel}>분기를 바꾸면 지도, 추천 상권, 고객 흐름 정보가 함께 갱신됩니다.</div>
+          <div style={S.subLabel}>분기를 바꾸면 지도, 추천 상권, 단절 위험 정보가 함께 갱신됩니다.</div>
         </div>
 
         <div>
@@ -755,7 +837,7 @@ export default function FlowControlPanel({
       </section>
 
       <section style={S.section}>
-        <div style={S.sectionTitle}>고객 흐름 요약</div>
+        <div style={S.sectionTitle}>상권 위험 요약</div>
         <div style={S.compareHeader}>
           <div>
             <div style={S.label}>분기 비교</div>
@@ -855,27 +937,29 @@ export default function FlowControlPanel({
             {speed}x
           </button>
         </div>
+        {flowControlsEnabled && (
+          <div style={S.switchRow}>
+            <span style={S.switchLabel}>흐름 궤적 표시</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showFlows}
+              onClick={onToggleFlows}
+              aria-label="OD flow display toggle"
+              style={S.switchTrack(showFlows)}
+            >
+              <span style={S.switchThumb(showFlows)} />
+            </button>
+          </div>
+        )}
         <div style={S.switchRow}>
-          <span style={S.switchLabel}>흐름 궤적 표시</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={showFlows}
-            onClick={onToggleFlows}
-            aria-label="OD flow display toggle"
-            style={S.switchTrack(showFlows)}
-          >
-            <span style={S.switchThumb(showFlows)} />
-          </button>
-        </div>
-        <div style={S.switchRow}>
-          <span style={S.switchLabel}>흐름 단절 표시</span>
+          <span style={S.switchLabel}>단절 위험 표시</span>
           <button
             type="button"
             role="switch"
             aria-checked={showBarriers}
             onClick={onToggleBarriers}
-            aria-label="흐름 단절 레이어 표시 전환"
+            aria-label="단절 위험 레이어 표시 전환"
             style={S.switchTrack(showBarriers)}
           >
             <span style={S.switchThumb(showBarriers)} />
@@ -889,23 +973,89 @@ export default function FlowControlPanel({
       </section>
 
       <section style={S.section}>
-        <div style={S.sectionTitle}>자치구 필터</div>
-        <div style={S.districtGrid}>
-          {DISTRICTS.map((district) => {
-            const active = selectedDistricts.has(district)
-            return (
-              <button
-                key={district}
-                style={S.pillButton(active, '#42A5F5')}
-                onClick={() => onToggleDistrict(district)}
-                aria-pressed={active}
-                aria-label={`${district} 자치구 필터 ${active ? '해제' : '선택'}`}
-              >
-                <span>{district}</span>
-              </button>
-            )
-          })}
+        <div style={S.filterHeader}>
+          <div style={S.filterSummary}>
+            <div style={S.sectionTitle}>자치구 필터</div>
+            <div style={S.subLabel}>{districtSummary}</div>
+          </div>
+          <button
+            type="button"
+            style={S.expandButton}
+            onClick={() => setDistrictFilterOpen((prev) => !prev)}
+            aria-expanded={districtFilterOpen}
+            aria-label="자치구 상세 필터 열기"
+          >
+            {districtFilterOpen ? '접기' : '상세'}
+          </button>
         </div>
+
+        <div style={S.filterActions}>
+          <button
+            type="button"
+            style={S.compactButton(allDistrictsSelected)}
+            onClick={onSelectAllDistricts}
+            aria-pressed={allDistrictsSelected}
+          >
+            서울 전체
+          </button>
+          <button
+            type="button"
+            style={S.compactButton(selectedDistrictCount === 0)}
+            onClick={onClearDistricts}
+            aria-pressed={selectedDistrictCount === 0}
+          >
+            전체 해제
+          </button>
+        </div>
+
+        {districtFilterOpen && (
+          <>
+            <div style={S.presetGrid}>
+              {SEOUL_DISTRICT_GROUPS.map((group) => {
+                const active = group.districts.every((district) => selectedDistricts.has(district))
+                return (
+                  <button
+                    key={group.name}
+                    type="button"
+                    style={S.compactButton(active)}
+                    onClick={() => selectDistrictGroup(group.districts)}
+                    aria-pressed={active}
+                  >
+                    {group.name}
+                  </button>
+                )
+              })}
+            </div>
+            <input
+              type="search"
+              value={districtSearch}
+              onChange={(event) => setDistrictSearch(event.target.value)}
+              placeholder="자치구 검색"
+              style={S.searchInput}
+              aria-label="자치구 검색"
+            />
+            <div style={S.districtGrid}>
+              {filteredDistricts.map((district) => {
+                const active = selectedDistricts.has(district)
+                return (
+                  <button
+                    key={district}
+                    type="button"
+                    style={S.pillButton(active, '#42A5F5')}
+                    onClick={() => onToggleDistrict(district)}
+                    aria-pressed={active}
+                    aria-label={`${district} 자치구 필터 ${active ? '해제' : '선택'}`}
+                  >
+                    <span>{district}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {filteredDistricts.length === 0 && (
+              <div style={S.emptyNote}>검색된 자치구가 없습니다.</div>
+            )}
+          </>
+        )}
       </section>
 
       {selectedNode && (

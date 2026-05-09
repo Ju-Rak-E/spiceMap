@@ -36,4 +36,25 @@ describe('buildPolygonExtrusionData', () => {
     const data = buildPolygonExtrusionData(nodes, boundaries, 'griScore')
     expect(data.map(d => d.id)).not.toContain('gc_999')
   })
+
+  it('progress=0 시 모든 elevation이 0 (애니메이션 시작점)', () => {
+    const data = buildPolygonExtrusionData(nodes, boundaries, 'griScore', 0)
+    for (const d of data) {
+      expect(d.elevation).toBe(0)
+    }
+  })
+
+  it('progress=0.5 시 elevation이 정확히 절반', () => {
+    const full = buildPolygonExtrusionData(nodes, boundaries, 'griScore', 1)
+    const half = buildPolygonExtrusionData(nodes, boundaries, 'griScore', 0.5)
+    const fullHigh = full.find(d => d.id === 'gc_001')!
+    const halfHigh = half.find(d => d.id === 'gc_001')!
+    expect(halfHigh.elevation).toBeCloseTo(fullHigh.elevation * 0.5, 5)
+  })
+
+  it('progress 인자 미지정 시 기본값 1 (기존 동작 보존)', () => {
+    const a = buildPolygonExtrusionData(nodes, boundaries, 'griScore')
+    const b = buildPolygonExtrusionData(nodes, boundaries, 'griScore', 1)
+    expect(a).toEqual(b)
+  })
 })

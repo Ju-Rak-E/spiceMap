@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CommerceNode, CommerceTypeMapResponse } from '../types/commerce'
 import { featuresToNodes } from '../types/commerce'
 import { isDemoMode } from '../utils/demoMode'
+import { SEOUL_DISTRICT_NAMES } from '../utils/seoulDistricts'
 
 export interface UseCommerceDataReturn {
   nodes: CommerceNode[]
@@ -20,8 +21,9 @@ async function fetchMockCommerceNodes(): Promise<{ nodes: CommerceNode[]; isMock
   return { nodes, isMock: true }
 }
 
-async function fetchCommerceNodes(quarter: string, gu: string): Promise<CommerceNode[]> {
-  const params = new URLSearchParams({ quarter, gu })
+async function fetchCommerceNodes(quarter: string, gu?: string): Promise<CommerceNode[]> {
+  const params = new URLSearchParams({ quarter })
+  if (gu) params.set('gu', gu)
   const res = await fetch(`${BASE_URL}/api/commerce/type-map?${params.toString()}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = (await res.json()) as CommerceTypeMapResponse
@@ -29,7 +31,7 @@ async function fetchCommerceNodes(quarter: string, gu: string): Promise<Commerce
     ...node,
     // The request is already scoped by gu; use it as the canonical district
     // because some DB rows currently return mojibake gu_nm values.
-    district: gu,
+    district: gu ?? node.district,
   }))
 }
 
@@ -43,6 +45,10 @@ async function fetchCommerceNodesForDistricts(
 
   if (isDemoMode()) {
     return fetchMockCommerceNodes()
+  }
+
+  if (districts.length >= SEOUL_DISTRICT_NAMES.length) {
+    return { nodes: await fetchCommerceNodes(quarter), isMock: false }
   }
 
   const groupedNodes = await Promise.all(

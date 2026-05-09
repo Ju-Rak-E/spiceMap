@@ -2,6 +2,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { normalizeBackendBarriers, useBarriers } from './useBarriers'
+import { SEOUL_DISTRICT_NAMES } from '../utils/seoulDistricts'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -24,6 +25,31 @@ describe('useBarriers', () => {
     const url = fetchMock.mock.calls[0][0] as string
     expect(url).toContain('/api/barriers?quarter=2025Q4')
     expect(url).not.toContain('gu=')
+  })
+
+  it('treats all selected districts as a single Seoul-wide request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ quarter: '2025Q4', total: 0, barriers: [] }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderHook(() => useBarriers('2025Q4', new Set(SEOUL_DISTRICT_NAMES)))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    const url = fetchMock.mock.calls[0][0] as string
+    expect(url).toContain('/api/barriers?quarter=2025Q4')
+    expect(url).not.toContain('gu=')
+  })
+
+  it('returns no barriers when the explicit district selection is empty', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => useBarriers('2025Q4', new Set()))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(result.current.barriers).toEqual([])
   })
 
   it('fetches each district in parallel and merges results, deduped by id', async () => {

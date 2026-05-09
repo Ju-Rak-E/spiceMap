@@ -4,10 +4,12 @@ import type { HeightMetric } from '../hooks/use3DView'
 import { hexToRgba } from '../utils/colorUtils'
 import { getMetricValue } from '../utils/threeDUtils'
 
-const MIN_SIZE = 18
-const MAX_SIZE = 42
-const MAX_COUNT = 5
-const OFFSET_STEP = 0.00018
+const MIN_SIZE_METERS = 60
+const MAX_SIZE_METERS = 140
+const SIZE_MIN_PIXELS = 10
+const SIZE_MAX_PIXELS = 56
+const MAX_COUNT = 3
+const OFFSET_STEP = 0.0009
 
 interface PictogramDatum {
   id: string
@@ -56,8 +58,7 @@ function getComparableValue(node: CommerceNode, metric: HeightMetric): number {
 function getPictogramOffset(index: number, count: number): [number, number] {
   if (count === 1) return [0, 0]
   const angle = (Math.PI * 2 * index) / count
-  const radius = OFFSET_STEP * (count <= 3 ? 1 : 1.35)
-  return [Math.cos(angle) * radius, Math.sin(angle) * radius]
+  return [Math.cos(angle) * OFFSET_STEP, Math.sin(angle) * OFFSET_STEP]
 }
 
 export function buildCommercePictogramData(
@@ -75,7 +76,7 @@ export function buildCommercePictogramData(
     const value = getComparableValue(node, metric)
     const intensity = max === min ? (max > 0 ? 0.5 : 0) : clamp01((value - min) / (max - min))
     const count = Math.max(1, Math.round(1 + intensity * (MAX_COUNT - 1)))
-    const size = MIN_SIZE + intensity * (MAX_SIZE - MIN_SIZE)
+    const size = MIN_SIZE_METERS + intensity * (MAX_SIZE_METERS - MIN_SIZE_METERS)
 
     for (let i = 0; i < count; i += 1) {
       const [dx, dy] = getPictogramOffset(i, count)
@@ -105,7 +106,9 @@ export function createCommerceColumnLayer(
     getText: (d) => d.text,
     getSize: (d) => d.size,
     getColor: (d) => d.color,
-    sizeUnits: 'pixels',
+    sizeUnits: 'meters',
+    sizeMinPixels: SIZE_MIN_PIXELS,
+    sizeMaxPixels: SIZE_MAX_PIXELS,
     fontFamily: 'system-ui, sans-serif',
     fontWeight: 800,
     characterSet: '人!×●',

@@ -280,3 +280,32 @@
 - [x] `commerce_analysis` NaN metric NULL 변환 보완
 
 남은 항목은 발표 준비와 운영 DB 기준 최종 확인입니다.
+
+---
+
+## Week 5 추가 작업: 3D 뷰 개선 (2026-05-07)
+
+> 요구사항: 폴리곤 라인대로 상권구역별 지형그래프가 위아래로 솟아오르며, 강도에 따라 따로따로 높낮이; 픽토그램은 1~3개·강도별 크기 변화·줌인줌아웃 자동 스케일.
+
+### 결정 사항
+- 솟아오르는 애니메이션: 0 → 목표 높이, 600ms ease-out (out: 300ms)
+- 픽토그램 줌 스케일: `sizeUnits: 'meters'` (60~140m), `sizeMinPixels: 10` / `sizeMaxPixels: 56` 가드
+- 픽토그램 카운트: 카드 + 지도 위 모두 1~3개로 통일
+
+### Dev-B
+- [x] Phase 1: `PolygonExtrusionLayer`에 `progress` 파라미터, `Map.tsx` extrude-progress 연결, `use3DView`에 RAF 애니메이션 (`utils/threeDUtils.ts`의 `easeOutCubic` / `interpolateProgress` 추출)
+- [x] Phase 2: `CommerceColumnLayer.MAX_COUNT` 5→3, `getMetricPictogramStats` 1~3 클램프
+- [x] Phase 3: `sizeUnits` `'pixels'`→`'meters'`, `OFFSET_STEP` 0.0009 (~80m)로 키워 픽토그램 분리 보장
+- [x] Phase 4: vitest 367/367 PASS
+
+### Dev-B (2026-05-07 추가) — 자치구 단위 3D + 빨간 핀 (mockup/map.png 매칭)
+> 사용자 피드백: 상권이 아닌 **자치구** 단위로 솟아야 하고, 픽토그램은 **빨간 위치 핀**이어야 함
+
+- [x] A. `utils/districtAggregation.ts` — 자치구별 평균 metric, centroid, dong→district 매핑 (테스트 7개)
+- [x] B. `layers/AdminPolygonExtrusionLayer.ts` — 행정동 폴리곤을 자치구 단위 elevation으로 솟게, `stroked: false`로 자치구처럼 보이게, 라벤더 톤 (테스트 7개)
+- [x] C. `layers/DistrictPinLayer.ts` — 자치구 centroid에 빨간 핀 1~3개, `radiusUnits: 'meters'` 줌 스케일 (테스트 7개)
+- [x] D. `use3DView`에 `adminBoundaries` 추가, `Map.tsx` polygon 모드를 자치구 extrusion + 빨간 핀 동시 표시로 전환, 사용 안 하는 `createPolygonExtrusionLayer` import 제거
+- [x] E. vitest 388/388 PASS, vite build 성공
+- [x] F. ThreeDMode 재정의 `'off' | 'admin' | 'commerce'`, ThreeDViewControl 토글 라벨 'OFF' / '자치구 3D' / '상권 3D'. `Map.tsx`에서 모드별 분기 — admin: AdminPolygonExtrusion + DistrictPin / commerce: PolygonExtrusion(상권) + CommerceColumnLayer(픽토그램). 두 모드 모두 솟아오르는 애니메이션 적용. CommerceBoundaryLayer는 commerce 모드에서만 숨김(z-fighting 방지). vitest 390/390 PASS, build 성공
+- [ ] (사전 결함) `ThreeDViewControl.tsx`의 `getMetricPictogramStats` export — `react-refresh/only-export-components` lint 에러: 별도 파일 분리 필요 (작업 외 수정으로 보류)
+- [ ] (수동 검증) `npm run dev`로 자치구 솟음·빨간 핀 위치·줌 스케일링 시각 확인

@@ -40,11 +40,11 @@ describe('ThreeDViewControl', () => {
     onMetricChange: vi.fn(),
   }
 
-  it('OFF/폴리곤/이미지 버튼 렌더링', () => {
+  it('OFF/자치구 3D/상권 3D 버튼 렌더링', () => {
     render(<ThreeDViewControl {...defaultProps} />)
     expect(screen.getByText('OFF')).toBeTruthy()
-    expect(screen.getByText('폴리곤')).toBeTruthy()
-    expect(screen.getByText('이미지')).toBeTruthy()
+    expect(screen.getByText('자치구 3D')).toBeTruthy()
+    expect(screen.getByText('상권 3D')).toBeTruthy()
   })
 
   it('mode=off 시 지표 드롭다운 미표시', () => {
@@ -52,22 +52,34 @@ describe('ThreeDViewControl', () => {
     expect(screen.queryByRole('combobox')).toBeNull()
   })
 
-  it('폴리곤 버튼 클릭 → onModeChange("polygon") 호출', () => {
+  it('자치구 3D 버튼 클릭 → onModeChange("admin")', () => {
     const onModeChange = vi.fn()
     render(<ThreeDViewControl {...defaultProps} onModeChange={onModeChange} />)
-    fireEvent.click(screen.getByText('폴리곤'))
-    expect(onModeChange).toHaveBeenCalledWith('polygon')
+    fireEvent.click(screen.getByText('자치구 3D'))
+    expect(onModeChange).toHaveBeenCalledWith('admin')
   })
 
-  it('mode=polygon 시 지표 드롭다운과 픽토그램 카드 표시', () => {
-    render(<ThreeDViewControl {...defaultProps} mode="polygon" />)
+  it('상권 3D 버튼 클릭 → onModeChange("commerce")', () => {
+    const onModeChange = vi.fn()
+    render(<ThreeDViewControl {...defaultProps} onModeChange={onModeChange} />)
+    fireEvent.click(screen.getByText('상권 3D'))
+    expect(onModeChange).toHaveBeenCalledWith('commerce')
+  })
+
+  it('mode=admin 시 지표 드롭다운과 픽토그램 카드 표시', () => {
+    render(<ThreeDViewControl {...defaultProps} mode="admin" />)
     expect(screen.getByRole('combobox')).toBeTruthy()
     expect(screen.getByTestId('metric-pictogram-netFlow')).toBeTruthy()
   })
 
+  it('mode=commerce 시에도 지표 드롭다운 표시', () => {
+    render(<ThreeDViewControl {...defaultProps} mode="commerce" />)
+    expect(screen.getByRole('combobox')).toBeTruthy()
+  })
+
   it('지표 변경 → onMetricChange 호출', () => {
     const onMetricChange = vi.fn()
-    render(<ThreeDViewControl {...defaultProps} mode="polygon" onMetricChange={onMetricChange} />)
+    render(<ThreeDViewControl {...defaultProps} mode="admin" onMetricChange={onMetricChange} />)
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'netFlow' } })
     expect(onMetricChange).toHaveBeenCalledWith('netFlow')
   })
@@ -77,5 +89,13 @@ describe('ThreeDViewControl', () => {
     const low = getMetricPictogramStats([{ ...nodes[0], netFlow: 0 }], 'netFlow')
     expect(high.count).toBeGreaterThan(low.count)
     expect(high.size).toBeGreaterThan(low.size)
+  })
+
+  it('카드 픽토그램 카운트는 1~3 범위로 제한된다', () => {
+    const high = getMetricPictogramStats(nodes, 'netFlow')
+    const low = getMetricPictogramStats(undefined, 'netFlow')
+    expect(high.count).toBeLessThanOrEqual(3)
+    expect(high.count).toBeGreaterThanOrEqual(1)
+    expect(low.count).toBeGreaterThanOrEqual(1)
   })
 })

@@ -12,7 +12,7 @@ function formatHour(hour: number): string {
 export function buildSummaryText(
   purpose: FlowPurpose | null,
   hour: number,
-  topN: number,
+  _topN: number,
   _selectedTypes: Set<CommerceType>,
   nodes: CommerceNode[],
 ): string {
@@ -21,7 +21,7 @@ export function buildSummaryText(
   const dangerCount = nodes.filter(n => n.griScore >= 70).length
   const purposeText = purpose ?? '전체 목적'
   const hourText = formatHour(hour)
-  return `강남·관악 상권 ${totalCount}개 · GRI 70 이상 위험 상권 ${dangerCount}개 · ${hourText} ${purposeText} 상위 ${topN}개 흐름 표시 중`
+  return `서울 전역 상권 ${totalCount}개 · GRI 70 이상 위험 상권 ${dangerCount}개 · ${hourText} ${purposeText} 기준`
 }
 
 export function getNodeInterpretation(type: CommerceType, griScore: number): string {

@@ -33,6 +33,18 @@ describe('createCommerceColumnLayer', () => {
     expect(layer.id).toBe('commerce-pictogram')
   })
 
+  it('sizeUnits가 "meters"여서 줌 레벨에 따라 화면상 크기가 자동 변한다', () => {
+    const layer = createCommerceColumnLayer(nodes, 'griScore')
+    expect(layer.props.sizeUnits).toBe('meters')
+  })
+
+  it('sizeMinPixels/sizeMaxPixels로 극단 줌에서의 크기를 가드한다', () => {
+    const layer = createCommerceColumnLayer(nodes, 'griScore')
+    expect(typeof layer.props.sizeMinPixels).toBe('number')
+    expect(typeof layer.props.sizeMaxPixels).toBe('number')
+    expect(layer.props.sizeMaxPixels).toBeGreaterThan(layer.props.sizeMinPixels)
+  })
+
   it('빈 nodes 배열에서도 에러 없이 생성', () => {
     expect(() => createCommerceColumnLayer([], 'griScore')).not.toThrow()
   })
@@ -55,5 +67,20 @@ describe('createCommerceColumnLayer', () => {
     const high = data.find((d) => d.nodeId === 'gc_001')!
     const low = data.find((d) => d.nodeId === 'gc_002')!
     expect(high.size).toBeGreaterThan(low.size)
+  })
+
+  it('최대 강도 노드도 픽토그램은 3개를 넘지 않는다', () => {
+    const data = buildCommercePictogramData(nodes, 'netFlow')
+    const high = data.filter((d) => d.nodeId === 'gc_001')
+    expect(high.length).toBeLessThanOrEqual(3)
+  })
+
+  it('최소 강도 노드도 최소 1개의 픽토그램은 표시된다', () => {
+    const flatNodes: CommerceNode[] = nodes.map((n) => ({ ...n, netFlow: 0 }))
+    const data = buildCommercePictogramData(flatNodes, 'netFlow')
+    for (const node of flatNodes) {
+      const count = data.filter((d) => d.nodeId === node.id).length
+      expect(count).toBeGreaterThanOrEqual(1)
+    }
   })
 })

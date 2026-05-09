@@ -11,8 +11,8 @@ const METRIC_OPTIONS: Array<{ value: HeightMetric; label: string; icon: string; 
 
 const MODE_LABELS: Record<ThreeDMode, string> = {
   off: 'OFF',
-  polygon: '폴리곤',
-  column: '이미지',
+  admin: '자치구 3D',
+  commerce: '상권 3D',
 }
 
 interface ThreeDViewControlProps {
@@ -50,7 +50,7 @@ export function getMetricPictogramStats(
 ): { count: number; size: number } {
   const intensity = getMetricIntensity(nodes, metric)
   return {
-    count: Math.max(1, Math.round(1 + intensity * 4)),
+    count: Math.max(1, Math.min(3, Math.round(1 + intensity * 2))),
     size: Math.round(10 + intensity * 12),
   }
 }
@@ -93,7 +93,7 @@ export default function ThreeDViewControl({
         3D 뷰{isActive ? ' - 활성' : ''}
       </div>
       <div style={{ display: 'flex', gap: 4, marginBottom: isActive ? 8 : 0 }}>
-        {(['off', 'polygon', 'column'] as ThreeDMode[]).map((m) => (
+        {(['off', 'admin', 'commerce'] as ThreeDMode[]).map((m) => (
           <button
             key={m}
             type="button"

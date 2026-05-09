@@ -23,24 +23,24 @@ describe('use3DView', () => {
     expect(result.current.metric).toBe('griScore')
   })
 
-  it('polygon으로 setMode → flyTo pitch 45 호출', () => {
+  it('admin으로 setMode → flyTo pitch 45 호출', () => {
     const { result } = renderHook(() => use3DView(mapRef))
-    act(() => { result.current.setMode('polygon') })
-    expect(result.current.mode).toBe('polygon')
+    act(() => { result.current.setMode('admin') })
+    expect(result.current.mode).toBe('admin')
     expect(mockFlyTo).toHaveBeenCalledWith({ pitch: 45, bearing: -20, duration: 800 })
   })
 
   it('off로 setMode → flyTo pitch 0 호출', () => {
     const { result } = renderHook(() => use3DView(mapRef))
-    act(() => { result.current.setMode('polygon') })
+    act(() => { result.current.setMode('admin') })
     act(() => { result.current.setMode('off') })
     expect(mockFlyTo).toHaveBeenLastCalledWith({ pitch: 0, bearing: 0, duration: 600 })
   })
 
-  it('polygon → column 전환 시 flyTo pitch 45 재호출', () => {
+  it('admin → commerce 전환 시 flyTo pitch 45 재호출', () => {
     const { result } = renderHook(() => use3DView(mapRef))
-    act(() => { result.current.setMode('polygon') })
-    act(() => { result.current.setMode('column') })
+    act(() => { result.current.setMode('admin') })
+    act(() => { result.current.setMode('commerce') })
     expect(mockFlyTo).toHaveBeenLastCalledWith({ pitch: 45, bearing: -20, duration: 800 })
   })
 

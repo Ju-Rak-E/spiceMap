@@ -151,6 +151,24 @@ def test_barrier_routes_applies_score_and_limit_filters(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_barrier_routes_default_scope_is_not_limited_to_old_mvp_districts(monkeypatch):
+    mock_db = MagicMock()
+    mock_db.execute.return_value.fetchall.return_value = []
+
+    monkeypatch.setattr("backend.api.barrier_routes.settings.openrouteservice_api_key", "test-key")
+    app.dependency_overrides[get_session] = lambda: mock_db
+    app.dependency_overrides[get_cache] = _mock_cache
+
+    client = TestClient(app)
+    result = client.get("/api/barrier-routes?quarter=2025Q4")
+
+    assert result.status_code == 200
+    sql = str(mock_db.execute.call_args.args[0])
+    assert "강남구" not in sql
+    assert "관악구" not in sql
+    app.dependency_overrides.clear()
+
+
 def test_barrier_routes_applies_commerce_endpoint_filter(monkeypatch):
     mock_db = MagicMock()
     mock_db.execute.return_value.fetchall.return_value = []
