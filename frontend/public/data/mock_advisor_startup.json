@@ -1,0 +1,64 @@
+{
+  "industry_nm": "커피음료",
+  "quarter": "2025Q4",
+  "summary": "강남구 역삼1동 일대는 점심 유동인구가 최상위권이며 GRI 30으로 안정적입니다. 관악구 봉천2동은 대학생 유동인구가 꾸준하고 낮은 폐업률로 커피음료 창업에 유리한 환경을 갖추고 있습니다.",
+  "caution": "신림1동 일대는 동종 업종 경쟁 밀도가 높고 GRI 상승 추세이므로 신규 진입 시 주의가 필요합니다.",
+  "model_used": "claude-haiku-4-5",
+  "commerces": [
+    {
+      "comm_cd": "3110001",
+      "comm_nm": "역삼1동 상권",
+      "gu_nm": "강남구",
+      "tier": "추천",
+      "advisor_score": 82.4,
+      "gri_score": 30.0,
+      "flow_volume": 12400,
+      "closure_rate": 1.0,
+      "llm_reason": "점심 유동인구 최상위권이며 낮은 GRI가 안정적 창업 환경을 뒷받침합니다."
+    },
+    {
+      "comm_cd": "3110002",
+      "comm_nm": "봉천2동 상권",
+      "gu_nm": "관악구",
+      "tier": "추천",
+      "advisor_score": 74.1,
+      "gri_score": 42.0,
+      "flow_volume": 9800,
+      "closure_rate": 0.8,
+      "llm_reason": "대학가 특성으로 꾸준한 방문 수요가 있으며 폐업률이 매우 낮습니다."
+    },
+    {
+      "comm_cd": "3110003",
+      "comm_nm": "신림1동 상권",
+      "gu_nm": "관악구",
+      "tier": "주의",
+      "advisor_score": 55.3,
+      "gri_score": 61.0,
+      "flow_volume": 7200,
+      "closure_rate": 2.1,
+      "llm_reason": null
+    },
+    {
+      "comm_cd": "3110004",
+      "comm_nm": "서초2동 상권",
+      "gu_nm": "강남구",
+      "tier": "주의",
+      "advisor_score": 48.7,
+      "gri_score": 55.0,
+      "flow_volume": 6100,
+      "closure_rate": 1.8,
+      "llm_reason": null
+    },
+    {
+      "comm_cd": "3110005",
+      "comm_nm": "난곡 상권",
+      "gu_nm": "관악구",
+      "tier": "비추천",
+      "advisor_score": 31.2,
+      "gri_score": 78.0,
+      "flow_volume": 4100,
+      "closure_rate": 3.5,
+      "llm_reason": null
+    }
+  ]
+}
