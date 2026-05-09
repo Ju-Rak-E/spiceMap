@@ -9,8 +9,7 @@ import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
 import { useViewportMode } from './hooks/useViewportMode'
-import { useStartupAdvisor, type AdvisorResult } from './hooks/useStartupAdvisor'
-import type { AdvisorTierMap } from './layers/CommerceNodeLayer'
+import { useStartupAdvisor } from './hooks/useStartupAdvisor'
 import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import { countCriticalCommerces } from './utils/insightMetrics'
@@ -164,9 +163,7 @@ export default function App() {
     })
   }, [])
 
-  const advisorTiers: AdvisorTierMap | null = advisor.result
-    ? new Map(advisor.result.commerces.map((c) => [c.comm_cd, c.tier]))
-    : null
+  const advisorTiers = advisor.tierMap
 
   return (
     <ToastProvider>

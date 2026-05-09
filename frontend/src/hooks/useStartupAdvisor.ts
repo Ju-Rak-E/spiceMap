@@ -61,5 +61,9 @@ export function useStartupAdvisor(quarter: string) {
     setError(null)
   }, [])
 
-  return { industries, isLoading, result, error, analyze, reset }
+  const tierMap: Map<string, '추천' | '주의' | '비추천'> | null = result
+    ? new Map(result.commerces.map((c) => [c.comm_cd, c.tier]))
+    : null
+
+  return { industries, isLoading, result, error, analyze, reset, tierMap }
 }
