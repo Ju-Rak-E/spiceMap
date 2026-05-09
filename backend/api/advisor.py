@@ -75,8 +75,9 @@ def _compute_advisor_scores(rows: list) -> list[dict]:
 def _assign_tiers(scored: list[dict]) -> list[dict]:
     """점수 내림차순 리스트에 추천/주의/비추천 tier를 부여해 반환."""
     n = len(scored)
+    denom = n - 1 if n > 1 else 1
     for i, item in enumerate(scored):
-        pct = i / n if n > 0 else 0.0
+        pct = i / denom
         if pct < 0.30:
             item["tier"] = "추천"
         elif pct < 0.70:
