@@ -1,8 +1,10 @@
 import type { CommerceNode } from '../types/commerce'
 import type { CommerceType } from '../styles/tokens'
+import { SEOUL_DISTRICT_NAMES } from './seoulDistricts'
 
 export function filterNodesByDistrict(nodes: CommerceNode[], districts: Set<string>): CommerceNode[] {
   if (districts.size === 0) return []
+  if (districts.size >= SEOUL_DISTRICT_NAMES.length) return nodes
   return nodes.filter(n => districts.has(n.district))
 }
 

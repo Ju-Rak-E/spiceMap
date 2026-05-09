@@ -49,6 +49,29 @@ class TestBarriers:
         assert data["barriers"][0]["targetCoord"] == [126.9527, 37.4812]
         app.dependency_overrides.clear()
 
+    def test_returns_non_od_barrier_type(self):
+        mock_db = MagicMock()
+        mock_db.execute.return_value.fetchall.return_value = [
+            FakeRow(
+                from_comm_cd="C1", from_comm_nm="안정 상권",
+                from_centroid_lng=126.929, from_centroid_lat=37.484,
+                to_comm_cd="C2", to_comm_nm="위험 상권",
+                to_centroid_lng=126.952, to_centroid_lat=37.481,
+                barrier_score=0.64, barrier_type="비OD_공간단절",
+                source_lng=126.9291, source_lat=37.4844,
+                target_lng=126.9527, target_lat=37.4812,
+            )
+        ]
+        app.dependency_overrides[get_session] = lambda: mock_db
+        app.dependency_overrides[get_cache] = _mock_cache
+        client = TestClient(app)
+        response = client.get("/api/barriers?quarter=2025Q4")
+        assert response.status_code == 200
+        item = response.json()["barriers"][0]
+        assert item["barrier_type"] == "비OD_공간단절"
+        assert item["affected_volume"] == 6400
+        app.dependency_overrides.clear()
+
     def test_empty_when_no_data(self):
         mock_db = MagicMock()
         mock_db.execute.return_value.fetchall.return_value = []

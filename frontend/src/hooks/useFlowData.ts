@@ -67,6 +67,7 @@ export interface FlowFilters {
   topN?: number
   hour?: number
   quarter?: string
+  enabled?: boolean
 }
 
 export interface FlowStats {
@@ -207,8 +208,18 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const quarter = filters.quarter ?? '2025Q4'
+  const enabled = filters.enabled ?? true
 
   useEffect(() => {
+    if (!enabled) {
+      queueMicrotask(() => {
+        setAllFlows([])
+        setIsLoading(false)
+        setError(null)
+      })
+      return
+    }
+
     queueMicrotask(() => {
       setIsLoading(true)
       setError(null)
@@ -223,7 +234,7 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
         setError('흐름 데이터를 불러오지 못했습니다')
         setIsLoading(false)
       })
-  }, [quarter])
+  }, [enabled, quarter])
 
   const flows = filterFlows(allFlows, filters)
   const stats = computeStats(flows)

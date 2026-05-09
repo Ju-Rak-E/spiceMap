@@ -4,6 +4,12 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
 import { MAP_THEME, COMMERCE_COLORS, type CommerceType, type MapTheme } from '../styles/tokens'
+import { use3DView } from '../hooks/use3DView'
+import ThreeDViewControl from './ThreeDViewControl'
+import { createPolygonExtrusionLayer } from '../layers/PolygonExtrusionLayer'
+import { createCommerceColumnLayer } from '../layers/CommerceColumnLayer'
+import { createAdminPolygonExtrusionLayer } from '../layers/AdminPolygonExtrusionLayer'
+import { createDistrictPinLayer } from '../layers/DistrictPinLayer'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceBoundaryLayer from './CommerceBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
@@ -23,6 +29,7 @@ import { formatSignedFixed2 } from '../utils/numberFormat'
 import { markMapLoadEnd, markMapLoadStart } from '../utils/mapPerformance'
 import { getFlowProgressIncrement } from '../utils/flowAnimation'
 import { selectBalancedBarriers } from '../utils/barrierSelection'
+import { SEOUL_DISTRICT_CODE_BY_NAME } from '../utils/seoulDistricts'
 import {
   buildDistrictCommerceClusters,
   buildDongCommerceClusters,
@@ -53,10 +60,6 @@ const CLUSTER_PANEL_WIDTH = 332
 const DISTRICT_ZOOM = 10.5
 const DONG_ZOOM = 12.5
 const CANDIDATE_ZOOM = 14.5
-const DISTRICT_CODES: Record<string, string> = {
-  '강남구': '1123',
-  '관악구': '1121',
-}
 const ALL_COMMERCE_TYPES = new Set(Object.keys(COMMERCE_COLORS) as CommerceType[])
 const OVERVIEW_BARRIER_LIMIT = 8
 
@@ -147,6 +150,7 @@ export default function Map({
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const threeDView = use3DView(mapRef)
   const overlayRef = useRef<MapboxOverlay | null>(null)
   const progressRef = useRef(0)
   const heroPulseRef = useRef(0)
@@ -205,9 +209,13 @@ export default function Map({
       zoom: 11.5,
       minZoom: 9,
       maxZoom: 18,
+      dragRotate: true,
+      pitchWithRotate: true,
+      touchPitch: true,
+      maxPitch: 70,
     })
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
 
     const overlay = new MapboxOverlay({ interleaved: false, layers: [] })
     map.addControl(overlay)
@@ -421,13 +429,35 @@ export default function Map({
       : [],
     [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage, advisorTiers],
   )
+  const threeDLayers = useMemo(() => {
+    if (nodes.length === 0) return []
+    const isAnimating = threeDView.extrudeProgress > 0
+    const isAdmin = threeDView.mode === 'admin' || (threeDView.mode === 'off' && isAnimating)
+    const isCommerce = threeDView.mode === 'commerce'
+
+    if (isAdmin && threeDView.adminBoundaries && threeDView.adminBoundaries.length > 0) {
+      return [
+        createAdminPolygonExtrusionLayer(nodes, threeDView.adminBoundaries, threeDView.metric, threeDView.extrudeProgress),
+        createDistrictPinLayer(nodes, threeDView.metric),
+      ]
+    }
+    if (isCommerce && threeDView.boundaries && threeDView.boundaries.length > 0) {
+      return [
+        createPolygonExtrusionLayer(nodes, threeDView.boundaries, threeDView.metric, threeDView.extrudeProgress),
+        createCommerceColumnLayer(nodes, threeDView.metric),
+      ]
+    }
+    return []
+  }, [threeDView.mode, threeDView.metric, threeDView.adminBoundaries, threeDView.boundaries, threeDView.extrudeProgress, nodes])
+
   const baseDeckLayers = useMemo(
     () => [
       ...(staticFlowLayer ? [staticFlowLayer] : []),
       ...barrierLayers,
       ...commerceLayers,
+      ...threeDLayers,
     ],
-    [barrierLayers, commerceLayers, staticFlowLayer],
+    [barrierLayers, commerceLayers, staticFlowLayer, threeDLayers],
   )
 
   useEffect(() => {
@@ -502,7 +532,7 @@ export default function Map({
   const commerceBoundaryStatus = zoom >= 11 ? '상권 경계 표시 중' : '상권 경계: 확대하면 표시'
   const selectedDistrictCodes = useMemo(
     () => [...(selectedDistricts ?? new Set<string>())]
-      .map((district) => DISTRICT_CODES[district])
+      .map((district) => SEOUL_DISTRICT_CODE_BY_NAME[district])
       .filter((code): code is string => Boolean(code)),
     [selectedDistricts],
   )
@@ -726,14 +756,14 @@ export default function Map({
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.25 }}>
-              흐름 단절 감지
+              단절 위험 감지
             </div>
             <div style={{ marginTop: 4, fontSize: 11, color: colors.secondaryText, lineHeight: 1.45 }}>
-              전 분기 대비 이동량이 급감한 상권 연결입니다.
+              매출 감소·폐업 위험·인접 상권 거리로 산출한 단절 위험 연결입니다.
             </div>
             {usingOverviewFallback && (
               <div style={{ marginTop: 5, fontSize: 10, color: '#FFCC80', lineHeight: 1.4 }}>
-                선택한 상권에 직접 연결된 단절이 없어 전체 단절 구간을 유지합니다.
+                선택한 상권에 직접 연결된 위험선이 없어 전체 단절 위험 구간을 유지합니다.
               </div>
             )}
           </div>
@@ -799,7 +829,7 @@ export default function Map({
                 </div>
               </div>
               <div style={{ background: 'rgba(21,29,38,0.86)', border: `1px solid ${colors.panelBorder}`, borderRadius: 8, padding: '8px 9px' }}>
-                <div style={{ fontSize: 10, color: colors.mutedText }}>영향 흐름량</div>
+                <div style={{ fontSize: 10, color: colors.mutedText }}>영향 지수</div>
                 <div style={{ marginTop: 3, fontSize: 15, fontWeight: 850 }}>
                   {formatBarrierVolume(barrierSummary.totalVolume)}
                 </div>
@@ -850,8 +880,8 @@ export default function Map({
             </div>
 
             <div style={{ marginTop: 10, fontSize: 10, color: colors.mutedText, lineHeight: 1.45 }}>
-              현재 표시는 각 자치구 내부 또는 인접 상권의 이동량 급감 구간입니다.
-              지도에서 붉은 점선은 단절 강도가 높은 이동축이고, 퍼지는 입자는 감소 충격이 주변으로 번지는 구간입니다.
+              현재 표시는 각 자치구 내부 또는 인접 상권의 매출·폐업 기반 단절 위험 구간입니다.
+              지도에서 붉은 점선은 단절 위험이 높은 연결축이고, 퍼지는 입자는 위험 신호가 주변으로 번지는 구간입니다.
             </div>
           </>
         ) : (
@@ -879,13 +909,15 @@ export default function Map({
             districtFilters={selectedDistrictCodes}
             fillOpacity={boundaryOpacity}
           />
-          <CommerceBoundaryLayer
-            map={mapInstance}
-            theme={theme}
-            selectedId={selectedNode?.id ?? null}
-            quarter={selectedQuarter}
-            districts={[...(selectedDistricts ?? new Set<string>())]}
-          />
+          {threeDView.mode !== 'commerce' && (
+            <CommerceBoundaryLayer
+              map={mapInstance}
+              theme={theme}
+              selectedId={selectedNode?.id ?? null}
+              quarter={selectedQuarter}
+              districts={[...(selectedDistricts ?? new Set<string>())]}
+            />
+          )}
         </>
       )}
 
@@ -1093,7 +1125,7 @@ export default function Map({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontWeight: 700, fontSize: 13 }}>흐름 단절</span>
+              <span style={{ fontWeight: 700, fontSize: 13 }}>단절 위험</span>
               <span
                 style={{
                   background: `${severityColor}22`,
@@ -1116,7 +1148,7 @@ export default function Map({
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: colors.mutedText }}>
-              <span>영향 흐름량 {barrier.affectedVolume.toLocaleString()}</span>
+              <span>영향 지수 {barrier.affectedVolume.toLocaleString()}</span>
               <span>점수 {barrier.score.toFixed(2)}</span>
             </div>
             <div style={{ marginTop: 6, color: '#FFCC80', fontSize: 11, fontWeight: 700 }}>
@@ -1159,6 +1191,14 @@ export default function Map({
           onClose={() => setClosedDetailNodeId(selectedNode?.id ?? null)}
         />
       )}
+
+      <ThreeDViewControl
+        mode={threeDView.mode}
+        metric={threeDView.metric}
+        nodes={nodes}
+        onModeChange={threeDView.setMode}
+        onMetricChange={threeDView.setMetric}
+      />
 
       {usingMockData && (
         <div

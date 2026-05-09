@@ -11,7 +11,10 @@ import pytest
 
 from backend.analysis.module_c_barriers import (
     BARRIER_OUTPUT_COLUMNS,
+    BARRIER_TYPE_NON_OD_SPATIAL,
     DEFAULT_DECLINE_THRESHOLD,
+    compute_non_od_barriers,
+    compute_sales_decline_rates,
     compute_flow_gaps,
     map_admin_pairs_to_commerce,
 )
@@ -194,3 +197,114 @@ class TestComputeFlowGaps:
 
     def test_default_threshold_constant(self):
         assert 0 < DEFAULT_DECLINE_THRESHOLD < 1
+
+
+class TestComputeSalesDeclineRates:
+    def test_missing_current_quarter_counts_as_full_decline(self):
+        sales = pd.DataFrame(
+            [
+                {"trdar_cd": "C1", "year_quarter": "2025Q3", "sales_amount": 1000.0},
+            ]
+        )
+
+        out = compute_sales_decline_rates(sales, "2025Q4", "2025Q3")
+
+        assert out.iloc[0]["commerce_code"] == "C1"
+        assert out.iloc[0]["sales_decline_rate"] == pytest.approx(1.0)
+
+    def test_missing_or_zero_previous_quarter_is_zero_decline(self):
+        sales = pd.DataFrame(
+            [
+                {"trdar_cd": "C1", "year_quarter": "2025Q3", "sales_amount": 0.0},
+                {"trdar_cd": "C1", "year_quarter": "2025Q4", "sales_amount": 100.0},
+            ]
+        )
+
+        out = compute_sales_decline_rates(sales, "2025Q4", "2025Q3")
+
+        assert out.iloc[0]["sales_decline_rate"] == pytest.approx(0.0)
+
+
+class TestComputeNonOdBarriers:
+    @pytest.fixture
+    def analysis(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            [
+                {"comm_cd": "C1", "gri_score": 20.0, "closure_rate": 1.0},
+                {"comm_cd": "C2", "gri_score": 80.0, "closure_rate": 8.0},
+                {"comm_cd": "C3", "gri_score": 60.0, "closure_rate": 4.0},
+            ]
+        )
+
+    @pytest.fixture
+    def sales(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            [
+                {"trdar_cd": "C1", "year_quarter": "2025Q3", "sales_amount": 1000.0},
+                {"trdar_cd": "C1", "year_quarter": "2025Q4", "sales_amount": 1000.0},
+                {"trdar_cd": "C2", "year_quarter": "2025Q3", "sales_amount": 1000.0},
+                {"trdar_cd": "C2", "year_quarter": "2025Q4", "sales_amount": 500.0},
+                {"trdar_cd": "C3", "year_quarter": "2025Q3", "sales_amount": 1000.0},
+                {"trdar_cd": "C3", "year_quarter": "2025Q4", "sales_amount": 900.0},
+            ]
+        )
+
+    def test_direction_is_stable_to_risky(self, analysis, sales):
+        pairs = pd.DataFrame(
+            [{"comm_a_cd": "C1", "comm_b_cd": "C2", "distance_m": 300.0}]
+        )
+
+        out = compute_non_od_barriers(
+            analysis,
+            sales,
+            pairs,
+            target_quarter="2025Q4",
+            previous_quarter="2025Q3",
+        )
+
+        assert out.iloc[0]["from_comm_cd"] == "C1"
+        assert out.iloc[0]["to_comm_cd"] == "C2"
+        assert out.iloc[0]["barrier_type"] == BARRIER_TYPE_NON_OD_SPATIAL
+
+    def test_score_is_in_0_1_range(self, analysis, sales):
+        pairs = pd.DataFrame(
+            [
+                {"comm_a_cd": "C1", "comm_b_cd": "C2", "distance_m": 300.0},
+                {"comm_a_cd": "C2", "comm_b_cd": "C3", "distance_m": 1200.0},
+            ]
+        )
+
+        out = compute_non_od_barriers(
+            analysis,
+            sales,
+            pairs,
+            target_quarter="2025Q4",
+            previous_quarter="2025Q3",
+        )
+
+        assert (out["barrier_score"] >= 0).all()
+        assert (out["barrier_score"] <= 1).all()
+
+    def test_filters_self_and_far_pairs_and_caps_top_n(self, analysis, sales):
+        pairs = pd.DataFrame(
+            [
+                {"comm_a_cd": "C1", "comm_b_cd": "C1", "distance_m": 100.0},
+                {"comm_a_cd": "C1", "comm_b_cd": "C2", "distance_m": 300.0},
+                {"comm_a_cd": "C2", "comm_b_cd": "C3", "distance_m": 2000.0},
+                {"comm_a_cd": "C1", "comm_b_cd": "C3", "distance_m": 400.0},
+            ]
+        )
+
+        out = compute_non_od_barriers(
+            analysis,
+            sales,
+            pairs,
+            target_quarter="2025Q4",
+            previous_quarter="2025Q3",
+            max_distance_m=1500.0,
+            top_n=1,
+        )
+
+        assert len(out) == 1
+        assert out.iloc[0]["from_comm_cd"] != out.iloc[0]["to_comm_cd"]
+        assert out.iloc[0]["distance_m"] <= 1500.0

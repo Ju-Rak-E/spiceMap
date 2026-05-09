@@ -179,6 +179,31 @@ class TestComposeAnalysis:
             assert row["net_flow"] in (0, 0.0)
             assert row["degree_centrality"] in (0, 0.0)
 
+    def test_no_od_flows_uses_sales_and_closure_signals(
+        self,
+        mapping_input,
+        closure_input,
+        commerce_meta,
+        sales_input,
+    ):
+        empty_od = pd.DataFrame(columns=["origin_adm_cd", "dest_adm_cd", "trip_count"])
+        inputs = AnalysisInputs(
+            od_flows=empty_od,
+            mapping=mapping_input,
+            closures=closure_input,
+            commerce_meta=commerce_meta,
+            sales=sales_input,
+        )
+
+        result = compose_analysis(inputs, "2025Q4", "2025Q3")
+
+        scores = {row["gri_score"] for row in result.analysis_rows}
+        assert len(scores) > 1
+        assert all(
+            row["analysis_note"] == "non_od_v1: closure_rate+sales_trend+sales_size; od_flow_excluded"
+            for row in result.analysis_rows
+        )
+
     def test_policy_cards_have_active_rule_ids(self, composable_inputs):
         result = compose_analysis(composable_inputs, "2025Q4", "2025Q3")
         for card in result.policy_cards:
@@ -375,6 +400,26 @@ class TestRunAnalysisIntegration:
         counts = run_analysis(engine, "2025Q4", "2025Q3")
         assert "analysis_rows" in counts
         assert "policy_cards" in counts
+
+    def test_exclude_od_flow_rebuilds_non_od_barriers_by_default(self, monkeypatch):
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        _seed_data(engine)
+        calls = []
+
+        def fake_build(engine_arg, *, quarter, previous_quarter):
+            calls.append((engine_arg, quarter, previous_quarter))
+            return {"analysis_rows": 3, "candidate_pairs": 2, "barriers": 2, "loaded": 2}
+
+        monkeypatch.setattr(
+            "backend.pipeline.build_non_od_barriers.build_and_replace_non_od_barriers",
+            fake_build,
+        )
+
+        counts = run_analysis(engine, "2025Q4", "2025Q3", exclude_od_flow=True)
+
+        assert calls == [(engine, "2025Q4", "2025Q3")]
+        assert counts["flow_barriers"] == 2
 
 
 class TestLoadClosuresByComm:

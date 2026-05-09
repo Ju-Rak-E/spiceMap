@@ -13,6 +13,7 @@ import { useStartupAdvisor } from './hooks/useStartupAdvisor'
 import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import { countCriticalCommerces } from './utils/insightMetrics'
+import { SEOUL_DISTRICT_NAMES } from './utils/seoulDistricts'
 import type { CommerceNode } from './types/commerce'
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
@@ -20,8 +21,9 @@ const STRENGTH_TO_TOP_N: Record<number, number> = {
 }
 
 const BOUNDARY_OPACITY = 0.08
-const SCOPE_LABEL = '강남구·관악구 창업 시범'
+const SCOPE_LABEL = '서울 전역 창업 분석'
 const DEFAULT_QUARTER = '2025Q4'
+const OD_FLOW_ENABLED = true
 const MAP_HEADER_CLEARANCE = 64
 // docs/hero_shot_scenario.md §0: ?hero=1 진입 시 신림(gw_001)을 펄싱 강조.
 // 시연 외 일반 동작에는 영향 없음(쿼리 미설정 시 null).
@@ -46,11 +48,11 @@ export default function App() {
   const [purpose, setPurpose] = useState<FlowPurpose | null>(null)
   const [hour, setHour] = useState(14)
   const [flowStrength, setFlowStrength] = useState(3)
-  const [showFlows, setShowFlows] = useState(true)
+  const [showFlows, setShowFlows] = useState(false)
   const [showBarriers, setShowBarriers] = useState(false)
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(
-    () => new Set(['강남구', '관악구']),
+    () => new Set(SEOUL_DISTRICT_NAMES),
   )
   const [selectedQuarter, setSelectedQuarter] = useState(DEFAULT_QUARTER)
   const [heroMode] = useState<boolean>(() => isHeroModeEnabled())
@@ -70,7 +72,13 @@ export default function App() {
   )
 
   const { nodes: rawNodes, usingMockData } = useCommerceData(selectedQuarter, selectedDistricts)
-  const flowData = useFlowData({ purpose: purpose ?? undefined, topN, hour, quarter: selectedQuarter })
+  const flowData = useFlowData({
+    purpose: purpose ?? undefined,
+    topN,
+    hour,
+    quarter: selectedQuarter,
+    enabled: OD_FLOW_ENABLED,
+  })
 
   const compareEnabled = compareMode && previousQuarter !== null
   const compareQuarter = compareEnabled ? previousQuarter : selectedQuarter
@@ -80,6 +88,7 @@ export default function App() {
     topN,
     hour,
     quarter: compareQuarter,
+    enabled: OD_FLOW_ENABLED,
   })
 
   const nodes = filterNodesByDistrict(rawNodes, selectedDistricts)
@@ -162,6 +171,15 @@ export default function App() {
       return next
     })
   }, [])
+  const handleSelectAllDistricts = useCallback(() => {
+    setSelectedDistricts(new Set(SEOUL_DISTRICT_NAMES))
+  }, [])
+  const handleClearDistricts = useCallback(() => {
+    setSelectedDistricts(new Set())
+  }, [])
+  const handleSetDistricts = useCallback((districts: Set<string>) => {
+    setSelectedDistricts(new Set(districts))
+  }, [])
 
   const advisorTiers = advisor.tierMap
 
@@ -191,7 +209,7 @@ export default function App() {
             dataStatusLabel={usingMockData ? '캐시 데이터' : 'API 연결'}
             selectedQuarter={selectedQuarter}
             boundaryOpacity={BOUNDARY_OPACITY}
-            showFlows={showFlows}
+            showFlows={OD_FLOW_ENABLED && showFlows}
             showBarriers={showBarriers}
             selectedDistricts={selectedDistricts}
             selectedNode={selectedNode}
@@ -204,13 +222,13 @@ export default function App() {
               style={{
                 position: 'absolute',
                 top: MAP_HEADER_CLEARANCE + 8,
-                right: 16,
+                right: 72,
                 zIndex: 60,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-end',
                 gap: 8,
-                maxWidth: 'calc(100% - 32px)',
+                maxWidth: 'calc(100% - 88px)',
                 pointerEvents: 'none',
               }}
             >
@@ -272,6 +290,7 @@ export default function App() {
           speed={speed}
           showFlows={showFlows}
           showBarriers={showBarriers}
+          flowControlsEnabled={OD_FLOW_ENABLED}
           onPlay={play}
           onPause={pause}
           onToggleSpeed={toggleSpeed}
@@ -279,6 +298,9 @@ export default function App() {
           onToggleBarriers={() => setShowBarriers(prev => !prev)}
           selectedDistricts={selectedDistricts}
           onToggleDistrict={handleToggleDistrict}
+          onSelectAllDistricts={handleSelectAllDistricts}
+          onClearDistricts={handleClearDistricts}
+          onSetDistricts={handleSetDistricts}
           onSelectNode={setSelectedNode}
           compareMode={compareMode}
           compareQuarter={previousQuarter}

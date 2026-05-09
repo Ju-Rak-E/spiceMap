@@ -46,7 +46,7 @@ export default function InsightStrip(props: InsightStripProps) {
       }}
     >
       <Card
-        label="H1 검증 (r)"
+        label="유동인구-매출 상관"
         primary={h1R == null ? '—' : h1R.toFixed(3)}
         secondary={h1P == null ? '순유입×매출' : `p=${formatP(h1P)}`}
         tertiary="통계적으로 확실 (효과 약함)"
