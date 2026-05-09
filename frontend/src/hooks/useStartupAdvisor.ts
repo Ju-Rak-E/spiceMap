@@ -30,7 +30,6 @@ export function useStartupAdvisor(quarter: string) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!BASE_URL) return
     fetch(`${BASE_URL}/api/advisor/industries?quarter=${quarter}`)
       .then((r) => r.json())
       .then((data) => setIndustries(data.industries ?? []))
@@ -38,7 +37,7 @@ export function useStartupAdvisor(quarter: string) {
   }, [quarter])
 
   const analyze = useCallback(async (industry: string) => {
-    if (!BASE_URL || !industry) return
+    if (!industry) return
     setIsLoading(true)
     setError(null)
     try {

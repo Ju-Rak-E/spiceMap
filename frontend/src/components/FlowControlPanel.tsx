@@ -646,7 +646,7 @@ export default function FlowControlPanel({
         </div>
 
         {advisorIndustries.length === 0 ? (
-          <div style={{ ...S.subLabel, color: COLORS.mutedText }}>백엔드 연결 후 업종 목록이 로드됩니다.</div>
+          <div style={{ ...S.subLabel, color: COLORS.mutedText }}>업종 목록 로드 중... (백엔드 연결 확인)</div>
         ) : (
           <>
             <select
