@@ -46,12 +46,16 @@ def _compute_advisor_scores(rows: list) -> list[dict]:
     results = []
     for i, r in enumerate(rows):
         gri = float(r.gri_score or 50.0)
-        closure = float(r.closure_rate or 0.0)
         centrality = float(r.degree_centrality or 0.0)
+        closure_term = (
+            max(0.0, 100.0 - float(r.closure_rate) * 10.0) * 0.20
+            if r.closure_rate is not None
+            else 0.0
+        )
         score = (
             (100.0 - gri) * 0.40
             + norm_flows[i] * 0.30
-            + max(0.0, 100.0 - closure * 10.0) * 0.20
+            + closure_term
             + centrality * 100.0 * 0.10
         )
         results.append({
