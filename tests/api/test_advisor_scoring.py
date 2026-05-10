@@ -40,7 +40,7 @@ class TestComputeAdvisorScores:
     def test_none_values_handled(self):
         rows = [_make_row("A", "결측", "강남구", None, None, None, None)]
         scored = _compute_advisor_scores(rows)
-        assert scored[0]["advisor_score"] == pytest.approx(50.0 * 0.40, abs=1.0)
+        assert scored[0]["advisor_score"] == pytest.approx(50.0 * 0.35, abs=1.0)
 
     def test_score_in_range(self):
         rows = [
@@ -48,6 +48,22 @@ class TestComputeAdvisorScores:
         ]
         scored = _compute_advisor_scores(rows)
         assert 0.0 <= scored[0]["advisor_score"] <= 100.0
+
+    def test_industry_store_count_changes_ranking(self):
+        rows = [
+            _make_row("A", "low stores", "Gangnam", 50.0, 5000, 2.0, 0.5),
+            _make_row("B", "high stores", "Gwanak", 50.0, 5000, 2.0, 0.5),
+        ]
+        rows[0].industry_store_count = 1
+        rows[1].industry_store_count = 100
+        scored = _compute_advisor_scores(rows)
+        assert scored[0]["comm_cd"] == "B"
+
+    def test_industry_close_rate_overrides_commerce_close_rate(self):
+        rows = [_make_row("A", "industry rate", "Gangnam", 50.0, 5000, 9.9, 0.5)]
+        rows[0].industry_close_rate = 1.2
+        scored = _compute_advisor_scores(rows)
+        assert scored[0]["closure_rate"] == 1.2
 
 
 class TestAssignTiers:

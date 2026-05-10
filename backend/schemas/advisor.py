@@ -14,6 +14,7 @@ class IndustriesResponse(BaseModel):
 class StartupAdvisorRequest(BaseModel):
     industry_nm: str
     quarter: str = "2025Q4"
+    districts: list[str] | None = None
 
 
 class RankedCommerce(BaseModel):

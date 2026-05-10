@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
@@ -28,6 +28,7 @@ export function useStartupAdvisor(quarter: string) {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<AdvisorResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const requestSeq = useRef(0)
 
   useEffect(() => {
     fetch(`${BASE_URL}/api/advisor/industries?quarter=${quarter}`)
@@ -36,34 +37,42 @@ export function useStartupAdvisor(quarter: string) {
       .catch(() => setIndustries([]))
   }, [quarter])
 
-  const analyze = useCallback(async (industry: string) => {
+  const analyze = useCallback(async (industry: string, districts?: string[]) => {
     if (!industry) return
+    const requestId = requestSeq.current + 1
+    requestSeq.current = requestId
     setIsLoading(true)
     setError(null)
+    setResult(null)
     try {
       const r = await fetch(`${BASE_URL}/api/advisor/startup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ industry_nm: industry, quarter }),
+        body: JSON.stringify({ industry_nm: industry, quarter, districts: districts?.filter(Boolean) ?? [] }),
       })
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
       const data: AdvisorResult = await r.json()
-      setResult(data)
+      if (requestSeq.current === requestId) setResult(data)
     } catch {
+      if (requestSeq.current === requestId) {
       setError('분석 중 오류가 발생했습니다.')
+      }
     } finally {
-      setIsLoading(false)
+      if (requestSeq.current === requestId) setIsLoading(false)
     }
   }, [quarter])
 
   const reset = useCallback(() => {
+    requestSeq.current += 1
     setResult(null)
     setError(null)
+    setIsLoading(false)
   }, [])
 
-  const tierMap: Map<string, '추천' | '주의' | '비추천'> | null = result
-    ? new Map(result.commerces.map((c) => [c.comm_cd, c.tier]))
+  const visibleResult = result?.quarter === quarter ? result : null
+  const tierMap: Map<string, '추천' | '주의' | '비추천'> | null = visibleResult
+    ? new Map(visibleResult.commerces.map((c) => [c.comm_cd, c.tier]))
     : null
 
-  return { industries, isLoading, result, error, analyze, reset, tierMap }
+  return { industries, isLoading, result: visibleResult, error, analyze, reset, tierMap }
 }
