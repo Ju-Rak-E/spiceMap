@@ -45,26 +45,38 @@ def list_industries(
     return IndustriesResponse(quarter=quarter, industries=[r.industry_nm for r in rows])
 
 
+def _value(row, name: str, default=None):
+    return getattr(row, name, default)
+
+
 def _compute_advisor_scores(rows: list) -> list[dict]:
     """각 상권의 어드바이저 점수를 계산해 내림차순 정렬된 dict 리스트로 반환."""
     flows = np.array([float(r.flow_volume or 0) for r in rows])
     flow_min, flow_max = flows.min(), flows.max()
     flow_range = flow_max - flow_min if flow_max > flow_min else 1.0
     norm_flows = (flows - flow_min) / flow_range * 100.0
+    stores = np.array([float(_value(r, "industry_store_count", 0) or 0) for r in rows])
+    store_min, store_max = stores.min(), stores.max()
+    store_range = store_max - store_min if store_max > store_min else 1.0
+    norm_stores = (stores - store_min) / store_range * 100.0
 
     results = []
     for i, r in enumerate(rows):
         gri = float(r.gri_score or 50.0)
         centrality = float(r.degree_centrality or 0.0)
+        close_rate = _value(r, "industry_close_rate", None)
+        if close_rate is None:
+            close_rate = r.closure_rate
         closure_term = (
-            max(0.0, 100.0 - float(r.closure_rate) * 10.0) * 0.20
-            if r.closure_rate is not None
+            max(0.0, 100.0 - float(close_rate) * 10.0) * 0.20
+            if close_rate is not None
             else 0.0
         )
         score = (
-            (100.0 - gri) * 0.40
-            + norm_flows[i] * 0.30
+            (100.0 - gri) * 0.35
+            + norm_flows[i] * 0.25
             + closure_term
+            + norm_stores[i] * 0.10
             + centrality * 100.0 * 0.10
         )
         results.append({
@@ -74,7 +86,7 @@ def _compute_advisor_scores(rows: list) -> list[dict]:
             "advisor_score": round(score, 2),
             "gri_score": r.gri_score,
             "flow_volume": r.flow_volume,
-            "closure_rate": r.closure_rate,
+            "closure_rate": close_rate,
         })
 
     results.sort(key=lambda x: x["advisor_score"], reverse=True)
@@ -162,20 +174,33 @@ def startup_advisor(
     body: StartupAdvisorRequest,
     db: Session = Depends(get_session),
 ):
+    store_quarter = _to_store_info_quarter(body.quarter)
+    districts = {d for d in (body.districts or []) if d}
     rows = db.execute(
         text("""
             SELECT ca.comm_cd, cb.comm_nm, ab.gu_nm,
-                   ca.gri_score, ca.flow_volume, ca.closure_rate, ca.degree_centrality
+                   ca.gri_score, ca.flow_volume, ca.closure_rate, ca.degree_centrality,
+                   si.close_rate AS industry_close_rate,
+                   si.store_count AS industry_store_count
             FROM commerce_analysis ca
             JOIN commerce_boundary cb ON cb.comm_cd = ca.comm_cd
             LEFT JOIN LATERAL (
                 SELECT gu_nm FROM admin_boundary
                 WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom)) LIMIT 1
             ) ab ON TRUE
+            LEFT JOIN store_info si ON si.year_quarter = :store_quarter
+                AND si.signgu_nm = ab.gu_nm
+                AND si.industry_nm = :industry_nm
             WHERE ca.year_quarter = :quarter
         """),
-        {"quarter": body.quarter},
+        {
+            "quarter": body.quarter,
+            "store_quarter": store_quarter,
+            "industry_nm": body.industry_nm,
+        },
     ).fetchall()
+    if districts:
+        rows = [r for r in rows if (r.gu_nm or "") in districts]
 
     if not rows:
         raise HTTPException(status_code=422, detail="해당 분기에 상권 데이터가 없습니다")

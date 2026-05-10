@@ -943,10 +943,10 @@ export default function Map({
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1, whiteSpace: 'nowrap' }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: colors.panelText }}>
-            왜 이 상권이 침체됐는가
+            서울 창업 상권 지도
           </div>
           <div style={{ fontSize: 10, color: colors.secondaryText, fontWeight: 500 }}>
-            흐름으로 보는 서울 상권 위험 지도
+            업종·지역 후보를 고르고 위험 근거를 확인하세요
           </div>
         </div>
         <div style={{ width: 1, height: 18, background: colors.panelBorder, flexShrink: 0 }} />
@@ -1192,13 +1192,15 @@ export default function Map({
         />
       )}
 
-      <ThreeDViewControl
-        mode={threeDView.mode}
-        metric={threeDView.metric}
-        nodes={nodes}
-        onModeChange={threeDView.setMode}
-        onMetricChange={threeDView.setMetric}
-      />
+      {containerSize.width >= 520 && (
+        <ThreeDViewControl
+          mode={threeDView.mode}
+          metric={threeDView.metric}
+          nodes={nodes}
+          onModeChange={threeDView.setMode}
+          onMetricChange={threeDView.setMetric}
+        />
+      )}
 
       {usingMockData && (
         <div

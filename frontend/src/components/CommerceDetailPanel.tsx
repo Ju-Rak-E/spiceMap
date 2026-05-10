@@ -4,13 +4,12 @@ import { useGriHistory, type GriPoint } from '../hooks/useGriHistory'
 import { usePolicyInsights, type PolicyInsight } from '../hooks/usePolicyInsights'
 import { formatQuarter } from '../utils/quarter'
 import { deriveStartupSummary } from '../utils/startupAdvisor'
-import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
-import { computePercentile } from '../utils/percentile'
+import { formatSignedFixed2 } from '../utils/numberFormat'
+import { buildMetricExplanations } from '../utils/founderUx'
 import TrendChart from './TrendChart'
 import PolicyCard from './PolicyCard'
-import MiniGauge from './MiniGauge'
+import MetricExplanationCard from './MetricExplanationCard'
 
-// docs/hero_shot_scenario.md §1-2: Hero shot에서 R4 카드(현장 조사+금융 지원)를 첫 번째로 강조.
 const HERO_HIGHLIGHT_RULE = 'R4'
 
 function sortPolicyInsightsHeroFirst(insights: PolicyInsight[]): PolicyInsight[] {
@@ -24,7 +23,6 @@ interface CommerceDetailPanelProps {
   node: CommerceNode | null
   quarter: string
   usingMockData?: boolean
-  // 분포 percentile 산출용 — 강남·관악 전체 노드 (없거나 비어 있으면 게이지 미노출)
   nodes?: CommerceNode[]
   onClose: () => void
 }
@@ -168,10 +166,6 @@ const S = {
   emptyText: { fontSize: 12, color: '#B0BEC5', lineHeight: 1.5 },
 }
 
-function netFlowColor(v: number): string {
-  return v >= 0 ? '#43A047' : '#EF5350'
-}
-
 function getLatestRiskDelta(series: GriPoint[]): number | null {
   if (series.length < 2) return null
   const latest = series[series.length - 1]
@@ -186,23 +180,16 @@ function deltaColor(delta: number | null): string | undefined {
   return '#ECEFF1'
 }
 
-// 분포 percentile(상위 N%) → 위험도 컬러. 폐업률·GRI 모두 클수록 위험.
-function riskAccent(percentile: number): string {
-  if (percentile <= 10) return '#EF5350'  // 상위 10% — 빨강
-  if (percentile <= 30) return '#FFC107'  // 상위 30% — 노랑
-  return '#43A047'                          // 그 외 — 초록 (상대적 안전)
-}
-
 export default function CommerceDetailPanel({
   node,
   quarter,
   usingMockData = false,
-  nodes,
   onClose,
 }: CommerceDetailPanelProps) {
   const nodeId = node?.id ?? null
   const { series, isLoading, error } = useGriHistory(nodeId, quarter)
   const policyResult = usePolicyInsights(nodeId, quarter, node?.type ?? null)
+
   if (!node) {
     return (
       <div
@@ -215,7 +202,7 @@ export default function CommerceDetailPanel({
           gap: 8,
         }}
       >
-        <div style={{ fontSize: 28, lineHeight: 1 }}>🗺</div>
+        <div style={{ fontSize: 28, lineHeight: 1 }}>?</div>
         <div style={{ fontSize: 14, fontWeight: 600, color: '#78909C' }}>
           상권을 클릭하면
         </div>
@@ -231,20 +218,7 @@ export default function CommerceDetailPanel({
   const icon = TYPE_ICON[node.type] ?? 'type'
   const riskDelta = getLatestRiskDelta(series)
   const policyInsights = sortPolicyInsightsHeroFirst(policyResult.insights)
-
-  // 분포 percentile (상위 N%) — nodes 미전달 또는 빈 배열이면 미노출
-  const distributionSize = nodes?.length ?? 0
-  const closeRatePercentile = nodes && distributionSize > 0 && node.closeRate != null
-    ? computePercentile(
-        nodes
-          .map((n) => n.closeRate)
-          .filter((v): v is number => v != null),
-        node.closeRate,
-      )
-    : null
-  const griPercentile = nodes && distributionSize > 0
-    ? computePercentile(nodes.map((n) => n.griScore), node.griScore)
-    : null
+  const metricExplanations = buildMetricExplanations(node)
 
   return (
     <div style={S.overlay}>
@@ -284,42 +258,9 @@ export default function CommerceDetailPanel({
       <div>
         <div style={S.sectionTitle}>핵심 지표</div>
         <div style={S.kpiGrid}>
-          <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>창업 적합도</div>
-            <div style={S.kpiValue(startup.fitColor)}>{startup.fitScore}</div>
-            <div style={S.sourceLabel}>높을수록 검토 우선</div>
-          </div>
-          <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>고객 흐름</div>
-            <div style={S.kpiValue(netFlowColor(node.netFlow))}>{startup.flowLabel}</div>
-            <div style={S.sourceLabel}>{`순유입 ${formatSignedFixed2(node.netFlow)}`}</div>
-          </div>
-          <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>폐업률</div>
-            <div style={S.kpiValue(node.closeRate != null && node.closeRate >= 10 ? '#EF5350' : undefined)}>
-              {node.closeRate != null ? `${node.closeRate.toFixed(1)}%` : '-'}
-            </div>
-            {closeRatePercentile != null && (
-              <MiniGauge
-                percentile={closeRatePercentile}
-                accent={riskAccent(closeRatePercentile)}
-                label={`강남·관악 ${distributionSize.toLocaleString()}상권 중 상위 ${closeRatePercentile}%`}
-              />
-            )}
-            <div style={S.sourceLabel}>점포 데이터 기준</div>
-          </div>
-          <div style={S.kpiCard}>
-            <div style={S.kpiLabel}>상권 위험도</div>
-            <div style={S.kpiValue(colorToken.fill)}>{formatFixed2(node.griScore)}</div>
-            {griPercentile != null && (
-              <MiniGauge
-                percentile={griPercentile}
-                accent={riskAccent(griPercentile)}
-                label={`강남·관악 ${distributionSize.toLocaleString()}상권 중 상위 ${griPercentile}%`}
-              />
-            )}
-            <div style={S.sourceLabel}>GRI 기반 보조 지표</div>
-          </div>
+          {metricExplanations.map((metric) => (
+            <MetricExplanationCard key={metric.key} metric={metric} />
+          ))}
         </div>
       </div>
 

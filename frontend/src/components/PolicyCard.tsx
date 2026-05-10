@@ -76,6 +76,9 @@ export default function PolicyCard({ insight, highlight = false }: PolicyCardPro
       <div style={{ fontSize: 10, color: '#37474F' }}>
         출처: {insight.source}
       </div>
+      <div style={{ marginTop: 6, fontSize: 10, color: '#B0BEC5', lineHeight: 1.45 }}>
+        다음 행동: 정책 조건과 실제 신청 가능 여부를 확인하세요.
+      </div>
     </div>
   )
 }

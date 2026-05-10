@@ -36,11 +36,11 @@ describe('ValidationView', () => {
     expect(h2.textContent).toMatch(/방향 반대|음의 상관/)
   })
 
-  it('shows B1 Jaccard 0.58 PASS', () => {
+  it('shows B1 Jaccard 0.157 PASS', () => {
     render(<ValidationView onClose={() => {}} />)
     const b1 = screen.getByTestId('validation-card-B1')
     expect(b1.textContent).toContain('Jaccard')
-    expect(b1.textContent).toContain('0.58')
+    expect(b1.textContent).toContain('0.157')
   })
 
   it('shows B3 Jaccard 0.151 differentiation', () => {

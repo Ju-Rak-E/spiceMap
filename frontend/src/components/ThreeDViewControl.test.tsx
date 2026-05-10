@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import ThreeDViewControl, { getMetricPictogramStats } from './ThreeDViewControl'
+import ThreeDViewControl from './ThreeDViewControl'
+import { getMetricPictogramStats } from '../utils/metricPictogram'
 import type { CommerceNode } from '../types/commerce'
 
 afterEach(cleanup)

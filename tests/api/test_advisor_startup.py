@@ -76,6 +76,24 @@ class TestAdvisorStartup:
         )
         assert response.status_code == 422
 
+    def test_filters_by_requested_districts(self):
+        rows = _make_commerce_rows()
+        self._setup(rows)
+        client = TestClient(app)
+        with patch("backend.api.advisor._call_claude", return_value=("", "", {})):
+            response = client.post(
+                "/api/advisor/startup",
+                json={
+                    "industry_nm": "ì»¤í”¼?Œë£Œ",
+                    "quarter": "2025Q4",
+                    "districts": [rows[0].gu_nm],
+                },
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["commerces"]) == 1
+        assert data["commerces"][0]["gu_nm"] == rows[0].gu_nm
+
     def test_llm_failure_returns_empty_summary(self):
         """Claude API 실패 시 summary/caution이 빈 문자열이고 200 반환."""
         self._setup(_make_commerce_rows())
