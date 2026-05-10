@@ -56,10 +56,10 @@ def _compute_advisor_scores(rows: list) -> list[dict]:
     flow_range = flow_max - flow_min if flow_max > flow_min else 1.0
     norm_flows = (flows - flow_min) / flow_range * 100.0
     stores = np.array([float(_value(r, "industry_store_count", 0) or 0) for r in rows])
-    # 역 U 커브: 중앙값 근처(수요 검증 + 경쟁 여유) → 고점, 극소(미검증)/극다(포화) → 저점
-    store_median = float(np.median(stores))
-    store_max_dev = max(float(np.abs(stores - store_median).max()), 1.0)
-    norm_stores = (1.0 - np.abs(stores - store_median) / store_max_dev) * 100.0
+    store_signal = np.log1p(stores)
+    store_min, store_max = store_signal.min(), store_signal.max()
+    store_range = store_max - store_min if store_max > store_min else 1.0
+    norm_stores = (store_signal - store_min) / store_range * 100.0
 
     results = []
     for i, r in enumerate(rows):
@@ -68,16 +68,16 @@ def _compute_advisor_scores(rows: list) -> list[dict]:
         close_rate = _value(r, "industry_close_rate", None)
         if close_rate is None:
             close_rate = r.closure_rate
-        closure_term = (
-            max(0.0, 100.0 - float(close_rate) * 10.0) * 0.20
+        closure_signal = (
+            max(0.0, 100.0 - float(close_rate) * 10.0)
             if close_rate is not None
             else 0.0
         )
         score = (
-            (100.0 - gri) * 0.35
-            + norm_flows[i] * 0.25
-            + closure_term
-            + norm_stores[i] * 0.10
+            (100.0 - gri) * 0.25
+            + norm_flows[i] * 0.20
+            + closure_signal * 0.25
+            + norm_stores[i] * 0.20
             + centrality * 100.0 * 0.10
         )
         results.append({
@@ -122,7 +122,7 @@ def _select_top_per_tier(scored: list[dict], n: int = 3) -> list[dict]:
 def _build_llm_context(industry_nm: str, selected: list[dict]) -> str:
     by_tier: dict[str, list[dict]] = {"추천": [], "주의": [], "비추천": []}
     for item in selected:
-        bucket = by_tier.get(item["tier"])
+        bucket = by_tier.get(item.get("tier", "추천"))
         if bucket is not None:
             bucket.append(item)
 
@@ -190,19 +190,59 @@ def startup_advisor(
     districts = {d for d in (body.districts or []) if d}
     rows = db.execute(
         text("""
+            WITH commerce_area_weight AS (
+                SELECT
+                    LEFT(m.adm_cd, 5) AS signgu_cd,
+                    m.comm_cd,
+                    SUM(
+                        COALESCE(
+                            NULLIF(m.overlap_area, 0),
+                            NULLIF(m.comm_area_ratio, 0),
+                            1.0
+                        )
+                    ) AS area_weight
+                FROM adm_comm_mapping m
+                GROUP BY LEFT(m.adm_cd, 5), m.comm_cd
+            ),
+            commerce_area_share AS (
+                SELECT
+                    signgu_cd,
+                    comm_cd,
+                    area_weight / NULLIF(SUM(area_weight) OVER (PARTITION BY signgu_cd), 0) AS commerce_share
+                FROM commerce_area_weight
+            )
             SELECT ca.comm_cd, cb.comm_nm, ab.gu_nm,
                    ca.gri_score, ca.flow_volume, ca.closure_rate, ca.degree_centrality,
-                   si.close_rate AS industry_close_rate,
-                   si.store_count AS industry_store_count
+                   sie.industry_close_rate,
+                   sie.industry_store_count
             FROM commerce_analysis ca
             JOIN commerce_boundary cb ON cb.comm_cd = ca.comm_cd
             LEFT JOIN LATERAL (
-                SELECT gu_nm FROM admin_boundary
+                SELECT gu_nm, adm_cd
+                FROM admin_boundary
                 WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom)) LIMIT 1
             ) ab ON TRUE
-            LEFT JOIN store_info si ON si.year_quarter = :store_quarter
-                AND si.signgu_nm = ab.gu_nm
-                AND si.industry_nm = :industry_nm
+            LEFT JOIN LATERAL (
+                SELECT
+                    si.store_count * COALESCE(cas.commerce_share, 0.0) AS industry_store_count,
+                    LEAST(
+                        100.0,
+                        GREATEST(
+                            0.0,
+                            COALESCE(
+                                si.close_rate,
+                                si.close_count / NULLIF(si.store_count, 0) * 100.0,
+                                ca.closure_rate
+                            ) * (0.5 + COALESCE(ca.gri_score, 50.0) / 100.0)
+                        )
+                    ) AS industry_close_rate
+                FROM commerce_area_share cas
+                JOIN store_info si ON si.signgu_cd = cas.signgu_cd
+                WHERE cas.comm_cd = ca.comm_cd
+                  AND si.year_quarter = :store_quarter
+                  AND si.industry_nm = :industry_nm
+                LIMIT 1
+            ) sie ON TRUE
             WHERE ca.year_quarter = :quarter
         """),
         {

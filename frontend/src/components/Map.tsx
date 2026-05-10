@@ -576,6 +576,13 @@ export default function Map({
     })
   }, [])
 
+  useEffect(() => {
+    if (!selectedNode || is3DActive) return
+    setClosedDetailNodeId(null)
+    setSelectedClusterId(null)
+    focusCommerceNode(selectedNode)
+  }, [focusCommerceNode, is3DActive, selectedNode])
+
   const districtClusters = useMemo(() => buildDistrictCommerceClusters(nodes), [nodes])
   const dongClusters = useMemo(() => buildDongCommerceClusters(nodes, boundaries), [nodes, boundaries])
   const clusters = useMemo(() => {
