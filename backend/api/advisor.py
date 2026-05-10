@@ -56,9 +56,10 @@ def _compute_advisor_scores(rows: list) -> list[dict]:
     flow_range = flow_max - flow_min if flow_max > flow_min else 1.0
     norm_flows = (flows - flow_min) / flow_range * 100.0
     stores = np.array([float(_value(r, "industry_store_count", 0) or 0) for r in rows])
-    store_min, store_max = stores.min(), stores.max()
-    store_range = store_max - store_min if store_max > store_min else 1.0
-    norm_stores = (stores - store_min) / store_range * 100.0
+    # 역 U 커브: 중앙값 근처(수요 검증 + 경쟁 여유) → 고점, 극소(미검증)/극다(포화) → 저점
+    store_median = float(np.median(stores))
+    store_max_dev = max(float(np.abs(stores - store_median).max()), 1.0)
+    norm_stores = (1.0 - np.abs(stores - store_median) / store_max_dev) * 100.0
 
     results = []
     for i, r in enumerate(rows):
@@ -108,31 +109,42 @@ def _assign_tiers(scored: list[dict]) -> list[dict]:
     return scored
 
 
-def _build_llm_context(industry_nm: str, scored: list[dict]) -> str:
-    top5 = scored[:5]
-    bottom3 = scored[-3:]
+def _select_top_per_tier(scored: list[dict], n: int = 3) -> list[dict]:
+    """tier별 상위 n개씩 선택해 추천→주의→비추천 순으로 반환."""
+    by_tier: dict[str, list[dict]] = {"추천": [], "주의": [], "비추천": []}
+    for item in scored:
+        bucket = by_tier.get(item["tier"])
+        if bucket is not None:
+            bucket.append(item)
+    return by_tier["추천"][:n] + by_tier["주의"][:n] + by_tier["비추천"][:n]
+
+
+def _build_llm_context(industry_nm: str, selected: list[dict]) -> str:
+    by_tier: dict[str, list[dict]] = {"추천": [], "주의": [], "비추천": []}
+    for item in selected:
+        bucket = by_tier.get(item["tier"])
+        if bucket is not None:
+            bucket.append(item)
+
+    def fmt_item(item: dict) -> str:
+        return (
+            f"- [{item['comm_cd']}] {item['comm_nm']} ({item['gu_nm']}): "
+            f"GRI {item['gri_score'] or 'N/A'}, "
+            f"유동인구 {item['flow_volume'] or 'N/A'}, "
+            f"폐업률 {item['closure_rate'] or 'N/A'}%"
+        )
+
     lines = [f"{industry_nm} 창업을 위한 서울 상권 분석 데이터입니다.\n"]
-    lines.append("[추천 후보 상권 (상위 5개)]")
-    for item in top5:
-        lines.append(
-            f"- [{item['comm_cd']}] {item['comm_nm']} ({item['gu_nm']}): "
-            f"GRI {item['gri_score'] or 'N/A'}, "
-            f"유동인구 {item['flow_volume'] or 'N/A'}, "
-            f"폐업률 {item['closure_rate'] or 'N/A'}%"
-        )
-    lines.append("\n[비추천 상권 (하위 3개)]")
-    for item in bottom3:
-        lines.append(
-            f"- [{item['comm_cd']}] {item['comm_nm']} ({item['gu_nm']}): "
-            f"GRI {item['gri_score'] or 'N/A'}, "
-            f"유동인구 {item['flow_volume'] or 'N/A'}, "
-            f"폐업률 {item['closure_rate'] or 'N/A'}%"
-        )
+    for tier_label, tier_key in [("추천", "추천"), ("주의", "주의"), ("비추천", "비추천")]:
+        items = by_tier[tier_key]
+        if items:
+            lines.append(f"[{tier_label} 상권]")
+            lines.extend(fmt_item(i) for i in items)
     lines.append("""
 다음 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요:
 {
   "summary": "전체 상황 2~3문장 요약",
-  "reasons": [{"comm_cd": "상권코드", "reason": "추천 이유 1~2문장"}],
+  "reasons": [{"comm_cd": "상권코드", "reason": "추천/주의/비추천 이유 1~2문장"}],
   "caution": "가장 중요한 주의사항 1문장"
 }""")
     return "\n".join(lines)
@@ -206,7 +218,8 @@ def startup_advisor(
         raise HTTPException(status_code=422, detail="해당 분기에 상권 데이터가 없습니다")
 
     scored = _assign_tiers(_compute_advisor_scores(rows))
-    summary, caution, reasons = _call_claude(body.industry_nm, scored)
+    selected = _select_top_per_tier(scored, n=3)
+    summary, caution, reasons = _call_claude(body.industry_nm, selected)
 
     commerces = [
         RankedCommerce(
@@ -220,7 +233,7 @@ def startup_advisor(
             closure_rate=item["closure_rate"],
             llm_reason=reasons.get(item["comm_cd"]),
         )
-        for item in scored
+        for item in selected
     ]
 
     model_used = "claude-haiku-4-5" if summary else "none"

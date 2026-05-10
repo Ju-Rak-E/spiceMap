@@ -171,7 +171,7 @@ export function buildFounderRecommendations(
     ? result.commerces.filter((commerce) => selectedDistricts.has(commerce.gu_nm))
     : result.commerces
 
-  return filteredCommerces.slice(0, 6).map((commerce) => ({
+  return filteredCommerces.map((commerce) => ({
     id: commerce.comm_cd,
     name: commerce.comm_nm,
     tier: commerce.tier,
