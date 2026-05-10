@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
 import type { PickingInfo } from '@deck.gl/core'
+import { LightingEffect, AmbientLight, DirectionalLight } from '@deck.gl/core'
 import { MAP_THEME, COMMERCE_COLORS, type CommerceType, type MapTheme } from '../styles/tokens'
 import { use3DView } from '../hooks/use3DView'
 import ThreeDViewControl from './ThreeDViewControl'
@@ -19,6 +20,8 @@ import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
 import { createDisruptedBarrierParticleLayer } from '../layers/DisruptedBarrierParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
+import { getMetricLabel, formatMetricValue } from '../utils/threeDUtils'
+import type { HeightMetric } from '../hooks/use3DView'
 import { useBarriers, type Barrier } from '../hooks/useBarriers'
 import { useBarrierRoutes } from '../hooks/useBarrierRoutes'
 import type { ODFlow, FlowPurpose } from '../hooks/useFlowData'
@@ -108,6 +111,15 @@ interface HoveredBarrier {
   y: number
 }
 
+interface Hovered3D {
+  title: string
+  subtitle: string | null
+  metric: HeightMetric
+  value: number
+  x: number
+  y: number
+}
+
 const BARRIER_SEVERITY_META: Record<BarrierSeverity, { label: string; color: string; bg: string }> = {
   high: { label: '심각', color: '#EF5350', bg: 'rgba(239,83,80,0.16)' },
   medium: { label: '주의', color: '#FFA726', bg: 'rgba(255,167,38,0.16)' },
@@ -161,6 +173,12 @@ export default function Map({
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
   const [hoveredBarrier, setHoveredBarrier] = useState<HoveredBarrier | null>(null)
+  const [hovered3D, setHovered3D] = useState<Hovered3D | null>(null)
+  const is3DActive = threeDView.mode !== 'off'
+
+  useEffect(() => {
+    if (!is3DActive) setHovered3D(null)
+  }, [is3DActive])
   const [closedDetailNodeId, setClosedDetailNodeId] = useState<string | null>(null)
   const selectedDistrictList = useMemo(
     () => [...(selectedDistricts ?? new Set<string>())].sort(),
@@ -217,7 +235,20 @@ export default function Map({
 
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
 
-    const overlay = new MapboxOverlay({ interleaved: false, layers: [] })
+    const lightingEffect = new LightingEffect({
+      ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.0 }),
+      key: new DirectionalLight({
+        color: [255, 240, 220],
+        intensity: 1.6,
+        direction: [-1, -2, -3],
+      }),
+      fill: new DirectionalLight({
+        color: [180, 200, 255],
+        intensity: 0.6,
+        direction: [2, -1, -1],
+      }),
+    })
+    const overlay = new MapboxOverlay({ interleaved: false, layers: [], effects: [lightingEffect] })
     map.addControl(overlay)
     overlayRef.current = overlay
 
@@ -354,6 +385,36 @@ export default function Map({
     }
   }, [onSelectNode])
 
+  const handleAdminHover = useCallback((info: PickingInfo<{ name: string; districtName?: string; value?: number }>) => {
+    if (info.object && info.object.value !== undefined) {
+      setHovered3D({
+        title: info.object.districtName ?? info.object.name,
+        subtitle: info.object.districtName ? info.object.name : null,
+        metric: threeDView.metric,
+        value: info.object.value,
+        x: info.x,
+        y: info.y,
+      })
+    } else {
+      setHovered3D(null)
+    }
+  }, [threeDView.metric])
+
+  const handleCommerceHover = useCallback((info: PickingInfo<{ name: string; value: number }>) => {
+    if (info.object) {
+      setHovered3D({
+        title: info.object.name,
+        subtitle: null,
+        metric: threeDView.metric,
+        value: info.object.value,
+        x: info.x,
+        y: info.y,
+      })
+    } else {
+      setHovered3D(null)
+    }
+  }, [threeDView.metric])
+
   const colors = MAP_THEME[theme]
   const zoomStage = getZoomStage(zoom)
   const selectedFlowKey = selectedNode?.admKey ?? null
@@ -418,7 +479,7 @@ export default function Map({
     }
   }, [visibleBarriers])
   const commerceLayers = useMemo(
-    () => nodes.length > 0 && zoomStage === 'candidate'
+    () => nodes.length > 0 && zoomStage === 'candidate' && !is3DActive
       ? createCommerceNodeLayers(
           nodes,
           handleNodeHover,
@@ -427,7 +488,7 @@ export default function Map({
           advisorTiers,
         )
       : [],
-    [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage, advisorTiers],
+    [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage, advisorTiers, is3DActive],
   )
   const threeDLayers = useMemo(() => {
     if (nodes.length === 0) return []
@@ -437,18 +498,18 @@ export default function Map({
 
     if (isAdmin && threeDView.adminBoundaries && threeDView.adminBoundaries.length > 0) {
       return [
-        createAdminPolygonExtrusionLayer(nodes, threeDView.adminBoundaries, threeDView.metric, threeDView.extrudeProgress),
+        createAdminPolygonExtrusionLayer(nodes, threeDView.adminBoundaries, threeDView.metric, threeDView.extrudeProgress, handleAdminHover),
         createDistrictPinLayer(nodes, threeDView.metric),
       ]
     }
     if (isCommerce && threeDView.boundaries && threeDView.boundaries.length > 0) {
       return [
-        createPolygonExtrusionLayer(nodes, threeDView.boundaries, threeDView.metric, threeDView.extrudeProgress),
-        createCommerceColumnLayer(nodes, threeDView.metric),
+        createPolygonExtrusionLayer(nodes, threeDView.boundaries, threeDView.metric, threeDView.extrudeProgress, handleCommerceHover),
+        createCommerceColumnLayer(nodes, threeDView.metric, 1, handleCommerceHover),
       ]
     }
     return []
-  }, [threeDView.mode, threeDView.metric, threeDView.adminBoundaries, threeDView.boundaries, threeDView.extrudeProgress, nodes])
+  }, [threeDView.mode, threeDView.metric, threeDView.adminBoundaries, threeDView.boundaries, threeDView.extrudeProgress, nodes, handleAdminHover, handleCommerceHover])
 
   const baseDeckLayers = useMemo(
     () => [
@@ -921,8 +982,8 @@ export default function Map({
         </>
       )}
 
-      {clusters.map(renderClusterBadge)}
-      {renderClusterPanel()}
+      {!is3DActive && clusters.map(renderClusterBadge)}
+      {!is3DActive && renderClusterPanel()}
       {renderBarrierPanel()}
 
       <div
@@ -995,7 +1056,7 @@ export default function Map({
         </div>
       </div>
 
-      {hoveredNode && (() => {
+      {!is3DActive && hoveredNode && (() => {
         const { node, x, y } = hoveredNode
         const containerWidth = containerSize.width || window.innerWidth
         const rawLeft = x + 14 + HOVER_CARD_WIDTH > containerWidth
@@ -1158,7 +1219,63 @@ export default function Map({
         )
       })()}
 
-      {selectedNode && !detailPanelOpen && (
+      {is3DActive && hovered3D && (() => {
+        const { title, subtitle, metric, value, x, y } = hovered3D
+        const containerWidth = containerSize.width || window.innerWidth
+        const cardWidth = 220
+        const rawLeft = x + 14 + cardWidth > containerWidth ? x - 14 - cardWidth : x + 14
+        const cardLeft = Math.max(0, rawLeft)
+        const cardTop = Math.max(56, y - 12)
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: cardLeft,
+              top: cardTop,
+              background: colors.panelBg,
+              color: colors.panelText,
+              border: `1px solid ${colors.panelBorder}`,
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 12,
+              pointerEvents: 'none',
+              zIndex: 12,
+              boxShadow: '0 6px 18px rgba(0,0,0,0.5)',
+              minWidth: 180,
+              maxWidth: cardWidth,
+            }}
+          >
+            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 2 }}>
+              {title}
+            </div>
+            {subtitle && (
+              <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 6 }}>
+                {subtitle}
+              </div>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                gap: 8,
+                marginTop: subtitle ? 0 : 6,
+                paddingTop: 6,
+                borderTop: `1px solid ${colors.panelBorder}`,
+              }}
+            >
+              <span style={{ fontSize: 11, color: colors.secondaryText }}>
+                {getMetricLabel(metric)}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 800 }}>
+                {formatMetricValue(value, metric)}
+              </span>
+            </div>
+          </div>
+        )
+      })()}
+
+      {!is3DActive && selectedNode && !detailPanelOpen && (
         <button
           type="button"
           onClick={() => setClosedDetailNodeId(null)}
@@ -1182,7 +1299,7 @@ export default function Map({
         </button>
       )}
 
-      {detailPanelOpen && (
+      {!is3DActive && detailPanelOpen && (
         <CommerceDetailPanel
           node={selectedNode}
           quarter={selectedQuarter}

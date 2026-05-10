@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildCommercePictogramData, createCommerceColumnLayer } from './CommerceColumnLayer'
+import { ColumnLayer } from '@deck.gl/layers'
+import { buildCommerceColumnData, createCommerceColumnLayer } from './CommerceColumnLayer'
 import type { CommerceNode } from '../types/commerce'
 
 const nodes: CommerceNode[] = [
@@ -28,21 +29,19 @@ const nodes: CommerceNode[] = [
 ]
 
 describe('createCommerceColumnLayer', () => {
-  it('레이어 id가 "commerce-pictogram"', () => {
+  it('ColumnLayer 인스턴스를 반환한다', () => {
     const layer = createCommerceColumnLayer(nodes, 'griScore')
-    expect(layer.id).toBe('commerce-pictogram')
+    expect(layer).toBeInstanceOf(ColumnLayer)
   })
 
-  it('sizeUnits가 "meters"여서 줌 레벨에 따라 화면상 크기가 자동 변한다', () => {
+  it('레이어 id가 "commerce-3d-columns"', () => {
     const layer = createCommerceColumnLayer(nodes, 'griScore')
-    expect(layer.props.sizeUnits).toBe('meters')
+    expect(layer.id).toBe('commerce-3d-columns')
   })
 
-  it('sizeMinPixels/sizeMaxPixels로 극단 줌에서의 크기를 가드한다', () => {
+  it('extruded: true (3D 기둥)', () => {
     const layer = createCommerceColumnLayer(nodes, 'griScore')
-    expect(typeof layer.props.sizeMinPixels).toBe('number')
-    expect(typeof layer.props.sizeMaxPixels).toBe('number')
-    expect(layer.props.sizeMaxPixels).toBeGreaterThan(layer.props.sizeMinPixels)
+    expect(layer.props.extruded).toBe(true)
   })
 
   it('빈 nodes 배열에서도 에러 없이 생성', () => {
@@ -55,32 +54,95 @@ describe('createCommerceColumnLayer', () => {
     expect(l1.props.updateTriggers).not.toEqual(l2.props.updateTriggers)
   })
 
-  it('순유입이 큰 상권은 사람 픽토그램 수량이 더 많다', () => {
-    const data = buildCommercePictogramData(nodes, 'netFlow')
-    const high = data.filter((d) => d.nodeId === 'gc_001')
-    const low = data.filter((d) => d.nodeId === 'gc_002')
-    expect(high.length).toBeGreaterThan(low.length)
+  it('material prop이 설정됨 (라이팅 적용)', () => {
+    const layer = createCommerceColumnLayer(nodes, 'griScore')
+    expect(layer.props.material).toBeDefined()
   })
 
-  it('순유입이 큰 상권은 사람 픽토그램 크기도 더 크다', () => {
-    const data = buildCommercePictogramData(nodes, 'netFlow')
-    const high = data.find((d) => d.nodeId === 'gc_001')!
-    const low = data.find((d) => d.nodeId === 'gc_002')!
-    expect(high.size).toBeGreaterThan(low.size)
+  it('stroked: true + 흰색 반투명 라인', () => {
+    const layer = createCommerceColumnLayer(nodes, 'griScore')
+    expect(layer.props.stroked).toBe(true)
   })
 
-  it('최대 강도 노드도 픽토그램은 3개를 넘지 않는다', () => {
-    const data = buildCommercePictogramData(nodes, 'netFlow')
-    const high = data.filter((d) => d.nodeId === 'gc_001')
-    expect(high.length).toBeLessThanOrEqual(3)
+  it('onHover 미지정 시 pickable: false', () => {
+    const layer = createCommerceColumnLayer(nodes, 'griScore')
+    expect(layer.props.pickable).toBe(false)
   })
 
-  it('최소 강도 노드도 최소 1개의 픽토그램은 표시된다', () => {
-    const flatNodes: CommerceNode[] = nodes.map((n) => ({ ...n, netFlow: 0 }))
-    const data = buildCommercePictogramData(flatNodes, 'netFlow')
-    for (const node of flatNodes) {
-      const count = data.filter((d) => d.nodeId === node.id).length
-      expect(count).toBeGreaterThanOrEqual(1)
+  it('onHover 지정 시 pickable: true + onHover 콜백 연결', () => {
+    const onHover = () => {}
+    const layer = createCommerceColumnLayer(nodes, 'griScore', 1, onHover)
+    expect(layer.props.pickable).toBe(true)
+    expect(layer.props.onHover).toBe(onHover)
+  })
+})
+
+describe('buildCommerceColumnData', () => {
+  it('각 노드마다 1개 데이터 반환', () => {
+    const data = buildCommerceColumnData(nodes, 'griScore')
+    expect(data).toHaveLength(nodes.length)
+  })
+
+  it('값이 큰 노드의 elevation이 더 크다 (griScore)', () => {
+    const data = buildCommerceColumnData(nodes, 'griScore')
+    const high = data.find((d) => d.id === 'gc_001')!
+    const low = data.find((d) => d.id === 'gc_002')!
+    expect(high.elevation).toBeGreaterThan(low.elevation)
+  })
+
+  it('progress=0 시 모든 elevation이 0', () => {
+    const data = buildCommerceColumnData(nodes, 'griScore', 0)
+    for (const d of data) {
+      expect(d.elevation).toBe(0)
     }
+  })
+
+  it('progress=0.5 시 elevation 절반', () => {
+    const full = buildCommerceColumnData(nodes, 'griScore', 1)
+    const half = buildCommerceColumnData(nodes, 'griScore', 0.5)
+    const fullHigh = full.find((d) => d.id === 'gc_001')!
+    const halfHigh = half.find((d) => d.id === 'gc_001')!
+    expect(halfHigh.elevation).toBeCloseTo(fullHigh.elevation * 0.5, 5)
+  })
+
+  it('color는 RGB 튜플이며 metric 램프 색상', () => {
+    const data = buildCommerceColumnData(nodes, 'griScore')
+    for (const d of data) {
+      expect(d.color).toHaveLength(4) // RGBA
+      expect(d.color[0]).toBeGreaterThanOrEqual(0)
+      expect(d.color[0]).toBeLessThanOrEqual(255)
+    }
+  })
+
+  it('동일 값(min===max)이어도 NaN 없이 처리', () => {
+    const flat: CommerceNode[] = [
+      { ...nodes[0], griScore: 50 },
+      { ...nodes[1], griScore: 50 },
+    ]
+    const data = buildCommerceColumnData(flat, 'griScore')
+    for (const d of data) {
+      expect(Number.isFinite(d.elevation)).toBe(true)
+      for (const c of d.color) {
+        expect(Number.isFinite(c)).toBe(true)
+      }
+    }
+  })
+
+  it('position은 노드 좌표 그대로', () => {
+    const data = buildCommerceColumnData(nodes, 'griScore')
+    const high = data.find((d) => d.id === 'gc_001')!
+    expect(high.position).toEqual(nodes[0].coordinates)
+  })
+
+  it('각 datum에 name 필드 (hover 노출용)', () => {
+    const data = buildCommerceColumnData(nodes, 'griScore')
+    const high = data.find((d) => d.id === 'gc_001')!
+    expect(high.name).toBe('강남역')
+  })
+
+  it('각 datum에 value 필드 (hover 노출용)', () => {
+    const data = buildCommerceColumnData(nodes, 'griScore')
+    const high = data.find((d) => d.id === 'gc_001')!
+    expect(high.value).toBe(80)
   })
 })

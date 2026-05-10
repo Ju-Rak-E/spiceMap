@@ -2,7 +2,7 @@ import type { FlowPurpose } from '../hooks/useFlowData'
 import type { AdvisorCommerce, AdvisorResult } from '../hooks/useStartupAdvisor'
 import type { CommerceNode } from '../types/commerce'
 import { deriveStartupSummary } from './startupAdvisor'
-import { formatFixed2, formatSignedFixed2 } from './numberFormat'
+import { formatSignedInteger } from './numberFormat'
 
 export type FounderStep = 'industry' | 'region' | 'results' | 'detail'
 
@@ -20,6 +20,7 @@ export interface MetricExplanation {
   key: string
   label: string
   value: string
+  numericValue?: number
   tone: MetricTone
   shortMeaning: string
   basis: string
@@ -82,10 +83,14 @@ export function buildMetricExplanations(node: CommerceNode): MetricExplanation[]
     },
     {
       key: 'netFlow',
-      label: '고객 흐름',
-      value: startup.flowLabel,
+      label: '순유입',
+      value: `${formatSignedInteger(node.netFlow)}명`,
       tone: toneForNetFlow(node.netFlow),
-      shortMeaning: `순유입 ${formatSignedFixed2(node.netFlow)}`,
+      shortMeaning: node.netFlow > 0
+        ? '유입 우세'
+        : node.netFlow < 0
+          ? '유출 우세'
+          : '데이터 부족',
       basis: '선택 분기 OD 유동량에서 유입과 유출의 차이를 본 값입니다.',
       nextAction: node.netFlow > 0
         ? '유입 시간대와 주 고객 동선을 더 확인하세요.'
@@ -97,12 +102,12 @@ export function buildMetricExplanations(node: CommerceNode): MetricExplanation[]
       value: closeRateValue,
       tone: toneForCloseRate(node.closeRate),
       shortMeaning: node.closeRate == null
-        ? '폐업률 데이터 없음'
+        ? '데이터 없음'
         : node.closeRate >= 10
-          ? '폐업 부담 높음'
+          ? '높음'
           : node.closeRate >= 7
-            ? '주의 필요'
-            : '상대적으로 안정',
+            ? '주의'
+            : '안정',
       basis: '서울시 점포 데이터의 상권 단위 폐업률입니다.',
       nextAction: node.closeRate != null && node.closeRate >= 7
         ? '동종 업종 폐업 사례와 임대 조건을 먼저 확인하세요.'
@@ -111,15 +116,16 @@ export function buildMetricExplanations(node: CommerceNode): MetricExplanation[]
     {
       key: 'griScore',
       label: '상권 위험도',
-      value: formatFixed2(node.griScore),
+      value: `${Math.round(node.griScore)}점`,
+      numericValue: node.griScore,
       tone: toneForGri(node.griScore),
       shortMeaning: node.griScore >= 70
         ? '고위험'
         : node.griScore >= 40
           ? '주의'
           : node.griScore > 0
-            ? '낮은 위험'
-            : '분석 대기',
+            ? '낮음'
+            : '대기',
       basis: '폐업률, 고객 흐름, 연결성 기반의 GRI 보조 지표입니다.',
       nextAction: node.griScore >= 70
         ? '임대료 상승, 고객 이탈, 경쟁 과열 여부를 반드시 확인하세요.'

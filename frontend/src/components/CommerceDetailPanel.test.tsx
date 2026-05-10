@@ -59,7 +59,15 @@ describe('CommerceDetailPanel', () => {
 
   it('상권 위험도 점수가 표시된다', () => {
     renderPanel()
-    expect(screen.getAllByText('82.00').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('82점').length).toBeGreaterThan(0)
+  })
+
+  it('상권 위험도 색상 스케일이 표시된다', () => {
+    renderPanel()
+    expect(screen.getByLabelText('상권 위험도 82점')).toBeTruthy()
+    expect(screen.getByText('낮음')).toBeTruthy()
+    expect(screen.getByText('주의')).toBeTruthy()
+    expect(screen.getByText('위협')).toBeTruthy()
   })
 
   it('창업 적합도 라벨이 표시된다', () => {
@@ -69,7 +77,7 @@ describe('CommerceDetailPanel', () => {
 
   it('순유입 값이 표시된다', () => {
     renderPanel()
-    expect(screen.getAllByText(/1200/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('+1,200명').length).toBeGreaterThan(0)
   })
 
   it('닫기 버튼 클릭 시 onClose가 호출된다', async () => {

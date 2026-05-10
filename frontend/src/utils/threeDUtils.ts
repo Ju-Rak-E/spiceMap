@@ -36,3 +36,29 @@ export function interpolateProgress(
   const t = Math.min(1, elapsedMs / durationMs)
   return start + (target - start) * easeOutCubic(t)
 }
+
+const METRIC_LABEL: Record<HeightMetric, string> = {
+  griScore: '상권 위험도',
+  netFlow: '순유입 인구',
+  closeRate: '폐업률',
+  degreeCentrality: '연결 중심성',
+}
+
+export function getMetricLabel(metric: HeightMetric): string {
+  return METRIC_LABEL[metric]
+}
+
+export function formatMetricValue(value: number, metric: HeightMetric): string {
+  switch (metric) {
+    case 'griScore':
+      return `${value.toFixed(1)}점`
+    case 'netFlow': {
+      const sign = value >= 0 ? '+' : ''
+      return `${sign}${value.toLocaleString()}명`
+    }
+    case 'closeRate':
+      return `${value.toFixed(1)}%`
+    case 'degreeCentrality':
+      return value.toFixed(2)
+  }
+}
