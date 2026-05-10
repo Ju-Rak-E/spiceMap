@@ -23,23 +23,23 @@ describe('use3DView', () => {
     expect(result.current.metric).toBe('griScore')
   })
 
-  it('admin으로 setMode → flyTo pitch 45 호출', () => {
+  it('commerce로 setMode → flyTo pitch 45 호출', () => {
     const { result } = renderHook(() => use3DView(mapRef))
-    act(() => { result.current.setMode('admin') })
-    expect(result.current.mode).toBe('admin')
+    act(() => { result.current.setMode('commerce') })
+    expect(result.current.mode).toBe('commerce')
     expect(mockFlyTo).toHaveBeenCalledWith({ pitch: 45, bearing: -20, duration: 800 })
   })
 
   it('off로 setMode → flyTo pitch 0 호출', () => {
     const { result } = renderHook(() => use3DView(mapRef))
-    act(() => { result.current.setMode('admin') })
+    act(() => { result.current.setMode('commerce') })
     act(() => { result.current.setMode('off') })
     expect(mockFlyTo).toHaveBeenLastCalledWith({ pitch: 0, bearing: 0, duration: 600 })
   })
 
-  it('admin → commerce 전환 시 flyTo pitch 45 재호출', () => {
+  it('commerce 재선택 시 flyTo pitch 45 재호출', () => {
     const { result } = renderHook(() => use3DView(mapRef))
-    act(() => { result.current.setMode('admin') })
+    act(() => { result.current.setMode('commerce') })
     act(() => { result.current.setMode('commerce') })
     expect(mockFlyTo).toHaveBeenLastCalledWith({ pitch: 45, bearing: -20, duration: 800 })
   })

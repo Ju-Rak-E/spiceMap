@@ -9,12 +9,10 @@ import { use3DView } from '../hooks/use3DView'
 import ThreeDViewControl from './ThreeDViewControl'
 import { createPolygonExtrusionLayer } from '../layers/PolygonExtrusionLayer'
 import { createCommerceColumnLayer } from '../layers/CommerceColumnLayer'
-import { createAdminPolygonExtrusionLayer } from '../layers/AdminPolygonExtrusionLayer'
-import { createDistrictPinLayer } from '../layers/DistrictPinLayer'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceBoundaryLayer from './CommerceBoundaryLayer'
 import CommerceDetailPanel from './CommerceDetailPanel'
-import { createCommerceNodeLayers, createHeroPulseLayer, type AdvisorTierMap } from '../layers/CommerceNodeLayer'
+import { createCommerceNodeLayers, createHeroPulseLayer, getAdvisorColorHex, type AdvisorTierMap } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
 import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
@@ -385,21 +383,6 @@ export default function Map({
     }
   }, [onSelectNode])
 
-  const handleAdminHover = useCallback((info: PickingInfo<{ name: string; districtName?: string; value?: number }>) => {
-    if (info.object && info.object.value !== undefined) {
-      setHovered3D({
-        title: info.object.districtName ?? info.object.name,
-        subtitle: info.object.districtName ? info.object.name : null,
-        metric: threeDView.metric,
-        value: info.object.value,
-        x: info.x,
-        y: info.y,
-      })
-    } else {
-      setHovered3D(null)
-    }
-  }, [threeDView.metric])
-
   const handleCommerceHover = useCallback((info: PickingInfo<{ name: string; value: number }>) => {
     if (info.object) {
       setHovered3D({
@@ -493,15 +476,8 @@ export default function Map({
   const threeDLayers = useMemo(() => {
     if (nodes.length === 0) return []
     const isAnimating = threeDView.extrudeProgress > 0
-    const isAdmin = threeDView.mode === 'admin' || (threeDView.mode === 'off' && isAnimating)
-    const isCommerce = threeDView.mode === 'commerce'
+    const isCommerce = threeDView.mode === 'commerce' || (threeDView.mode === 'off' && isAnimating)
 
-    if (isAdmin && threeDView.adminBoundaries && threeDView.adminBoundaries.length > 0) {
-      return [
-        createAdminPolygonExtrusionLayer(nodes, threeDView.adminBoundaries, threeDView.metric, threeDView.extrudeProgress, handleAdminHover),
-        createDistrictPinLayer(nodes, threeDView.metric),
-      ]
-    }
     if (isCommerce && threeDView.boundaries && threeDView.boundaries.length > 0) {
       return [
         createPolygonExtrusionLayer(nodes, threeDView.boundaries, threeDView.metric, threeDView.extrudeProgress, handleCommerceHover),
@@ -509,7 +485,7 @@ export default function Map({
       ]
     }
     return []
-  }, [threeDView.mode, threeDView.metric, threeDView.adminBoundaries, threeDView.boundaries, threeDView.extrudeProgress, nodes, handleAdminHover, handleCommerceHover])
+  }, [threeDView.mode, threeDView.metric, threeDView.boundaries, threeDView.extrudeProgress, nodes, handleCommerceHover])
 
   const baseDeckLayers = useMemo(
     () => [
@@ -604,6 +580,20 @@ export default function Map({
       .filter((code): code is string => Boolean(code)),
     [selectedDistricts],
   )
+  const advisorBoundaryColors = useMemo(() => {
+    const colorMap = new globalThis.Map<string, string>()
+    if (!advisorTiers) return colorMap
+    for (const [commCd, tier] of advisorTiers.entries()) {
+      colorMap.set(commCd, getAdvisorColorHex(tier))
+    }
+    return colorMap
+  }, [advisorTiers])
+  const selectedBoundaryColor = useMemo(() => {
+    if (!selectedNode) return null
+    const tier = advisorTiers?.get(selectedNode.id)
+    if (tier) return getAdvisorColorHex(tier)
+    return deriveStartupSummary(selectedNode).fitColor
+  }, [advisorTiers, selectedNode])
 
   const clusterPositions = useMemo((): ClusterPositionMap => {
     void viewportVersion
@@ -624,7 +614,7 @@ export default function Map({
   }, [clusters, containerSize.height, containerSize.width, mapInstance, viewportVersion])
 
   function getClusterColor(cluster: DongCommerceCluster) {
-    if (cluster.tone === 'recommended') return '#43A047'
+    if (cluster.tone === 'recommended') return '#2563EB'
     if (cluster.tone === 'caution') return '#FB8C00'
     return '#78909C'
   }
@@ -680,7 +670,7 @@ export default function Map({
           </span>
         </div>
         <div style={{ display: 'flex', gap: 9, marginTop: 5, fontSize: 11, color: colors.secondaryText }}>
-          <span style={{ color: '#A5D6A7', fontWeight: 700 }}>추천 {cluster.recommendedCount}</span>
+          <span style={{ color: '#93C5FD', fontWeight: 700 }}>추천 {cluster.recommendedCount}</span>
           <span>최고 {cluster.bestScore}</span>
           <span>목록 보기</span>
         </div>
@@ -982,6 +972,8 @@ export default function Map({
               map={mapInstance}
               theme={theme}
               selectedId={selectedNode?.id ?? null}
+              selectedColor={selectedBoundaryColor}
+              boundaryColors={advisorBoundaryColors}
               quarter={selectedQuarter}
               districts={[...(selectedDistricts ?? new Set<string>())]}
             />

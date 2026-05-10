@@ -11,7 +11,6 @@ const METRIC_OPTIONS: Array<{ value: HeightMetric; label: string; icon: string; 
 
 const MODE_LABELS: Record<ThreeDMode, string> = {
   off: 'OFF',
-  admin: '자치구 3D',
   commerce: '상권 3D',
 }
 
@@ -61,7 +60,7 @@ export default function ThreeDViewControl({
         3D 뷰{isActive ? ' - 활성' : ''}
       </div>
       <div style={{ display: 'flex', gap: 4, marginBottom: isActive ? 8 : 0 }}>
-        {(['off', 'admin', 'commerce'] as ThreeDMode[]).map((m) => (
+        {(['off', 'commerce'] as ThreeDMode[]).map((m) => (
           <button
             key={m}
             type="button"

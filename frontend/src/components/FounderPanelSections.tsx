@@ -450,9 +450,10 @@ export function RecommendationResultsSection({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {recommendations.map((item, index) => {
-            const tierColor = item.tier === '추천' ? '#4ade80' : item.tier === '주의' ? '#fbbf24' : '#f87171'
-            const tierBg = item.tier === '추천' ? '#14532d22' : item.tier === '주의' ? '#78350f22' : '#7f1d1d22'
-            const tierBorder = item.tier === '추천' ? '#166534' : item.tier === '주의' ? '#92400e' : '#991b1b'
+            const tierColor = item.tier === '추천' ? '#60a5fa' : item.tier === '주의' ? '#fbbf24' : '#f87171'
+            const tierBg = item.tier === '추천' ? '#1d4ed822' : item.tier === '주의' ? '#78350f22' : '#7f1d1d22'
+            const tierBorder = item.tier === '추천' ? '#2563eb' : item.tier === '주의' ? '#92400e' : '#991b1b'
+            const summary = item.opportunityReasons[0] ?? '업종 적합성과 고객 흐름을 확인할 수 있습니다.'
             return (
               <button
                 key={item.id}
@@ -469,11 +470,14 @@ export function RecommendationResultsSection({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ fontSize: 12, color: tierColor, fontWeight: 800 }}>
+                    <div style={{ fontSize: 12, color: tierColor, fontWeight: 850 }}>
+                      {item.tier} · 점수 {item.score.toFixed(1)}
+                    </div>
+                    <div style={{ marginTop: 3, fontSize: 12, color: COLORS.panelText, fontWeight: 800 }}>
                       {index + 1}. {item.name}
                     </div>
                     <div style={{ marginTop: 2, fontSize: 10, color: COLORS.mutedText }}>
-                      {item.district || '자치구 미분류'} · {selectedIndustry || item.suitableIndustries[0]} · 점수 {item.score.toFixed(1)}
+                      {item.district || '자치구 미분류'} · {selectedIndustry || item.suitableIndustries[0]}
                     </div>
                   </div>
                   <span style={{ fontSize: 10, background: tierColor, color: '#0E141B', padding: '2px 6px', borderRadius: 999, fontWeight: 800 }}>
@@ -481,7 +485,7 @@ export function RecommendationResultsSection({
                   </span>
                 </div>
                 <div style={{ marginTop: 8, display: 'grid', gap: 5 }}>
-                  <div style={S.subLabel}>기회: {item.opportunityReasons[0] ?? '업종 적합성과 고객 흐름을 확인할 수 있습니다.'}</div>
+                  <div style={{ ...S.subLabel, color: COLORS.secondaryText }}>{summary}</div>
                   <div style={S.subLabel}>주의: {item.riskReasons[0]}</div>
                   <div style={{ ...S.subLabel, color: '#D7F5DC' }}>다음 행동: {item.nextActions[0]}</div>
                 </div>

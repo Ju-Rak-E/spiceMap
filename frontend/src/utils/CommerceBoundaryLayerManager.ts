@@ -13,6 +13,8 @@ const SELECTED_COLOR = '#7BD08D'
 const MIN_VISIBLE_ZOOM = 10.5
 const SELECTED_MIN_VISIBLE_ZOOM = 11.5
 type BoundaryData = NonNullable<maplibregl.GeoJSONSourceSpecification['data']>
+export type BoundaryColorMap = ReadonlyMap<string, string>
+type ColorPaint = string | maplibregl.ExpressionSpecification
 
 function buildSelectedFilter(selectedId: string | null): maplibregl.FilterSpecification {
   const ids = selectedId ? [selectedId] : []
@@ -27,10 +29,28 @@ function lineColor(theme: MapTheme): string {
   return theme === 'dark' ? '#E8F1F5' : '#263238'
 }
 
+function buildBoundaryColorExpression(colors: BoundaryColorMap, fallback: string): ColorPaint {
+  if (colors.size === 0) return fallback
+  const matchPairs = [...colors.entries()].flatMap(([id, color]) => [id, color])
+  return [
+    'match',
+    ['to-string', ['get', 'comm_cd']],
+    ...matchPairs,
+    [
+      'match',
+      ['to-string', ['get', 'comm_id']],
+      ...matchPairs,
+      fallback,
+    ],
+  ] as maplibregl.ExpressionSpecification
+}
+
 export class CommerceBoundaryLayerManager {
   private readonly map: maplibregl.Map
   private theme: MapTheme
   private selectedId: string | null
+  private boundaryColors: BoundaryColorMap
+  private selectedColor: string
   private data: BoundaryData
   private readonly handleStyleData: () => void
 
@@ -39,10 +59,14 @@ export class CommerceBoundaryLayerManager {
     theme: MapTheme,
     selectedId: string | null = null,
     data: BoundaryData = DATA_URL,
+    boundaryColors: BoundaryColorMap = new Map(),
+    selectedColor: string | null = null,
   ) {
     this.map = map
     this.theme = theme
     this.selectedId = selectedId
+    this.boundaryColors = boundaryColors
+    this.selectedColor = selectedColor ?? SELECTED_COLOR
     this.data = data
     this.handleStyleData = () => this.syncLayers()
 
@@ -65,6 +89,16 @@ export class CommerceBoundaryLayerManager {
   setSelectedId(selectedId: string | null) {
     this.selectedId = selectedId
     this.applySelectedFilter()
+  }
+
+  setBoundaryColors(boundaryColors: BoundaryColorMap) {
+    this.boundaryColors = boundaryColors
+    this.updatePaint()
+  }
+
+  setSelectedColor(selectedColor: string | null) {
+    this.selectedColor = selectedColor ?? SELECTED_COLOR
+    this.updatePaint()
   }
 
   setData(data: BoundaryData) {
@@ -130,7 +164,7 @@ export class CommerceBoundaryLayerManager {
       source: SOURCE_ID,
       minzoom: MIN_VISIBLE_ZOOM,
       paint: {
-        'line-color': SELECTED_COLOR,
+        'line-color': buildBoundaryColorExpression(this.boundaryColors, lineColor(this.theme)),
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
           10.5, 2.4,
@@ -152,7 +186,7 @@ export class CommerceBoundaryLayerManager {
       source: SOURCE_ID,
       minzoom: MIN_VISIBLE_ZOOM,
       paint: {
-        'line-color': lineColor(this.theme),
+        'line-color': buildBoundaryColorExpression(this.boundaryColors, lineColor(this.theme)),
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
           10.5, 1.1,
@@ -171,7 +205,7 @@ export class CommerceBoundaryLayerManager {
       minzoom: SELECTED_MIN_VISIBLE_ZOOM,
       filter: buildSelectedFilter(this.selectedId),
       paint: {
-        'fill-color': SELECTED_COLOR,
+        'fill-color': this.selectedColor,
         'fill-opacity': 0.2,
       },
     })
@@ -183,7 +217,7 @@ export class CommerceBoundaryLayerManager {
       minzoom: SELECTED_MIN_VISIBLE_ZOOM,
       filter: buildSelectedFilter(this.selectedId),
       paint: {
-        'line-color': SELECTED_COLOR,
+        'line-color': this.selectedColor,
         'line-width': 4,
         'line-opacity': 0.95,
       },
@@ -200,8 +234,18 @@ export class CommerceBoundaryLayerManager {
 
   private updatePaint() {
     if (!this.map.isStyleLoaded()) return
+    const boundaryLineColor = buildBoundaryColorExpression(this.boundaryColors, lineColor(this.theme))
+    if (this.map.getLayer(LINE_GLOW_LAYER_ID)) {
+      this.map.setPaintProperty(LINE_GLOW_LAYER_ID, 'line-color', boundaryLineColor)
+    }
     if (this.map.getLayer(LINE_LAYER_ID)) {
-      this.map.setPaintProperty(LINE_LAYER_ID, 'line-color', lineColor(this.theme))
+      this.map.setPaintProperty(LINE_LAYER_ID, 'line-color', boundaryLineColor)
+    }
+    if (this.map.getLayer(SELECTED_FILL_LAYER_ID)) {
+      this.map.setPaintProperty(SELECTED_FILL_LAYER_ID, 'fill-color', this.selectedColor)
+    }
+    if (this.map.getLayer(SELECTED_LINE_LAYER_ID)) {
+      this.map.setPaintProperty(SELECTED_LINE_LAYER_ID, 'line-color', this.selectedColor)
     }
   }
 
