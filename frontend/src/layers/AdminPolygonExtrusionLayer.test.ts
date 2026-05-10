@@ -70,4 +70,23 @@ describe('createAdminPolygonExtrusionLayer', () => {
     const layer = createAdminPolygonExtrusionLayer(NODES, FEATURES, 'griScore', 1)
     expect(layer.props.stroked).toBe(false)
   })
+
+  it('onHover 미지정 시 pickable: false', () => {
+    const layer = createAdminPolygonExtrusionLayer(NODES, FEATURES, 'griScore', 1)
+    expect(layer.props.pickable).toBe(false)
+  })
+
+  it('onHover 지정 시 pickable: true + onHover 콜백 연결', () => {
+    const onHover = () => {}
+    const layer = createAdminPolygonExtrusionLayer(NODES, FEATURES, 'griScore', 1, onHover)
+    expect(layer.props.pickable).toBe(true)
+    expect(layer.props.onHover).toBe(onHover)
+  })
+
+  it('각 datum에 districtName/value 필드 (hover 노출용)', () => {
+    const data = buildAdminPolygonExtrusionData(NODES, FEATURES, 'griScore')
+    const yeoksam = data.find((d) => d.name === '역삼동')!
+    expect(yeoksam.districtName).toBe('강남구')
+    expect(yeoksam.value).toBeDefined()
+  })
 })

@@ -80,12 +80,11 @@ const S = {
     fontWeight: 700,
   }),
   sectionTitle: {
-    fontSize: 11,
-    color: '#78909C',
-    fontWeight: 700,
-    marginBottom: 6,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em',
+    fontSize: 12,
+    color: '#B0BEC5',
+    fontWeight: 800,
+    marginBottom: 8,
+    letterSpacing: 0,
   },
   sectionTitleSub: {
     fontSize: 10,
@@ -128,7 +127,7 @@ const S = {
   kpiGrid: {
     display: 'grid' as const,
     gridTemplateColumns: '1fr 1fr',
-    gap: 8,
+    gap: 10,
   },
   kpiCard: {
     background: '#263238',

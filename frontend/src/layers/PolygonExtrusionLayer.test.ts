@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildPolygonExtrusionData } from './PolygonExtrusionLayer'
+import { buildPolygonExtrusionData, createPolygonExtrusionLayer } from './PolygonExtrusionLayer'
 import type { CommerceNode } from '../types/commerce'
 import type { BoundaryFeature } from '../hooks/use3DView'
 
@@ -56,5 +56,26 @@ describe('buildPolygonExtrusionData', () => {
     const a = buildPolygonExtrusionData(nodes, boundaries, 'griScore')
     const b = buildPolygonExtrusionData(nodes, boundaries, 'griScore', 1)
     expect(a).toEqual(b)
+  })
+
+  it('각 datum에 name/value 필드 (hover 노출용)', () => {
+    const data = buildPolygonExtrusionData(nodes, boundaries, 'griScore')
+    const high = data.find(d => d.id === 'gc_001')!
+    expect(high.name).toBe('강남역')
+    expect(high.value).toBe(80)
+  })
+})
+
+describe('createPolygonExtrusionLayer', () => {
+  it('onHover 미지정 시 pickable: false', () => {
+    const layer = createPolygonExtrusionLayer(nodes, boundaries, 'griScore')
+    expect(layer.props.pickable).toBe(false)
+  })
+
+  it('onHover 지정 시 pickable: true + onHover 콜백 연결', () => {
+    const onHover = () => {}
+    const layer = createPolygonExtrusionLayer(nodes, boundaries, 'griScore', 1, onHover)
+    expect(layer.props.pickable).toBe(true)
+    expect(layer.props.onHover).toBe(onHover)
   })
 })
