@@ -7,7 +7,6 @@ import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatFixed2, formatSignedFixed2 } from '../utils/numberFormat'
 import { deltaTone, formatDelta, type QuarterKpiDelta } from '../utils/quarterDelta'
 import { SEOUL_DISTRICT_GROUPS, SEOUL_DISTRICT_NAMES } from '../utils/seoulDistricts'
-import { useToast } from './ToastContext'
 import type { AdvisorResult } from '../hooks/useStartupAdvisor'
 
 const PURPOSE_OPTIONS: Array<{ value: FlowPurpose; label: string; peak: string }> = [
@@ -27,7 +26,6 @@ const DENSITY_LABELS: Record<number, string> = {
 
 const DISTRICTS = SEOUL_DISTRICT_NAMES
 const COLORS = MAP_THEME.dark
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 interface FlowControlPanelProps {
   purpose: FlowPurpose | null
@@ -95,82 +93,11 @@ function formatHourLabel(hour: number): string {
   return `오후 ${hour - 12}시`
 }
 
-function getPriorityNodes(nodes: CommerceNode[]): CommerceNode[] {
-  return nodes
-    .filter((n) => deriveStartupSummary(n).fitLevel === 'recommended')
-    .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
-    .slice(0, 5)
-}
-
 function getDeltaColor(value: number, betterWhen: 'higher' | 'lower' = 'higher'): string {
   const tone = deltaTone(value, betterWhen)
   if (tone === 'up') return '#A5D6A7'
   if (tone === 'down') return '#EF9A9A'
   return COLORS.mutedText
-}
-
-function csvCell(value: string | number | null | undefined): string {
-  const text = value == null ? '' : String(value)
-  return `"${text.replaceAll('"', '""')}"`
-}
-
-function downloadCsvDemo(nodes: CommerceNode[], quarter: string): void {
-  const header = [
-    '상권ID',
-    '상권명',
-    '자치구',
-    '분기',
-    '상권유형',
-    '창업적합도',
-    '판단',
-    '순유입',
-    '연결중심성',
-    '상권위험도',
-    '폐업률',
-  ]
-  const rows = nodes
-    .filter((n) => deriveStartupSummary(n).fitLevel === 'recommended')
-    .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
-    .map((n) => {
-      const summary = deriveStartupSummary(n)
-      return [
-        n.id,
-        n.name,
-        n.district,
-        quarter,
-        summary.characterLabel,
-        summary.fitScore,
-        summary.fitLabel,
-        formatSignedFixed2(n.netFlow),
-        formatFixed2(n.degreeCentrality),
-        formatFixed2(n.griScore),
-        n.closeRate != null ? `${n.closeRate.toFixed(1)}%` : '',
-      ].map(csvCell).join(',')
-    })
-  const csv = [header.map(csvCell).join(','), ...rows].join('\r\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `startup_candidate_commerce_${quarter}.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}
-
-async function downloadCsvApi(quarter: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/export/csv?quarter=${quarter}`)
-  if (!res.ok) throw new Error(`CSV 다운로드 실패: ${res.status}`)
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `startup_candidate_commerce_${quarter}.csv`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
 }
 
 const S = {
@@ -534,66 +461,10 @@ const S = {
     boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
     transition: 'left 0.16s ease',
   }),
-  priorityList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-  } satisfies CSSProperties,
-  priorityItem: (active: boolean): CSSProperties => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '8px 10px',
-    borderRadius: 8,
-    border: active ? '1.5px solid #43A047' : `1px solid ${COLORS.panelBorder}`,
-    background: active ? 'rgba(67,160,71,0.12)' : COLORS.panelSurface,
-    cursor: 'pointer',
-    width: '100%',
-    textAlign: 'left',
-  }),
-  priorityBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#43A047',
-    color: '#fff',
-    borderRadius: 4,
-    padding: '1px 5px',
-    fontSize: 10,
-    fontWeight: 700,
-    flexShrink: 0,
-  } satisfies CSSProperties,
-  priorityName: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: 600,
-    color: COLORS.panelText,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  } satisfies CSSProperties,
-  priorityScore: {
-    fontSize: 12,
-    fontWeight: 700,
-    color: '#A5D6A7',
-    flexShrink: 0,
-  } satisfies CSSProperties,
   emptyNote: {
     fontSize: 11,
     color: COLORS.mutedText,
     lineHeight: 1.5,
-  } satisfies CSSProperties,
-  csvButton: {
-    width: '100%',
-    padding: '8px 0',
-    borderRadius: 8,
-    border: `1px solid ${COLORS.panelBorder}`,
-    background: COLORS.panelSurface,
-    color: '#7BD08D',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-    marginTop: 4,
   } satisfies CSSProperties,
 } as const
 
@@ -610,7 +481,6 @@ export default function FlowControlPanel({
   topN,
   scopeLabel,
   usingMockData,
-  nodes,
   selectedNode,
   stats,
   purposeTotals,
@@ -629,7 +499,6 @@ export default function FlowControlPanel({
   onSelectAllDistricts,
   onClearDistricts,
   onSetDistricts,
-  onSelectNode,
   compareMode,
   compareQuarter,
   kpiDelta,
@@ -648,10 +517,8 @@ export default function FlowControlPanel({
   const [districtFilterOpen, setDistrictFilterOpen] = useState(false)
   const [districtSearch, setDistrictSearch] = useState('')
   const densityLabel = DENSITY_LABELS[flowStrength] ?? '보통'
-  const priorityNodes = getPriorityNodes(nodes)
   const totalPurposeVolume = Object.values(purposeTotals).reduce((sum, value) => sum + value, 0)
   const selectedPurposeVolume = purpose ? purposeTotals[purpose] ?? 0 : totalPurposeVolume
-  const toast = useToast()
   const selectedDistrictCount = selectedDistricts.size
   const allDistrictsSelected = selectedDistrictCount >= DISTRICTS.length
   const districtSummary = allDistrictsSelected
@@ -667,35 +534,6 @@ export default function FlowControlPanel({
 
   function selectDistrictGroup(districts: readonly string[]) {
     onSetDistricts(new Set(districts))
-  }
-
-  // docs/hero_shot_scenario.md §1-3: CSV 다운로드 시 toast 컨텍스트로 결과 피드백.
-  // 메시지에 "추천 상권 N건 + 정책 R4~R7 한 줄 요약" 명시 (hero shot 시간축 대사와 일치).
-  function handleCsvDownload() {
-    if (priorityNodes.length === 0) {
-      toast.info('현재 조건에서 다운로드할 추천 상권이 없습니다')
-      return
-    }
-    const successMsg = `${formatQuarter(selectedQuarter)} 추천 상권 ${priorityNodes.length}건 + 정책 R4~R7 한 줄 요약 다운로드`
-    if (usingMockData) {
-      try {
-        downloadCsvDemo(nodes, selectedQuarter)
-        toast.success(successMsg)
-      } catch (err) {
-        console.error('CSV 다운로드 오류:', err)
-        toast.error('CSV 생성에 실패했습니다')
-      }
-      return
-    }
-    downloadCsvApi(selectedQuarter)
-      .then(() => {
-        toast.success(successMsg)
-      })
-      .catch((err: unknown) => {
-        console.error('CSV 다운로드 오류:', err)
-        const reason = err instanceof Error ? err.message : 'API 응답 오류'
-        toast.error(`CSV 다운로드 실패: ${reason}`)
-      })
   }
 
   return (
@@ -810,37 +648,6 @@ export default function FlowControlPanel({
             </div>
           </>
         )}
-      </section>
-
-      <section style={S.section}>
-        <div style={S.sectionTitle}>창업 검토 추천 상권</div>
-        {priorityNodes.length === 0 ? (
-          <div style={S.emptyNote}>현재 조건에서 추천 상권이 없습니다.</div>
-        ) : (
-          <div style={S.priorityList}>
-            {priorityNodes.map((node) => (
-              <button
-                key={node.id}
-                type="button"
-                style={S.priorityItem(selectedNode?.id === node.id)}
-                onClick={() => onSelectNode(node)}
-              >
-                <span style={S.priorityBadge}>추천</span>
-                <span style={S.priorityName}>{node.name}</span>
-                <span style={S.priorityScore}>{deriveStartupSummary(node).fitScore}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        <button
-          type="button"
-          style={S.csvButton}
-          onClick={handleCsvDownload}
-          data-testid="hero-csv-export"
-          aria-label={`${formatQuarter(selectedQuarter)} 추천 상권 CSV 다운로드`}
-        >
-          추천 상권 CSV 다운로드
-        </button>
       </section>
 
       <section style={S.section}>
