@@ -349,24 +349,104 @@ def _load_closures_by_comm(
 ) -> pd.DataFrame:
     """store_info의 자치구 단위 폐업률을 상권 단위로 매핑.
 
-    1순위 (production, PostGIS): commerce_boundary + admin_boundary spatial
-        join으로 각 상권의 dominant 자치구를 식별 (admin_boundary.adm_cd 앞
-        5자리 = signgu_cd) → store_info의 signgu_cd로 폐업률 결합.
-    2순위 (fallback, SQLite/테스트): commerce_meta의 comm_nm == signgu_nm
-        직접 매칭 휴리스틱.
+    1순위 (production, PostGIS + sales): 업종 매출 가중평균. 자치구×업종
+        close_rate를 (상권×업종) 매출 비중으로 가중평균 → 같은 자치구라도
+        업종 mix가 다르면 상권별 closure_rate가 달라진다.
+    2순위 (production fallback, PostGIS only): 자치구 단순평균 broadcast
+        (sales/industry 데이터 부재 시).
+    3순위 (테스트 fallback, SQLite): comm_nm == signgu_nm 직접 매칭 휴리스틱.
 
     Returns: columns = [comm_cd, closure_rate].
     """
     if commerce_meta.empty:
         return pd.DataFrame(columns=["comm_cd", "closure_rate"])
 
-    # 1) Spatial 우선
+    # 1) Industry-weighted (상권별 진짜 분산 발생)
+    weighted = _closure_via_industry_weighted(engine, legacy_quarter)
+    if weighted is not None and not weighted.empty:
+        return weighted.drop_duplicates(subset="comm_cd")[["comm_cd", "closure_rate"]]
+
+    # 2) Spatial broadcast fallback
     spatial = _closure_via_spatial_join(engine, legacy_quarter)
     if spatial is not None and not spatial.empty:
         return spatial.drop_duplicates(subset="comm_cd")[["comm_cd", "closure_rate"]]
 
-    # 2) Heuristic fallback
+    # 3) Heuristic fallback
     return _closure_via_heuristic(engine, legacy_quarter, commerce_meta)
+
+
+def _closure_via_industry_weighted(
+    engine: Engine,
+    legacy_quarter: str,
+) -> pd.DataFrame | None:
+    """업종 매출 가중평균으로 상권별 폐업률 산출 (PostgreSQL 전용).
+
+    계산식:
+        closure_rate(comm) = Σ_industry [
+            close_rate(signgu(comm), industry) × sales_share(comm, industry)
+        ]
+        sales_share(comm, ind) = sales(comm, ind) / Σ_ind sales(comm, *)
+
+    같은 자치구라도 업종 매출 mix가 다르면 상권별 closure_rate가 달라진다.
+
+    Returns: columns = [comm_cd, closure_rate].
+        PostGIS 미지원 / industry_cd 결측 / SQL 실패 시 None.
+    """
+    sql = text(
+        """
+        WITH gu_industry AS (
+            SELECT signgu_cd, industry_cd,
+                   AVG(close_rate)::float AS gu_ind_close
+            FROM store_info
+            WHERE year_quarter = :q
+              AND signgu_cd IS NOT NULL
+              AND industry_cd IS NOT NULL
+              AND close_rate IS NOT NULL
+            GROUP BY signgu_cd, industry_cd
+        ),
+        comm_to_signgu AS (
+            SELECT cb.comm_cd, LEFT(ab.adm_cd, 5) AS signgu_cd
+            FROM commerce_boundary cb
+            LEFT JOIN LATERAL (
+                SELECT adm_cd FROM admin_boundary
+                WHERE ST_Contains(geom, ST_PointOnSurface(cb.geom))
+                LIMIT 1
+            ) ab ON TRUE
+            WHERE ab.adm_cd IS NOT NULL
+        ),
+        comm_industry_sales AS (
+            SELECT trdar_cd AS comm_cd, industry_cd,
+                   SUM(COALESCE(sales_amount, 0))::float AS sales
+            FROM commerce_sales
+            WHERE year_quarter = :q AND industry_cd IS NOT NULL
+            GROUP BY trdar_cd, industry_cd
+        ),
+        joined AS (
+            SELECT cs.comm_cd, gi.gu_ind_close, cis.sales
+            FROM comm_to_signgu cs
+            JOIN comm_industry_sales cis ON cis.comm_cd = cs.comm_cd
+            JOIN gu_industry gi
+              ON gi.signgu_cd = cs.signgu_cd
+             AND gi.industry_cd = cis.industry_cd
+        ),
+        weighted AS (
+            SELECT comm_cd,
+                   SUM(gu_ind_close * sales) AS num,
+                   SUM(sales)               AS den
+            FROM joined
+            GROUP BY comm_cd
+        )
+        SELECT comm_cd,
+               (num / NULLIF(den, 0))::float AS closure_rate
+        FROM weighted
+        WHERE den > 0
+        """
+    )
+    try:
+        return pd.read_sql(sql, engine, params={"q": legacy_quarter})
+    except Exception:
+        # PostGIS 미지원, industry_cd 결측, sales 부재 → 자동 fallback
+        return None
 
 
 def _closure_via_spatial_join(

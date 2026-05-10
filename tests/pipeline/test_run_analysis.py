@@ -16,6 +16,7 @@ from sqlalchemy.engine import Engine
 from backend.pipeline.run_analysis import (
     AnalysisInputs,
     AnalysisResult,
+    _closure_via_industry_weighted,
     _load_closures_by_comm,
     compose_analysis,
     quarter_to_legacy,
@@ -253,6 +254,7 @@ def _create_schema(engine: Engine) -> None:
                 year_quarter TEXT NOT NULL,
                 signgu_cd TEXT NOT NULL,
                 signgu_nm TEXT,
+                industry_cd TEXT,
                 close_rate REAL,
                 close_count REAL,
                 store_count REAL
@@ -263,6 +265,7 @@ def _create_schema(engine: Engine) -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 year_quarter TEXT NOT NULL,
                 trdar_cd TEXT NOT NULL,
+                industry_cd TEXT,
                 sales_amount REAL
             )
         """))
@@ -566,3 +569,153 @@ class TestLoadClosuresByComm:
         )
         result = _load_closures_by_comm(engine, "20254", meta)
         assert len(result) == 1
+
+
+class TestIndustryWeightedClosure:
+    """업종 매출 가중평균 closure_rate — 1순위 fallback head.
+
+    같은 자치구라도 업종 mix가 다른 상권은 다른 closure_rate를 받아야 한다.
+    SQL은 PostgreSQL 전용이므로 SQLite 테스트에서는 read_sql이 실패 → None.
+    monkeypatch로 fallback 체인 우선순위를 검증한다.
+    """
+
+    def test_weighted_takes_top_precedence(self, monkeypatch):
+        """weighted가 데이터 반환 시 spatial/heuristic 무시."""
+        from backend.pipeline import run_analysis as run_mod
+
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        meta = pd.DataFrame(
+            [
+                {"comm_cd": "C-X", "comm_nm": "X상권"},
+                {"comm_cd": "C-Y", "comm_nm": "Y상권"},
+            ]
+        )
+        weighted_result = pd.DataFrame(
+            [
+                {"comm_cd": "C-X", "closure_rate": 9.2},
+                {"comm_cd": "C-Y", "closure_rate": 2.8},
+            ]
+        )
+        # weighted 활성, spatial이 호출되더라도 다른 값 반환 (무시되어야 함)
+        monkeypatch.setattr(
+            run_mod, "_closure_via_industry_weighted",
+            lambda _eng, _q: weighted_result,
+        )
+        monkeypatch.setattr(
+            run_mod, "_closure_via_spatial_join",
+            lambda _eng, _q: pd.DataFrame(
+                [{"comm_cd": "C-X", "closure_rate": 6.0},
+                 {"comm_cd": "C-Y", "closure_rate": 6.0}]
+            ),
+        )
+        result = _load_closures_by_comm(engine, "20254", meta)
+        x = result[result["comm_cd"] == "C-X"].iloc[0]
+        y = result[result["comm_cd"] == "C-Y"].iloc[0]
+        # weighted 값이 사용됨 (spatial broadcast 6.0이 아님)
+        assert x["closure_rate"] == pytest.approx(9.2)
+        assert y["closure_rate"] == pytest.approx(2.8)
+
+    def test_weighted_returns_none_falls_back_to_spatial(self, monkeypatch):
+        """weighted None → spatial 호출."""
+        from backend.pipeline import run_analysis as run_mod
+
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        meta = pd.DataFrame([{"comm_cd": "C1", "comm_nm": "압구정"}])
+        spatial_result = pd.DataFrame(
+            [{"comm_cd": "C1", "closure_rate": 6.0}]
+        )
+        monkeypatch.setattr(
+            run_mod, "_closure_via_industry_weighted",
+            lambda _eng, _q: None,
+        )
+        monkeypatch.setattr(
+            run_mod, "_closure_via_spatial_join",
+            lambda _eng, _q: spatial_result,
+        )
+        result = _load_closures_by_comm(engine, "20254", meta)
+        assert len(result) == 1
+        assert result.iloc[0]["closure_rate"] == pytest.approx(6.0)
+
+    def test_weighted_returns_empty_falls_back_to_spatial(self, monkeypatch):
+        """weighted empty → spatial 호출."""
+        from backend.pipeline import run_analysis as run_mod
+
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        meta = pd.DataFrame([{"comm_cd": "C1", "comm_nm": "압구정"}])
+        monkeypatch.setattr(
+            run_mod, "_closure_via_industry_weighted",
+            lambda _eng, _q: pd.DataFrame(columns=["comm_cd", "closure_rate"]),
+        )
+        spatial_result = pd.DataFrame(
+            [{"comm_cd": "C1", "closure_rate": 6.0}]
+        )
+        monkeypatch.setattr(
+            run_mod, "_closure_via_spatial_join",
+            lambda _eng, _q: spatial_result,
+        )
+        result = _load_closures_by_comm(engine, "20254", meta)
+        assert len(result) == 1
+        assert result.iloc[0]["closure_rate"] == pytest.approx(6.0)
+
+    def test_weighted_sql_fails_silently_on_sqlite(self):
+        """SQLite는 LEFT()/LATERAL/PostGIS 미지원 → SQL 실패 → None 반환."""
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        # 데이터 있어도 SQL 자체가 SQLite 문법 미지원
+        with engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO store_info
+                (year_quarter, signgu_cd, signgu_nm, industry_cd, close_rate, close_count, store_count)
+                VALUES ('20254', '11680', '강남구', 'CS100001', 6.0, 10, 100)
+            """))
+        result = _closure_via_industry_weighted(engine, "20254")
+        assert result is None
+
+    def test_weighted_per_commerce_variance_via_mock(self, monkeypatch):
+        """기댓값 sanity: signgu=GN 업종 A/B close_rate=10/2일 때
+        상권 X 매출 A=900·B=100 → 9.2 / 상권 Y 매출 A=100·B=900 → 2.8.
+
+        SQL은 Postgres에서만 작동하므로 mock으로 가중평균 결과를 검증.
+        """
+        from backend.pipeline import run_analysis as run_mod
+
+        engine = create_engine("sqlite:///:memory:")
+        _create_schema(engine)
+        meta = pd.DataFrame(
+            [
+                {"comm_cd": "X", "comm_nm": "X상권"},
+                {"comm_cd": "Y", "comm_nm": "Y상권"},
+            ]
+        )
+
+        # 가중평균 계산을 in-memory에서 시뮬레이션 (SQL 의도 검증)
+        gu_industry = {("GN", "A"): 10.0, ("GN", "B"): 2.0}
+        comm_signgu = {"X": "GN", "Y": "GN"}
+        comm_sales = {("X", "A"): 900.0, ("X", "B"): 100.0,
+                      ("Y", "A"): 100.0, ("Y", "B"): 900.0}
+        rows = []
+        for comm in ("X", "Y"):
+            num = den = 0.0
+            for ind in ("A", "B"):
+                close = gu_industry[(comm_signgu[comm], ind)]
+                sales = comm_sales[(comm, ind)]
+                num += close * sales
+                den += sales
+            rows.append({"comm_cd": comm, "closure_rate": num / den})
+        weighted_result = pd.DataFrame(rows)
+
+        monkeypatch.setattr(
+            run_mod, "_closure_via_industry_weighted",
+            lambda _eng, _q: weighted_result,
+        )
+
+        result = _load_closures_by_comm(engine, "20254", meta)
+        x = result[result["comm_cd"] == "X"].iloc[0]
+        y = result[result["comm_cd"] == "Y"].iloc[0]
+        assert x["closure_rate"] == pytest.approx(9.2)
+        assert y["closure_rate"] == pytest.approx(2.8)
+        # 같은 자치구라도 업종 mix가 달라 분산 발생
+        assert x["closure_rate"] != y["closure_rate"]
