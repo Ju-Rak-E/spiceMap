@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-09",
+  "generated_at": "2026-05-10",
   "quarter": "2025Q4",
   "previous_quarter": "2025Q3",
   "cards": [
@@ -17,24 +17,24 @@
     {
       "id": "H3",
       "title": "H3 — Q3 GRI 고위험 → Q4 폐업률 상승",
-      "headline": "방향성 매우 강함",
-      "metric_primary": "gap = 0.746%p",
-      "metric_secondary": "p ≈ 5 × 10⁻³⁶",
+      "headline": "방향성 매우 강함 (가중평균 정밀화 후 +35% gap)",
+      "metric_primary": "gap = 1.009%p",
+      "metric_secondary": "p ≈ 8 × 10⁻³¹",
       "sample_size": "top n=330 / bottom n=1,320",
-      "summary": "GRI 상위 20% 위험 상권은 다음 분기 폐업률이 하위 80%의 14.5배 (0.800% vs 0.055%). 우연으로 보기 거의 불가능 (p≈5×10⁻³⁶) — GRI 신호가 미래 폐업을 사전에 가리킨다는 강력한 증거.",
-      "criterion": "임계 gap ≥ 2.0%p — FAIL (자치구 평균 매핑 한계)",
-      "source": "docs/verification_h1_h3_results.md §H3"
+      "summary": "GRI 상위 20% 위험 상권은 다음 분기 폐업률이 하위 80%의 14.5배 (1.084% vs 0.075%). 자치구×업종 매출 가중평균으로 closure_rate 분산을 정밀화하자 gap이 0.746%p → 1.009%p로 35% 증가. 우연으로 보기 거의 불가능 (p≈8×10⁻³¹) — GRI 신호가 미래 폐업을 사전에 가리킨다는 강력한 증거.",
+      "criterion": "임계 gap ≥ 2.0%p — FAIL (MVP 강남·관악은 가중평균, 그 외 자치구는 여전히 broadcast)",
+      "source": "docs/verification_h1_h3_results.md §H3 + 2026-05-10 가중평균 재산출"
     },
     {
       "id": "H2",
       "title": "H2 — 흐름 단절 강도 → 폐업률 상관",
       "headline": "방향 반대 (예상 외 발견)",
-      "metric_primary": "r = -0.595",
-      "metric_secondary": "p ≈ 6.3 × 10⁻⁵",
+      "metric_primary": "r = -0.558",
+      "metric_secondary": "p ≈ 2.2 × 10⁻⁴",
       "sample_size": "n = 39 (Q4 flow_barriers 280 → 상권 매핑)",
-      "summary": "예상은 양의 상관(단절↑→폐업↑)이었으나 실측은 음의 상관 r=-0.59 (p<0.0001). 흐름 단절은 보통 유동량 큰 hub 상권에서 발생하고, hub는 안정적이라 폐업률 낮음 (selection bias 가능). 표본 n=39 + 자치구 매핑 한계로 단정 어려움 — v2 에서 표본 확장 + 상권 단위 closure 직접 적재 후 재검증 필요.",
+      "summary": "예상은 양의 상관(단절↑→폐업↑)이었으나 실측은 음의 상관 r=-0.558 (p<0.001). 흐름 단절은 보통 유동량 큰 hub 상권에서 발생하고, hub는 안정적이라 폐업률 낮음 (selection bias 가능). 가중평균 정밀화 후 spearman r도 -0.812 → -0.558로 약화 (분산 증가가 단조성 약화시킴). 표본 n=39 + 자치구 매핑 한계로 단정 어려움 — v2에서 표본 확장 + 상권 단위 closure 직접 적재 후 재검증 필요.",
       "criterion": "임계 r ≥ 0.3 + p < 0.05 — FAIL (방향 반대)",
-      "source": "backend/analysis/verification_h2.py + Supabase 2026-05-07 실측"
+      "source": "backend/analysis/verification_h2.py + 2026-05-10 가중평균 재산출"
     },
     {
       "id": "B1",

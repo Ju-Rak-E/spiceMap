@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-05-07 (Week 5 Day 2 / D-5)
+> 최종 갱신: 2026-05-10 (Week 5 Day 5 / D-2)
 
 ---
 
@@ -149,9 +149,16 @@
 
 ### 기능 마감
 - [ ] 서울 전역 데이터 확장 가능성 검토 (Dev-A)
-- [ ] 배포 환경 구성 (시연 서버 또는 Docker) (Dev-A)
+- [x] 배포 환경 구성 (시연 서버 또는 Docker) (Dev-A) — **2026-05-09 PR #44~#47** Railway Dockerfile + `railway.toml` + `requirements-api.txt` (geopandas 제거 경량화) + PORT 환경변수 대응 + `.dockerignore`. Vercel(`frontend/vercel.json`)과 별개 백엔드 단독 배포 경로 확보
 - [ ] 3분 발표 시나리오 애니메이션 최종 조정 (Dev-B)
 - [ ] 태블릿 반응형 최종 확인 (Dev-B)
+
+### 검증 실측 (2025Q4 D-3)
+- [x] H1·H2·H3·B1 실측 수치 반영 — **2026-05-09 PR #48** `data/baselines/validation_2025Q4.json` + `frontend/src/data/validation_results.json` 현행화. H1 r=0.106 / p=2.83e-05 / n=1565, H2 r=-0.595 / p=6.51e-05 / n=39 (방향 반대 — selection bias 가능, v2에서 표본 확장 필요), H3 gap=0.746%p / p≈5e-36 / top n=330·bottom n=1320, B1 Jaccard=0.157 / 추가 식별 187건
+- [x] `/api/barriers` centroid 좌표 응답 — **2026-05-09 PR #43~#48** `backend/api/barriers.py` + `schemas/barriers.py`에 from/to centroid 좌표 추가 (프론트 흐름 단절 라인 anchor)
+- [x] README · FR_Workflow 현행화 — **2026-05-09 PR #49** 배포 URL·실측 수치·차별점 강화
+- [x] closure_rate 동일값 버그 수정 — 업종 매출 가중평균 — **2026-05-10 D-2** `backend/pipeline/run_analysis.py`에 `_closure_via_industry_weighted` 추가. 자치구×업종 close_rate를 (상권×업종) 매출 비중으로 가중평균 → 같은 자치구라도 업종 mix가 다르면 상권별 분산 발생. fallback 체인: weighted(1) → spatial broadcast(2) → heuristic(3) → median fill(4). schema 무변경. `tests/pipeline/test_run_analysis.py` 32/32 PASS (신규 5 케이스 — TestIndustryWeightedClosure: top precedence·spatial fallback·empty fallback·SQLite SQL 실패·가중평균 변동 sanity)
+- [x] **Supabase Q4 재계산 + ValidationView 갱신** — **2026-05-10 D-2** Supabase 직결 `run_analysis --quarter 2025Q4 --previous 2025Q3` 실행 → `commerce_analysis` 1,650행 + `policy_cards` 414건 DELETE+INSERT, GRI/priority_score 모두 새 closure_rate 입력으로 일관 재계산. **MVP 자치구 closure_rate 분포**: 강남(11680) n=104·distinct=99·std=0.780 / 관악(11620) n=74·distinct=72·std=0.910 (이전: 사실상 broadcast 단일값). MVP 외 23개 자치구는 `store_info` 데이터 부재로 0.0 broadcast 유지(raw 적재 한계). `scripts/run_validation_all` H1·H2·H3 재산출 → `data/baselines/validation_2025Q4.json` 갱신: **H3 gap 0.746%p → 1.009%p (+35%), p≈8e-31 (top_avg 1.084·bottom_avg 0.075, 14.5배 ratio 유지)**. H2 r=-0.595→-0.558 (분산 증가로 약간 약화), spearman -0.812→-0.558. `frontend/src/data/validation_results.json` H2/H3 카드 narrative 갱신 + frontend build PASS (1492 modules, gzip 618KB). 백업 테이블 `commerce_analysis_backup_20260510` 보존 (롤백용, 발표 시연 후 사용자 DROP)
 
 ### 제출 산출물
 - [~] 웹 데모 최종 버전 배포 — **2026-05-03** Vercel(`frontend/vercel.json`) + Netlify(`frontend/netlify.toml`) 정적 호스팅 설정 + `.env.production.example` + `docs/deployment_guide.md` (절차/검증/일정) + `scripts/preflight_check.py` (시연 안전 점검 25 항목, files/files+server/remote 모드, 10 tests) + `scripts/export_openapi.py` → `docs/api_openapi.json` 8 경로. D-3 preview, D-1 production promote 권장. 실제 배포는 V-World 도메인 등록 후 Dev-B 수동
@@ -309,3 +316,70 @@
 - [x] F. ThreeDMode 재정의 `'off' | 'admin' | 'commerce'`, ThreeDViewControl 토글 라벨 'OFF' / '자치구 3D' / '상권 3D'. `Map.tsx`에서 모드별 분기 — admin: AdminPolygonExtrusion + DistrictPin / commerce: PolygonExtrusion(상권) + CommerceColumnLayer(픽토그램). 두 모드 모두 솟아오르는 애니메이션 적용. CommerceBoundaryLayer는 commerce 모드에서만 숨김(z-fighting 방지). vitest 390/390 PASS, build 성공
 - [ ] (사전 결함) `ThreeDViewControl.tsx`의 `getMetricPictogramStats` export — `react-refresh/only-export-components` lint 에러: 별도 파일 분리 필요 (작업 외 수정으로 보류)
 - [ ] (수동 검증) `npm run dev`로 자치구 솟음·빨간 핀 위치·줌 스케일링 시각 확인
+
+---
+
+## Week 5 추가 작업: AI 창업 입지 분석 (Startup Advisor) (2026-05-10)
+
+> 공모전 창업 부문 필수 조건(AI 기술 활용) 충족 + 정책 지원 → 창업 의사결정 지원 도구로 포지셔닝 전환.
+> 설계: `docs/superpowers/specs/2026-05-10-llm-startup-advisor-design.md`
+> 계획: `docs/superpowers/plans/2026-05-10-llm-startup-advisor.md`
+
+### 백엔드 (PR #51 nik)
+- [x] Pydantic 스키마 + 스키마 회귀 — `backend/schemas/advisor.py` (`AdvisorIndustriesResponse`, `StartupAdvisorRequest`, `AdvisorTier`, `StartupAdvisorResponse`)
+- [x] `GET /api/advisor/industries` — `store_info` DISTINCT industry_nm (분기 필터)
+- [x] `POST /api/advisor/startup` — 점수 산출 + Claude API LLM 통합 (`compute_advisor_score`/`assign_tiers` + `anthropic` SDK), `comm_cd` LLM context 포함, JSON 코드블록 마크다운 제거 후 파싱
+- [x] `backend/config.py` — `anthropic_api_key` 필드 + `ANTHROPIC_API_KEY` 환경변수
+- [x] `backend/main.py` — advisor 라우터 등록
+- [x] `requirements*.txt` — `anthropic>=0.30.0` 추가
+- [x] 테스트 4종 — `test_schemas_advisor.py`·`test_advisor_industries.py`·`test_advisor_scoring.py`·`test_advisor_startup.py`
+
+### 프론트 (PR #52, #53 kbh)
+- [x] `useStartupAdvisor` 훅 — API 호출 + 상태 + `BASE_URL` 빈 문자열 차단(데모 모드 처리)
+- [x] `FounderPanelSections.tsx` — 우측 결과 패널 (792 lines, 추천·주의·비추천 3-tier)
+- [x] `MetricExplanationCard` — 지표 해설 카드 컴포넌트
+- [x] `FlowControlPanel` 어드바이저 섹션 — 업종 드롭다운 + 분석 버튼 (FlowControlPanel 950→reduced + 142 tests 신설)
+- [x] `App.tsx`/`Map.tsx` 통합 — `advisorTiers` prop으로 노드 색상 오버레이, `tierMap`을 `use3DView`/훅 내부에서 생성(import 충돌 회피), `advisorTiers` `useMemo` 파생화(훅 순서 위반 수정)
+- [x] mock 데모 — `mock_advisor_industries.json`·`mock_advisor_startup.json`
+- [x] 추천 상권 영역 폴리곤 제거(2026-05-10 PR #52 a28bd44) — 노드 색상으로만 시각화
+
+### 백엔드 데이터 정합성
+- [x] `store_info.year_quarter` 형식 변환(`2025Q4` → `20254`, 4debc65) — DB raw 포맷과 API 입력 정규화
+
+---
+
+## Week 5 추가 작업: Module C non-OD barriers 풀 구현 (2026-05-09~10)
+
+> 기존 `compute_flow_gaps`(OD 기반) 외에 OD 데이터가 없는 상권에 대해 시계열·공간 기반 barriers 추출.
+
+- [x] `backend/analysis/module_c_barriers.py` (188 lines) — non-OD barriers 알고리즘 + `tests/analysis/test_module_c_barriers.py`
+- [x] `backend/pipeline/build_non_od_barriers.py` (258 lines) — flow_barriers 적재 파이프라인 + `tests/pipeline/test_build_non_od_barriers.py`
+- [x] `backend/pipeline/run_analysis.py` 통합 — non-OD barriers 단계 추가 + 회귀 보강
+- [x] `backend/api/barriers.py` 응답에 `from_centroid`/`to_centroid` 추가, `schemas/barriers.py` 확장 (PR #43 87b993b)
+
+---
+
+## Week 5 추가 작업: 3D UX·시각 정밀화 + Advisor v2 (2026-05-10 D-2 후반)
+
+> 3D 뷰 1차 구현 후 UX 가독성·시각 정밀화. Advisor 결과 품질 강화.
+
+### 3D UX·시각 (PR #55 kbh)
+- [x] 설계 문서 — `docs/plan_3d_ux.md` (160 lines), `docs/plan_3d_visual.md` (275 lines)
+- [x] `frontend/src/utils/colorRamp.ts` 신규 (60 lines + 60 tests) — 강도→색상 그라데이션 보간 헬퍼
+- [x] `PolygonExtrusionLayer`·`AdminPolygonExtrusionLayer`·`CommerceColumnLayer` 모두 colorRamp 통합 — 3D 강도 시각 일관화
+- [x] `Map.tsx` 148 lines 갱신 — 3D 모드별 분기 + 좌측 분석 패널 가독성
+- [x] `CommerceDetailPanel` 정밀화 — `MetricExplanationCard` 129 lines 갱신
+- [x] `frontend/src/utils/numberFormat.ts` 신규 (5 lines) — 매출/카운트 포맷팅
+- [x] `frontend/src/utils/founderUx.ts` 30 lines 추가 — 창업자 UX 헬퍼
+- [x] `frontend/src/utils/threeDUtils.ts` 26 lines 추가 — 3D 보간/스케일
+
+### Advisor v2 — 품질 강화 (PR #54 nik, PR #55 kbh)
+- [x] `backend/api/advisor.py` 117 lines 갱신 — 추천/주의/비추천 **각 3개씩 반환** (이전 단일 결과) + 점포 수 **역 U 커브 보정** (포화 시장 패널티)
+- [x] `tests/api/test_advisor_scoring.py` 12 lines 갱신 — 새 점수 공식 + 3-tier 균등 분배 회귀
+- [x] 추천/주의 상권 확인 후 선택 시 카메라 이동 (kbh bbe0372) — UX 흐름 일체화
+- [x] 계산 방식 강화 (kbh bbe0372) — 업종 점포수 + 업종 폐업률 영향 강화
+
+### closure_rate 가중평균 fix (Dev-C, 본 세션)
+- [x] `backend/pipeline/run_analysis.py` `_closure_via_industry_weighted` 추가 — 자치구×업종 close_rate × 상권×업종 매출 비중 가중평균
+- [x] Supabase Q4 재계산 적용 — strange가 위에 검증 실측 (2025Q4 D-3) 섹션에 기록됨
+- [x] H3 gap 0.746%p → 1.009%p (+35%) 갱신 — `frontend/src/data/validation_results.json` H2/H3 카드 narrative 동기화 + frontend build PASS

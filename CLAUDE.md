@@ -49,29 +49,13 @@ cd frontend && npm run dev                        # 프론트엔드
 레포: `Ju-Rak-E/spiceMap` · 브랜치: `feature/<주차>-<담당>` or `docs/<주제>` → PR → `main`
 커밋 타입: feat / fix / refactor / docs / test / chore
 
-## 핵심 문서
-
-- `docs/FR_Role_Workflow.md` — 기능/요구/5주 일정 포괄 spec
-- `prompt_plan.md` — 5주 체크리스트
-- `docs/strategy_d13.md` — D-13 수상 전략 + 실용성 강화 플랜
-- `docs/hero_shot_scenario.md` — 3분 발표 4구간 시간축 + Hero shot 시연 동선 (단일 진실 문서)
-- `docs/openrouteservice_key_note.md` — 흐름단절 실 도로 경로 ORS 키 운영 가이드
-- `docs/schema.md` — DB 스키마 (commerce_analysis 5컬럼 확장 + policy_cards)
-- `docs/od_flows_aggregation.md` — od_flows 분기 집계본 설계
-- `docs/admin_boundary_gu_backfill.md` — gu_nm 백필 SQL + 검증
-- `docs/week2_decisions.md` — Week 2 주요 의사결정
-- `docs/README.md` — 전체 문서 인덱스
-
-## 현재 주차
-
-- **Week 2 (4/15~4/21)**: 완료.
-- **Week 3 (4/22~4/28)**: 완료. API 5종, Module A/B/D/E, run_analysis 파이프라인, closure_rate spatial join, admin_boundary 백필, type-map gu 필터, Dev-B 상세패널·타임라인·자치구필터.
-- **Week 4 (4/29~5/5)**: 완료. Module C·H1·H3·분류기 v1.1·프론트 Tier 1·B1/B3·검증 5카드·Hero shot 동선·H2/B1 코드+25 tests·`/api/insights/validation`·통합 검증·배포 인프라·발표 자료·흐름단절 실 도로 경로(`/api/barrier-routes` ORS+fallback, `useBarrierRoutes`, polyline 파티클).
-- **Week 5 (5/6~5/12)**: 진행 중 (Day 2 / D-5). 사용자 잔여: H2/B1 실측 산출(scripts/run_validation_all)·OA-15576 CSV·Hero shot PNG 5종·시연 영상·Vercel 배포·`OPENROUTESERVICE_API_KEY` 등록 결정. backend pytest 266 / frontend vitest 323 / preflight 31/31 ALL PASS.
-- **이월 블로커**: 원본 `od_flows`만 Dev-A 로컬 (집계본으로 우회). admin/commerce boundary 모두 Supabase 적재 완료.
-
 ## 원칙
 
 - MVP 범위: 강남·관악 2개 자치구 (서울 전역 아님)
 - 지표는 상대 순위 > 절대값 (GRI v1.0 4항목 재분배)
 - 집계 데이터만 사용, 개인 이동 추적 없음
+
+## 상세 규칙
+
+- 핵심 문서 인덱스 → `docs/rules/key-docs.md`
+- 프로젝트 진행 상태 (주차/블로커/카운트/narrative) → `docs/rules/project-status.md`
