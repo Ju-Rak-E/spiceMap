@@ -68,9 +68,9 @@ function deriveFitLevel(score: number, node: StartupCommerceNode): StartupFitLev
 function fitMeta(level: StartupFitLevel): Pick<StartupSummary, 'fitLabel' | 'fitColor'> {
   switch (level) {
     case 'recommended':
-      return { fitLabel: '검토 추천', fitColor: '#43A047' }
+      return { fitLabel: '추천', fitColor: '#2563EB' }
     case 'caution':
-      return { fitLabel: '주의 검토', fitColor: '#FB8C00' }
+      return { fitLabel: '주의', fitColor: '#FB8C00' }
     case 'not_recommended':
       return { fitLabel: '비추천', fitColor: '#E53935' }
     case 'unknown':

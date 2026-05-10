@@ -92,8 +92,15 @@ describe('CommerceDetailPanel', () => {
     expect(document.querySelector('svg')).toBeTruthy()
   })
 
-  it('업종 힌트가 표시된다', () => {
+  it('검토 업종이 창업 판단 요약 안에 표시된다', () => {
     renderPanel()
-    expect(screen.getAllByText('업종 힌트').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('검토 업종').length).toBeGreaterThan(0)
+  })
+
+  it('지역 대응 신호가 상세 패널 하단 보조 정보로 표시된다', () => {
+    renderPanel()
+    expect(screen.getByText('지역 대응 신호')).toBeTruthy()
+    expect(screen.getByText(/실제 시행 중인 정책이 아니라/)).toBeTruthy()
+    expect(screen.getByText(/창업 추천 결과와는 별개의 참고 정보입니다/)).toBeTruthy()
   })
 })

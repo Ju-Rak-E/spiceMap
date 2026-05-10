@@ -64,8 +64,14 @@ export function getGriBorderWidth(griScore: number, isSelected: boolean): number
 
 export type AdvisorTierMap = Map<string, '추천' | '주의' | '비추천'>
 
+export function getAdvisorColorHex(tier: '추천' | '주의' | '비추천'): string {
+  if (tier === '추천') return '#2563EB'
+  if (tier === '주의') return '#D97706'
+  return '#DC2626'
+}
+
 export function getAdvisorFillColor(tier: '추천' | '주의' | '비추천'): [number, number, number, number] {
-  if (tier === '추천') return [22, 163, 74, 220]
+  if (tier === '추천') return [37, 99, 235, 220]
   if (tier === '주의') return [217, 119, 6, 220]
   return [220, 38, 38, 220]
 }

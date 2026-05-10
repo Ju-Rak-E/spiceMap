@@ -105,6 +105,27 @@ const S = {
     border: '1px solid #37474F',
     padding: '12px 12px',
   },
+  decisionSummaryCard: (color: string): React.CSSProperties => ({
+    background: '#263238',
+    borderRadius: 8,
+    border: `1px solid ${color}`,
+    borderLeft: `4px solid ${color}`,
+    padding: '13px 12px',
+    boxShadow: `0 0 0 3px ${color}18`,
+  }),
+  decisionMeta: (color: string): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    background: `${color}22`,
+    border: `1px solid ${color}66`,
+    color,
+    borderRadius: 6,
+    padding: '3px 8px',
+    fontSize: 12,
+    fontWeight: 850,
+    marginBottom: 8,
+  }),
   summaryHeadline: {
     fontSize: 14,
     fontWeight: 700,
@@ -159,6 +180,18 @@ const S = {
     background: '#263238',
     borderRadius: 8,
     padding: '10px 12px',
+  },
+  policySection: {
+    background: '#18222B',
+    borderRadius: 8,
+    border: '1px solid #30404D',
+    padding: '12px',
+  },
+  policyIntro: {
+    fontSize: 11,
+    color: '#B0BEC5',
+    lineHeight: 1.55,
+    marginBottom: 10,
   },
   errorText: { fontSize: 12, color: '#EF5350' },
   loadingText: { fontSize: 12, color: '#78909C' },
@@ -240,8 +273,11 @@ export default function CommerceDetailPanel({
       </div>
 
       <div>
-        <div style={S.sectionTitle}>창업 판단</div>
-        <div style={S.summaryCard}>
+        <div style={S.sectionTitle}>창업 판단 요약</div>
+        <div style={S.decisionSummaryCard(startup.fitColor)}>
+          <div style={S.decisionMeta(startup.fitColor)}>
+            {startup.fitLabel} · 점수 {startup.fitScore.toFixed(1)}
+          </div>
           <div style={S.summaryHeadline}>{startup.headline}</div>
           <ul style={S.list}>
             {startup.reasons.map((reason) => (
@@ -250,6 +286,16 @@ export default function CommerceDetailPanel({
           </ul>
           <div style={{ marginTop: 8, fontSize: 11, color: '#78909C' }}>
             성격 근거: {startup.characterBasis}
+          </div>
+          <div style={{ marginTop: 10, ...S.hintGrid }}>
+            <div style={S.hintBox}>
+              <div style={S.kpiLabel}>검토 업종</div>
+              <div style={S.emptyText}>{startup.suitableIndustries.join(', ')}</div>
+            </div>
+            <div style={S.hintBox}>
+              <div style={S.kpiLabel}>주의 업종</div>
+              <div style={S.emptyText}>{startup.cautionIndustries.join(', ')}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -298,12 +344,16 @@ export default function CommerceDetailPanel({
         </div>
       </div>
 
-      <div>
-        <div style={S.sectionTitle}>정책 추천 카드</div>
-        {policyResult.isLoading && <div style={S.loadingText}>정책 정보를 불러오는 중...</div>}
+      <div style={S.policySection} aria-label="지역 대응 신호">
+        <div style={S.sectionTitle}>지역 대응 신호</div>
+        <div style={S.policyIntro}>
+          이 내용은 실제 시행 중인 정책이 아니라, 상권 지표를 바탕으로 한 지자체 대응 제안입니다.<br />
+          창업 추천 결과와는 별개의 참고 정보입니다.
+        </div>
+        {policyResult.isLoading && <div style={S.loadingText}>지역 대응 신호를 불러오는 중...</div>}
         {policyResult.error && <div style={S.errorText}>{policyResult.error}</div>}
         {!policyResult.isLoading && !policyResult.error && policyInsights.length === 0 && (
-          <div style={S.emptyText}>이 상권에 매칭된 정책 추천이 없습니다.</div>
+          <div style={S.emptyText}>이 상권에 매칭된 지역 대응 신호가 없습니다.</div>
         )}
         {policyInsights.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -316,20 +366,6 @@ export default function CommerceDetailPanel({
             ))}
           </div>
         )}
-      </div>
-
-      <div>
-        <div style={S.sectionTitleSub}>업종 힌트</div>
-        <div style={S.hintGrid}>
-          <div style={S.hintBox}>
-            <div style={S.kpiLabel}>검토 업종</div>
-            <div style={S.emptyText}>{startup.suitableIndustries.join(', ')}</div>
-          </div>
-          <div style={S.hintBox}>
-            <div style={S.kpiLabel}>주의 업종</div>
-            <div style={S.emptyText}>{startup.cautionIndustries.join(', ')}</div>
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -41,23 +41,16 @@ describe('ThreeDViewControl', () => {
     onMetricChange: vi.fn(),
   }
 
-  it('OFF/자치구 3D/상권 3D 버튼 렌더링', () => {
+  it('OFF/상권 3D 버튼 렌더링', () => {
     render(<ThreeDViewControl {...defaultProps} />)
     expect(screen.getByText('OFF')).toBeTruthy()
-    expect(screen.getByText('자치구 3D')).toBeTruthy()
     expect(screen.getByText('상권 3D')).toBeTruthy()
+    expect(screen.queryByText('자치구 3D')).toBeNull()
   })
 
   it('mode=off 시 지표 드롭다운 미표시', () => {
     render(<ThreeDViewControl {...defaultProps} />)
     expect(screen.queryByRole('combobox')).toBeNull()
-  })
-
-  it('자치구 3D 버튼 클릭 → onModeChange("admin")', () => {
-    const onModeChange = vi.fn()
-    render(<ThreeDViewControl {...defaultProps} onModeChange={onModeChange} />)
-    fireEvent.click(screen.getByText('자치구 3D'))
-    expect(onModeChange).toHaveBeenCalledWith('admin')
   })
 
   it('상권 3D 버튼 클릭 → onModeChange("commerce")', () => {
@@ -67,20 +60,15 @@ describe('ThreeDViewControl', () => {
     expect(onModeChange).toHaveBeenCalledWith('commerce')
   })
 
-  it('mode=admin 시 지표 드롭다운과 픽토그램 카드 표시', () => {
-    render(<ThreeDViewControl {...defaultProps} mode="admin" />)
+  it('mode=commerce 시에도 지표 드롭다운 표시', () => {
+    render(<ThreeDViewControl {...defaultProps} mode="commerce" />)
     expect(screen.getByRole('combobox')).toBeTruthy()
     expect(screen.getByTestId('metric-pictogram-netFlow')).toBeTruthy()
   })
 
-  it('mode=commerce 시에도 지표 드롭다운 표시', () => {
-    render(<ThreeDViewControl {...defaultProps} mode="commerce" />)
-    expect(screen.getByRole('combobox')).toBeTruthy()
-  })
-
   it('지표 변경 → onMetricChange 호출', () => {
     const onMetricChange = vi.fn()
-    render(<ThreeDViewControl {...defaultProps} mode="admin" onMetricChange={onMetricChange} />)
+    render(<ThreeDViewControl {...defaultProps} mode="commerce" onMetricChange={onMetricChange} />)
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'netFlow' } })
     expect(onMetricChange).toHaveBeenCalledWith('netFlow')
   })

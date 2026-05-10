@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useRef, type MutableRefObject } from 'react'
 import type maplibregl from 'maplibre-gl'
 import { interpolateProgress, type HeightMetric } from '../utils/threeDUtils'
-import type { AdminBoundaryFeature } from '../layers/AdminPolygonExtrusionLayer'
 
 export type { HeightMetric }
-export type ThreeDMode = 'off' | 'admin' | 'commerce'
+export type ThreeDMode = 'off' | 'commerce'
 
 export interface BoundaryFeature {
   comm_id: string
@@ -18,7 +17,6 @@ export interface Use3DViewReturn {
   setMode: (m: ThreeDMode) => void
   setMetric: (m: HeightMetric) => void
   boundaries: BoundaryFeature[] | null
-  adminBoundaries: AdminBoundaryFeature[] | null
 }
 
 const EXTRUDE_IN_MS = 600
@@ -30,7 +28,6 @@ export function use3DView(
   const [mode, setModeState] = useState<ThreeDMode>('off')
   const [metric, setMetric] = useState<HeightMetric>('griScore')
   const [boundaries, setBoundaries] = useState<BoundaryFeature[] | null>(null)
-  const [adminBoundaries, setAdminBoundaries] = useState<AdminBoundaryFeature[] | null>(null)
   const [extrudeProgress, setExtrudeProgress] = useState(0)
   const progressRef = useRef(0)
   const rafRef = useRef<number | null>(null)
@@ -51,26 +48,6 @@ export function use3DView(
         setBoundaries(parsed)
       })
       .catch(() => { if (!cancelled) setBoundaries([]) })
-    return () => { cancelled = true }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    fetch('/data/seoul_admin_boundary.geojson')
-      .then((r) => r.json())
-      .then((geojson: { features: Array<{ properties: { name: string; gu_code: string }; geometry: { type: string; coordinates: unknown } }> }) => {
-        if (cancelled) return
-        const parsed: AdminBoundaryFeature[] = geojson.features.map((f) => ({
-          name: f.properties.name,
-          gu_code: f.properties.gu_code,
-          polygon:
-            f.geometry.type === 'Polygon'
-              ? (f.geometry.coordinates as number[][][])[0]
-              : (f.geometry.coordinates as number[][][][])[0][0],
-        }))
-        setAdminBoundaries(parsed)
-      })
-      .catch(() => { if (!cancelled) setAdminBoundaries([]) })
     return () => { cancelled = true }
   }, [])
 
@@ -117,5 +94,5 @@ export function use3DView(
     [mapRef],
   )
 
-  return { mode, metric, extrudeProgress, setMode, setMetric, boundaries, adminBoundaries }
+  return { mode, metric, extrudeProgress, setMode, setMetric, boundaries }
 }
