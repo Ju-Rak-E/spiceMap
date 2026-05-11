@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SEOUL_DISTRICT_NAMES } from '../utils/seoulDistricts'
 
 export interface BarrierRoute {
   barrierId: string
@@ -45,13 +46,18 @@ async function fetchMockRoutes(): Promise<BarrierRoute[]> {
   return normalizeRoutes((await res.json()) as BarrierRoutesResponse)
 }
 
-async function fetchBarrierRoutes(quarter: string, commerceCode?: string | null): Promise<BarrierRoute[]> {
+async function fetchBarrierRoutes(
+  quarter: string,
+  commerceCode?: string | null,
+  district?: string | null,
+): Promise<BarrierRoute[]> {
   const params = new URLSearchParams({
     quarter,
     min_score: DEFAULT_MIN_SCORE,
     limit: commerceCode ? SELECTED_ROUTE_LIMIT : OVERVIEW_ROUTE_LIMIT,
   })
   if (commerceCode) params.set('comm_cd', commerceCode)
+  if (district && !commerceCode) params.set('gu', district)
   try {
     const res = await fetch(`${BASE_URL}/api/barrier-routes?${params.toString()}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -61,14 +67,36 @@ async function fetchBarrierRoutes(quarter: string, commerceCode?: string | null)
   }
 }
 
+async function fetchBarrierRoutesForDistricts(
+  quarter: string,
+  commerceCode?: string | null,
+  districts?: string[],
+): Promise<BarrierRoute[]> {
+  if (commerceCode || !districts || districts.length === 0 || districts.length >= SEOUL_DISTRICT_NAMES.length) {
+    return fetchBarrierRoutes(quarter, commerceCode)
+  }
+
+  const groupedRoutes = await Promise.all(
+    districts.map((district) => fetchBarrierRoutes(quarter, null, district)),
+  )
+  const deduped = new Map<string, BarrierRoute>()
+  for (const route of groupedRoutes.flat()) {
+    const key = route.barrierId || `${route.sourceId}-${route.targetId}`
+    if (!deduped.has(key)) deduped.set(key, route)
+  }
+  return [...deduped.values()]
+}
+
 export function useBarrierRoutes(
   quarter = '2025Q4',
   enabled = false,
   commerceCode?: string | null,
+  districts?: ReadonlySet<string>,
 ): UseBarrierRoutesReturn {
   const [routes, setRoutes] = useState<BarrierRoute[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const districtKey = districts ? [...districts].sort().join('|') : '__all__'
 
   useEffect(() => {
     let cancelled = false
@@ -90,7 +118,13 @@ export function useBarrierRoutes(
       setError(null)
     })
 
-    fetchBarrierRoutes(quarter, commerceCode)
+    const districtList = districtKey === '__all__'
+      ? undefined
+      : districtKey
+        ? districtKey.split('|')
+        : []
+
+    fetchBarrierRoutesForDistricts(quarter, commerceCode, districtList)
       .then((data) => {
         if (cancelled) return
         setRoutes(data)
@@ -106,7 +140,7 @@ export function useBarrierRoutes(
     return () => {
       cancelled = true
     }
-  }, [commerceCode, enabled, quarter])
+  }, [commerceCode, districtKey, enabled, quarter])
 
   return { routes, isLoading, error }
 }

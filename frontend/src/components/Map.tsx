@@ -235,7 +235,12 @@ export default function Map({
       : []
   ), [scopedBarriers, selectedBarrierNodeId])
   const barrierRouteNodeId = selectedScopedBarriers.length > 0 ? selectedBarrierNodeId : null
-  const { routes: barrierRoutes } = useBarrierRoutes(selectedQuarter, true, barrierRouteNodeId)
+  const { routes: barrierRoutes } = useBarrierRoutes(
+    selectedQuarter,
+    true,
+    barrierRouteNodeId,
+    selectedDistricts,
+  )
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
