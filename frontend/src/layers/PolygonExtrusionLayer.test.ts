@@ -78,4 +78,11 @@ describe('createPolygonExtrusionLayer', () => {
     expect(layer.props.pickable).toBe(true)
     expect(layer.props.onHover).toBe(onHover)
   })
+
+  it('keeps polygon stroke width in pixels', () => {
+    const layer = createPolygonExtrusionLayer(nodes, boundaries, 'griScore')
+    expect(layer.props.stroked).toBe(true)
+    expect(layer.props.lineWidthUnits).toBe('pixels')
+    expect(layer.props.getLineWidth).toBe(1.5)
+  })
 })

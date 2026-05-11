@@ -11,6 +11,10 @@ const MIN_ZOOM = 9
 const FULL_SIZE_ZOOM = 14.5
 const MIN_ZOOM_RADIUS_SCALE = 0.38
 const MAX_ZOOM_RADIUS_SCALE = 1
+const FLOW_PARTICLE_OVERLAY_PARAMETERS = {
+  depthCompare: 'always',
+  depthWriteEnabled: false,
+} as const
 
 interface Particle {
   position: [number, number]
@@ -100,6 +104,7 @@ export function createFlowParticleLayer(
     radiusUnits: 'meters',
     radiusMinPixels: pixelBounds.min,
     radiusMaxPixels: pixelBounds.max,
+    parameters: FLOW_PARTICLE_OVERLAY_PARAMETERS,
     updateTriggers: {
       getFillColor: [progress, selectedNodeId, animation.zoom, animation.flowStrength],
       getPosition: [progress, selectedNodeId, animation.zoom, animation.flowStrength],

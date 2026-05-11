@@ -15,7 +15,7 @@ import CommerceDetailPanel from './CommerceDetailPanel'
 import { createCommerceNodeLayers, createHeroPulseLayer, getAdvisorColorHex, type AdvisorTierMap } from '../layers/CommerceNodeLayer'
 import { createODFlowLayer } from '../layers/ODFlowLayer'
 import { createFlowParticleLayer } from '../layers/FlowParticleLayer'
-import { createFlowBarrierLayer } from '../layers/FlowBarrierLayer'
+import { createFlowBarrierLayers } from '../layers/FlowBarrierLayer'
 import { createDisruptedBarrierParticleLayer } from '../layers/DisruptedBarrierParticleLayer'
 import { useAnimationFrame } from '../hooks/useAnimationFrame'
 import { getMetricLabel, formatMetricValue } from '../utils/threeDUtils'
@@ -143,8 +143,8 @@ interface Hovered3D {
 
 const BARRIER_SEVERITY_META: Record<BarrierSeverity, { label: string; color: string; bg: string }> = {
   high: { label: '심각', color: '#EF5350', bg: 'rgba(239,83,80,0.16)' },
-  medium: { label: '주의', color: '#FFA726', bg: 'rgba(255,167,38,0.16)' },
-  low: { label: '관찰', color: '#FFD54F', bg: 'rgba(255,213,79,0.14)' },
+  medium: { label: '주의', color: '#F06292', bg: 'rgba(240,98,146,0.16)' },
+  low: { label: '관찰', color: '#C084FC', bg: 'rgba(192,132,252,0.14)' },
 }
 
 function formatBarrierVolume(value: number): string {
@@ -474,16 +474,18 @@ export default function Map({
   ])
   const barrierLayers = useMemo(
     () => visibleBarriers.length > 0 && barrierRoutePathMap.size > 0
-      ? [
-          createFlowBarrierLayer(visibleBarriers, barrierRoutePathMap, (info) => {
+      ? createFlowBarrierLayers(
+          visibleBarriers,
+          barrierRoutePathMap,
+          (info) => {
             if (info.object) {
               setHoveredBarrier({ barrier: info.object.barrier, x: info.x, y: info.y })
               setHoveredFlow(null)
             } else {
               setHoveredBarrier(null)
             }
-          }),
-        ]
+          },
+        )
       : [],
     [barrierRoutePathMap, visibleBarriers],
   )
@@ -531,10 +533,10 @@ export default function Map({
 
   const baseDeckLayers = useMemo(
     () => [
-      ...(staticFlowLayer ? [staticFlowLayer] : []),
-      ...barrierLayers,
       ...commerceLayers,
       ...threeDLayers,
+      ...(staticFlowLayer ? [staticFlowLayer] : []),
+      ...barrierLayers,
     ],
     [barrierLayers, commerceLayers, staticFlowLayer, threeDLayers],
   )
@@ -1326,11 +1328,11 @@ export default function Map({
         const cardTop = Math.max(56, y - 12)
         const severityColor =
           barrier.severity === 'high' ? '#EF5350'
-          : barrier.severity === 'medium' ? '#FFA726'
-          : '#FFD54F'
+          : barrier.severity === 'medium' ? '#F06292'
+          : '#C084FC'
         const severityLabel =
           barrier.severity === 'high' ? '심각'
-          : barrier.severity === 'medium' ? '주의' : '경미'
+          : barrier.severity === 'medium' ? '주의' : '관찰'
         return (
           <div
             style={{

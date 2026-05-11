@@ -7,6 +7,10 @@ const SEGMENTS = 32
 const MIN_WIDTH = 1.5
 const MAX_UNSELECTED_WIDTH = 8
 const MAX_VOLUME = 10000
+const FLOW_OVERLAY_PARAMETERS = {
+  depthCompare: 'always',
+  depthWriteEnabled: false,
+} as const
 
 // selectedId는 CommerceNode.admKey (행정동 코드) — flow.sourceId/targetId(adm_cd)와 매칭.
 // 매칭 안 되는 경우 graceful: 강조 없이 기본 alpha 유지.
@@ -62,6 +66,7 @@ export function createODFlowLayer(
     widthUnits: 'pixels',
     capRounded: true,
     jointRounded: true,
+    parameters: FLOW_OVERLAY_PARAMETERS,
     onHover,
     updateTriggers: {
       getColor: [flows, selectedNodeId],

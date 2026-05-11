@@ -1,9 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createFlowParticleLayer,
   getFlowParticleCount,
   getFlowParticlePixelBounds,
   getFlowParticleRadius,
 } from './FlowParticleLayer'
+import type { ODFlow } from '../hooks/useFlowData'
+
+const flow: ODFlow = {
+  id: 'a-b',
+  sourceId: 'A',
+  targetId: 'B',
+  sourceCoord: [126.9, 37.5],
+  targetCoord: [126.95, 37.52],
+  volume: 5000,
+  purpose: '출근',
+}
 
 describe('FlowParticleLayer animation density', () => {
   it('shows fewer moving particles when zoomed in with low visualization density', () => {
@@ -36,5 +48,11 @@ describe('FlowParticleLayer zoom radius', () => {
 
     expect(zoomedOut.min).toBeLessThan(zoomedIn.min)
     expect(zoomedOut.max).toBeLessThan(zoomedIn.max)
+  })
+
+  it('renders particles above polygon and 3D layers', () => {
+    const layer = createFlowParticleLayer([flow], 0)
+
+    expect(layer.props.parameters).toEqual({ depthCompare: 'always', depthWriteEnabled: false })
   })
 })

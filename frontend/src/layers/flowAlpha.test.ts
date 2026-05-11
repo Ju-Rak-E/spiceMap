@@ -58,4 +58,10 @@ describe('createODFlowLayer', () => {
     expect(withoutHover.props.pickable).toBe(false)
     expect(withHover.props.pickable).toBe(true)
   })
+
+  it('renders above polygon and 3D layers', () => {
+    const layer = createODFlowLayer([makeFlow('A', 'B')])
+
+    expect(layer.props.parameters).toEqual({ depthCompare: 'always', depthWriteEnabled: false })
+  })
 })

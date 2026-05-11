@@ -7,6 +7,10 @@ const FILL_LAYER_ID = 'admin-boundary-fill'
 const HIGHLIGHT_FILL_LAYER_ID = 'admin-boundary-highlight-fill'
 const LINE_LAYER_ID = 'admin-boundary-line'
 const HIGHLIGHT_LAYER_ID = 'admin-boundary-highlight'
+const BOUNDARY_LINE_LAYOUT = {
+  'line-join': 'round',
+  'line-cap': 'round',
+} as const
 
 type DistrictFilter = string | string[] | null
 
@@ -136,6 +140,7 @@ export class BoundaryLayerManager {
       id: LINE_LAYER_ID,
       type: 'line',
       source: SOURCE_ID,
+      layout: BOUNDARY_LINE_LAYOUT,
       paint: paint.line,
     })
 
@@ -144,6 +149,7 @@ export class BoundaryLayerManager {
       type: 'line',
       source: SOURCE_ID,
       filter: buildHighlightFilter(this.districtFilter),
+      layout: BOUNDARY_LINE_LAYOUT,
       paint: paint.highlight,
     })
   }

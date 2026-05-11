@@ -46,7 +46,7 @@ export default function App() {
   const [purpose, setPurpose] = useState<FlowPurpose | null>(null)
   const [hour, setHour] = useState(14)
   const [flowStrength, setFlowStrength] = useState(3)
-  const [showFlows, setShowFlows] = useState(false)
+  const [showFlows, setShowFlows] = useState(true)
   const [showBarriers, setShowBarriers] = useState(false)
   const [selectedNode, setSelectedNode] = useState<CommerceNode | null>(null)
   const [selectedDistricts, setSelectedDistricts] = useState<Set<string>>(
