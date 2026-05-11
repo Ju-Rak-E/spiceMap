@@ -5,13 +5,15 @@ import ValidationView from './components/ValidationView'
 import ToastViewport from './components/Toast'
 import { ToastProvider } from './components/ToastContext'
 import { useCommerceData } from './hooks/useCommerceData'
-import { useFlowData, type FlowPurpose } from './hooks/useFlowData'
+import { useFlowData, computeStats, type FlowPurpose } from './hooks/useFlowData'
 import { useTimelineControl } from './hooks/useTimelineControl'
 import { useViewportMode } from './hooks/useViewportMode'
 import { useStartupAdvisor } from './hooks/useStartupAdvisor'
 import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
-import { SEOUL_DISTRICT_NAMES } from './utils/seoulDistricts'
+import { countCriticalCommerces } from './utils/insightMetrics'
+import { SEOUL_DISTRICT_NAMES, SEOUL_DISTRICT_NAME_TO_ADM_PREFIX } from './utils/seoulDistricts'
+
 import type { CommerceNode } from './types/commerce'
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
@@ -50,7 +52,6 @@ export default function App() {
   const [heroMode] = useState<boolean>(() => isHeroModeEnabled())
   const heroNodeId = heroMode ? HERO_NODE_ID : null
   const [view, setView] = useState<'map' | 'validation'>('map')
-  const [compareMode, setCompareMode] = useState(false)
   const viewportMode = useViewportMode()
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
@@ -66,13 +67,12 @@ export default function App() {
   const { nodes: rawNodes, usingMockData } = useCommerceData(selectedQuarter, selectedDistricts)
   const flowData = useFlowData({
     purpose: purpose ?? undefined,
-    topN,
     hour,
     quarter: selectedQuarter,
     enabled: OD_FLOW_ENABLED,
   })
 
-  const compareEnabled = compareMode && previousQuarter !== null
+  const compareEnabled = previousQuarter !== null
   const compareQuarter = compareEnabled ? previousQuarter : selectedQuarter
   const { nodes: rawCompareNodes } = useCommerceData(compareQuarter, selectedDistricts)
   const compareFlowData = useFlowData({
@@ -85,6 +85,27 @@ export default function App() {
 
   const nodes = filterNodesByDistrict(rawNodes, selectedDistricts)
   const compareNodes = filterNodesByDistrict(rawCompareNodes, selectedDistricts)
+
+  const filteredFlows = useMemo(() => {
+    let result = flowData.flows
+    if (selectedDistricts.size < SEOUL_DISTRICT_NAMES.length) {
+      result = result.filter((f) =>
+        [...selectedDistricts].some((d) => {
+          // mock 포맷: "강남구_역삼동"
+          if (f.sourceId.startsWith(d + '_') || f.targetId.startsWith(d + '_')) return true
+          // API 포맷: adm_cd 8자리 (e.g. "11680650")
+          const prefix = SEOUL_DISTRICT_NAME_TO_ADM_PREFIX[d]
+          return prefix ? f.sourceId.startsWith(prefix) || f.targetId.startsWith(prefix) : false
+        }),
+      )
+    }
+    if (topN > 0) {
+      result = [...result].sort((a, b) => b.volume - a.volume).slice(0, topN)
+    }
+    return result
+  }, [flowData.flows, selectedDistricts, topN])
+
+  const filteredStats = useMemo(() => computeStats(filteredFlows), [filteredFlows])
 
   const kpiDelta = useMemo(() => {
     if (!compareEnabled) return null
@@ -189,7 +210,7 @@ export default function App() {
         <div style={{ flex: 1, position: 'relative', minWidth: 0, minHeight: viewportMode.isNarrow ? 420 : 0 }}>
           <Map
             theme="dark"
-            flows={flowData.flows}
+            flows={filteredFlows}
             nodes={nodes}
             usingMockData={usingMockData}
             hour={hour}
@@ -227,10 +248,10 @@ export default function App() {
           nodes={nodes}
           selectedNode={selectedNode}
           stats={{
-            totalVolume: flowData.totalVolume,
-            activeCount: flowData.activeCount,
-            topInflow: flowData.topInflow,
-            topOutflow: flowData.topOutflow,
+            totalVolume: filteredStats.totalVolume,
+            activeCount: filteredStats.activeCount,
+            topInflow: filteredStats.topInflow,
+            topOutflow: filteredStats.topOutflow,
           }}
           purposeTotals={flowData.purposeTotals}
           isPlaying={isPlaying}
@@ -249,10 +270,8 @@ export default function App() {
           onClearDistricts={handleClearDistricts}
           onSetDistricts={handleSetDistricts}
           onSelectNode={setSelectedNode}
-          compareMode={compareMode}
           compareQuarter={previousQuarter}
           kpiDelta={kpiDelta}
-          onToggleCompare={() => setCompareMode((prev) => !prev)}
           compact={viewportMode.isTablet}
           stacked={viewportMode.isNarrow}
           advisorIndustries={advisor.industries}
