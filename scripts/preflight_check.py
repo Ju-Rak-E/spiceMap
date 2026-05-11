@@ -127,7 +127,7 @@ def check_deploy_configs(frontend: Path) -> list[CheckResult]:
 def check_critical_docs() -> list[CheckResult]:
     docs = REPO_ROOT / "docs"
     return [
-        check_file_exists(docs / "hero_shot_scenario.md", "Hero shot 시나리오 v1.1"),
+        check_file_exists(docs / "preview" / "hero_shot_scenario.md", "Hero shot 시나리오 v1.1"),
         check_file_exists(docs / "kpi_summary.md", "KPI 요약 표"),
         check_file_exists(docs / "qa_briefing.md", "Q&A 브리핑"),
         check_file_exists(docs / "deployment_guide.md", "배포 가이드"),

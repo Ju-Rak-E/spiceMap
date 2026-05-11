@@ -16,7 +16,7 @@
 | 자동 줌 | 강남·관악 fit (initial viewport center≈[127.0, 37.49], zoom≈11.5) |
 | 백업 토글 | `VITE_USE_DEMO_POLICY=1` (정책카드 미적재 fallback) |
 | 단축키 | `1` 인트로 / `2` 신림 펄싱·패널 / `3` CSV toast / `4` 검증 보고 (modifier 무시 — `App.tsx:81` Alt/Cmd/Ctrl 누르면 단축키 비활성) |
-| 라이브 실패 폴백 | `docs/hero_shot_assets/hero_shot_30s.mp4` 즉시 재생 |
+| 라이브 실패 폴백 | `docs/preview/hero_shot_assets/hero_shot_30s.mp4` 즉시 재생 |
 
 ---
 

@@ -99,7 +99,7 @@
 3. **단축키 3 — CSV export**: 우선순위 ≥ 80 점 9 컬럼 CSV.
 4. **단축키 4 — 검증 보고**: H1·H2·H3·B1·B3 5 카드 신뢰성 입증.
 
-상세 시간축은 `docs/hero_shot_scenario.md` 참조.
+상세 시간축은 `docs/preview/hero_shot_scenario.md` 참조.
 
 ## 9. 다음 단계
 

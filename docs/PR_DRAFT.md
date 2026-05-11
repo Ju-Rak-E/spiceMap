@@ -89,7 +89,7 @@ D-day 까지 시간 여유 있으면 옵션 A, 그렇지 않으면 B.
 
 - `ValidationView.tsx` 헤더 부제 갱신 (H1·H2·H3 + B1·B3)
 - `validation_results.json` H2 카드 추가, B1 source 를 backend 코드 경로로 갱신
-- `hero_shot_scenario.md` v1.1 (5 카드 + 단축키 표기 정정)
+- `docs/preview/hero_shot_scenario.md` v1.1 (5 카드 + 단축키 표기 정정)
 
 ### 메타
 
@@ -129,7 +129,7 @@ D-day 까지 시간 여유 있으면 옵션 A, 그렇지 않으면 B.
 
 - `plans/db-enchanted-hinton.md` — 종합 검토 + 액션 플랜
 - `docs/strategy_d13.md` — D-13 수상 전략
-- `docs/hero_shot_scenario.md` v1.1 — 3분 발표 단일 진실 문서
+- `docs/preview/hero_shot_scenario.md` v1.1 — 3분 발표 단일 진실 문서
 ```
 
 ---

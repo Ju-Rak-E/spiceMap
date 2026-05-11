@@ -157,4 +157,4 @@ D-5 일정 고려 시 **Phase 1 + 2 + 3 + 4가 핵심** (약 4시간). Phase 5-6
 
 1. `/tdd` — TDD 방식으로 Phase 1부터 구현
 2. 또는 `/auto` — 한 번에 자동 실행
-3. Hero shot 영향도 확인 필요 시 `docs/hero_shot_scenario.md` 사전 검토
+3. Hero shot 영향도 확인 필요 시 `docs/preview/hero_shot_scenario.md` 사전 검토

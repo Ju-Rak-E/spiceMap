@@ -62,7 +62,7 @@ gw_001,신림 골목상권,관악구,방출형_침체,78.0,87.3,4.2,-250,"현장
 
 ### Hero shot 시연 (단축키 `3`)
 
-- `docs/hero_shot_scenario.md` §1-3 1:30~2:15 구간
+- `docs/preview/hero_shot_scenario.md` §1-3 1:30~2:15 구간
 - toast: "추천 상권 N건 + 정책 R4~R7 한 줄 요약 다운로드"
 - 실데이터 N (적재 후): commerce_analysis Q4 우선순위 ≥ 80 상권 수
 

@@ -195,7 +195,8 @@ python -m scripts.run_validation_all \
 
 | 문서 | 설명 |
 |------|------|
-| [`docs/hero_shot_scenario.md`](docs/hero_shot_scenario.md) | 3분 발표 시나리오 (4구간 시간축 + 대사 풀) |
+| [`docs/preview/hero_shot_scenario.md`](docs/preview/hero_shot_scenario.md) | 3분 발표 시나리오 (4구간 시간축 + 대사 풀) |
+| [`docs/preview/demo_storyline_gangnam_gwanak.md`](docs/preview/demo_storyline_gangnam_gwanak.md) | 강남·관악 중심 시연 영상 촬영 대본 |
 | [`docs/FR_Role_Workflow.md`](docs/FR_Role_Workflow.md) | 기능·요구 명세 + 5주 개발 계획 전체 |
 | [`docs/strategy_d13.md`](docs/strategy_d13.md) | D-13 수상 전략 |
 | [`docs/schema.md`](docs/schema.md) | DB 스키마 |

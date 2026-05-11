@@ -1,7 +1,7 @@
 /**
  * MiniGauge — 분포 percentile을 4px 막대로 시각화.
  *
- * docs/hero_shot_scenario.md §1-2: 신림 Hero 패널의 폐업률·GRI 카드에서
+ * docs/preview/hero_shot_scenario.md §1-2: 신림 Hero 패널의 폐업률·GRI 카드에서
  * "상위 X%" 라벨과 함께 위험도 컬러로 채워진 게이지를 노출한다.
  */
 interface MiniGaugeProps {
