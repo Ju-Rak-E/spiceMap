@@ -51,9 +51,13 @@ async function fetchCommerceNodesForDistricts(
     return { nodes: await fetchCommerceNodes(quarter), isMock: false }
   }
 
-  const groupedNodes = await Promise.all(
-    districts.map((district) => fetchCommerceNodes(quarter, district)),
-  )
+  // Serialize per-district requests to avoid bursting the Railway backend with
+  // concurrent PostGIS LATERAL ST_Contains queries (returned 503 under load
+  // with default SQLAlchemy pool=15 + single uvicorn worker).
+  const groupedNodes: CommerceNode[][] = []
+  for (const district of districts) {
+    groupedNodes.push(await fetchCommerceNodes(quarter, district))
+  }
   return { nodes: groupedNodes.flat(), isMock: false }
 }
 
