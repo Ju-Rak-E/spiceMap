@@ -93,6 +93,63 @@ describe('useBarrierRoutes', () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('limit=20'))
   })
 
+  it('requests overview routes with the selected district filter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ quarter: '2025Q4', total: 0, routes: [] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderHook(() => useBarrierRoutes('2025Q4', true, null, new Set(['Gangnam-gu'])))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('gu=Gangnam-gu'))
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('limit=8'))
+  })
+
+  it('deduplicates routes fetched for multiple selected districts', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          quarter: '2025Q4',
+          total: 1,
+          routes: [{
+            barrierId: 'shared',
+            sourceId: 'A',
+            targetId: 'B',
+            path: [[126.9, 37.4], [127.1, 37.6]],
+            source: 'ors',
+          }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          quarter: '2025Q4',
+          total: 1,
+          routes: [{
+            barrierId: 'shared',
+            sourceId: 'A',
+            targetId: 'B',
+            path: [[126.9, 37.4], [127.1, 37.6]],
+            source: 'ors',
+          }],
+        }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => (
+      useBarrierRoutes('2025Q4', true, null, new Set(['Gangnam-gu', 'Gwanak-gu']))
+    ))
+
+    await waitFor(() => expect(result.current.routes).toHaveLength(1))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenNthCalledWith(1, expect.stringContaining('gu=Gangnam-gu'))
+    expect(fetchMock).toHaveBeenNthCalledWith(2, expect.stringContaining('gu=Gwanak-gu'))
+  })
+
   it('refetches when quarter changes', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
