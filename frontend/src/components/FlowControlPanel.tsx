@@ -60,6 +60,7 @@ interface FlowControlPanelProps {
   onAdvisorAnalyze: (industry: string, districts?: string[]) => void
   onAdvisorReset: () => void
   onSelectAdvisorCommerce: (commCd: string) => void
+  panelWidth?: number
 }
 
 const STEP_LABELS: Array<{ step: FounderStep; label: string }> = [
@@ -70,9 +71,9 @@ const STEP_LABELS: Array<{ step: FounderStep; label: string }> = [
 ]
 
 const S = {
-  panel: (compact: boolean, stacked: boolean): CSSProperties => ({
-    width: stacked ? '100%' : compact ? 292 : 340,
-    minWidth: stacked ? 0 : compact ? 292 : 340,
+  panel: (compact: boolean, stacked: boolean, panelWidth?: number): CSSProperties => ({
+    width: stacked ? '100%' : panelWidth ?? (compact ? 292 : 340),
+    minWidth: stacked ? 0 : compact ? 292 : 300,
     height: stacked ? '46vh' : '100%',
     background: COLORS.panelBg,
     borderLeft: stacked ? 'none' : `1px solid ${COLORS.panelBorder}`,
@@ -174,6 +175,7 @@ export default function FlowControlPanel({
   onAdvisorAnalyze,
   onAdvisorReset,
   onSelectAdvisorCommerce,
+  panelWidth,
 }: FlowControlPanelProps) {
   const [selectedAdvisorIndustry, setSelectedAdvisorIndustry] = useState<string>('')
   const [activeStep, setActiveStep] = useState<FounderStep>('industry')
@@ -190,7 +192,7 @@ export default function FlowControlPanel({
   const showSection = (step: FounderStep) => !stacked || activeStep === step
 
   return (
-    <aside style={S.panel(compact, stacked)}>
+    <aside style={S.panel(compact, stacked, panelWidth)}>
       <div style={S.header}>
         <div style={S.title}>서울 창업 상권 찾기</div>
         <div style={S.subtitle}>

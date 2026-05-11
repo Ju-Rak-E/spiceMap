@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, type PointerEvent as ReactPointerEvent } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
 import ValidationView from './components/ValidationView'
@@ -23,6 +23,9 @@ const BOUNDARY_OPACITY = 0.08
 const SCOPE_LABEL = '서울 전역 창업 분석'
 const DEFAULT_QUARTER = '2025Q4'
 const OD_FLOW_ENABLED = true
+const CONTROL_PANEL_DEFAULT_WIDTH = 340
+const CONTROL_PANEL_MIN_WIDTH = 292
+const CONTROL_PANEL_MAX_WIDTH = 560
 // docs/hero_shot_scenario.md §0: ?hero=1 진입 시 신림(gw_001)을 펄싱 강조.
 // 시연 외 일반 동작에는 영향 없음(쿼리 미설정 시 null).
 const HERO_NODE_ID = 'gw_001'
@@ -32,10 +35,12 @@ function isHeroModeEnabled(): boolean {
   const params = new URLSearchParams(window.location.search)
   return params.get('hero') === '1'
 }
-const QUARTERS = [
-  '2024Q1', '2024Q2', '2024Q3', '2024Q4',
-  '2025Q1', '2025Q4',
-]
+const QUARTERS = ['2025Q4', '2025Q3', '2025Q2', '2025Q1']
+const QUARTER_SEQUENCE = [...QUARTERS].reverse()
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
 
 export default function App() {
   const [purpose, setPurpose] = useState<FlowPurpose | null>(null)
@@ -51,6 +56,7 @@ export default function App() {
   const [heroMode] = useState<boolean>(() => isHeroModeEnabled())
   const heroNodeId = heroMode ? HERO_NODE_ID : null
   const [view, setView] = useState<'map' | 'validation'>('map')
+  const [controlPanelWidth, setControlPanelWidth] = useState(CONTROL_PANEL_DEFAULT_WIDTH)
   const viewportMode = useViewportMode()
 
   const { isPlaying, speed, play, pause, toggleSpeed } = useTimelineControl(hour, setHour)
@@ -59,7 +65,7 @@ export default function App() {
 
   const topN = STRENGTH_TO_TOP_N[flowStrength] ?? 15
   const previousQuarter = useMemo(
-    () => getPreviousQuarter(selectedQuarter, QUARTERS),
+    () => getPreviousQuarter(selectedQuarter, QUARTER_SEQUENCE),
     [selectedQuarter],
   )
 
@@ -88,19 +94,25 @@ export default function App() {
   const filteredFlows = useMemo(() => {
     let result = flowData.flows
     if (selectedDistricts.size < SEOUL_DISTRICT_NAMES.length) {
-      result = result.filter((f) =>
-        [...selectedDistricts].some((d) => {
+      result = result.filter((flow) =>
+        [...selectedDistricts].some((district) => {
           // mock 포맷: "강남구_역삼동"
-          if (f.sourceId.startsWith(d + '_') || f.targetId.startsWith(d + '_')) return true
+          if (flow.sourceId.startsWith(`${district}_`) || flow.targetId.startsWith(`${district}_`)) {
+            return true
+          }
           // API 포맷: adm_cd 8자리 (e.g. "11680650")
-          const prefix = SEOUL_DISTRICT_NAME_TO_ADM_PREFIX[d]
-          return prefix ? f.sourceId.startsWith(prefix) || f.targetId.startsWith(prefix) : false
+          const prefix = SEOUL_DISTRICT_NAME_TO_ADM_PREFIX[district]
+          return prefix
+            ? flow.sourceId.startsWith(prefix) || flow.targetId.startsWith(prefix)
+            : false
         }),
       )
     }
+
     if (topN > 0) {
       result = [...result].sort((a, b) => b.volume - a.volume).slice(0, topN)
     }
+
     return result
   }, [flowData.flows, selectedDistricts, topN])
 
@@ -194,6 +206,41 @@ export default function App() {
 
   const advisorTiers = advisor.tierMap
 
+  const handleControlPanelResizeStart = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (viewportMode.isNarrow) return
+    event.preventDefault()
+
+    const startX = event.clientX
+    const startWidth = controlPanelWidth
+    const maxWidth = clamp(
+      window.innerWidth - 420,
+      CONTROL_PANEL_MIN_WIDTH,
+      CONTROL_PANEL_MAX_WIDTH,
+    )
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const nextWidth = startWidth + startX - moveEvent.clientX
+      setControlPanelWidth(clamp(nextWidth, CONTROL_PANEL_MIN_WIDTH, maxWidth))
+    }
+
+    const handleUp = () => {
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      window.removeEventListener('pointercancel', handleUp)
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleUp)
+  }, [controlPanelWidth, viewportMode.isNarrow])
+
   return (
     <ToastProvider>
       <div
@@ -230,6 +277,24 @@ export default function App() {
           />
           {view === 'validation' && <ValidationView onClose={() => setView('map')} />}
         </div>
+
+        {!viewportMode.isNarrow && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="control panel resize"
+            onPointerDown={handleControlPanelResizeStart}
+            style={{
+              width: 8,
+              flexShrink: 0,
+              cursor: 'col-resize',
+              background: '#10161D',
+              borderLeft: '1px solid #24323F',
+              borderRight: '1px solid #24323F',
+              touchAction: 'none',
+            }}
+          />
+        )}
 
         <FlowControlPanel
           purpose={purpose}
@@ -280,6 +345,7 @@ export default function App() {
           onAdvisorAnalyze={advisor.analyze}
           onAdvisorReset={advisor.reset}
           onSelectAdvisorCommerce={handleSelectAdvisorCommerce}
+          panelWidth={controlPanelWidth}
         />
       </div>
       <ToastViewport />

@@ -9,6 +9,7 @@ import { buildMetricExplanations } from '../utils/founderUx'
 import TrendChart from './TrendChart'
 import PolicyCard from './PolicyCard'
 import MetricExplanationCard from './MetricExplanationCard'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 
 const HERO_HIGHLIGHT_RULE = 'R4'
 
@@ -25,6 +26,9 @@ interface CommerceDetailPanelProps {
   usingMockData?: boolean
   nodes?: CommerceNode[]
   onClose: () => void
+  onBackToList?: () => void
+  panelWidth?: number
+  onResizeStart?: (event: ReactPointerEvent<HTMLDivElement>) => void
 }
 
 const TYPE_ICON: Record<string, string> = {
@@ -54,6 +58,8 @@ const S = {
     fontFamily: 'system-ui, sans-serif',
     gap: 14,
     boxShadow: '4px 0 16px rgba(0,0,0,0.5)',
+    minWidth: 300,
+    maxWidth: 'calc(100% - 48px)',
   },
   closeBtn: {
     position: 'absolute' as const,
@@ -66,6 +72,18 @@ const S = {
     cursor: 'pointer',
     lineHeight: 1,
     padding: 4,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    background: '#263238',
+    border: '1px solid #37474F',
+    borderRadius: 8,
+    color: '#CFD8DC',
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 750,
+    lineHeight: 1,
+    padding: '8px 10px',
   },
   typeBadge: (fill: string): React.CSSProperties => ({
     display: 'inline-flex',
@@ -217,6 +235,9 @@ export default function CommerceDetailPanel({
   quarter,
   usingMockData = false,
   onClose,
+  onBackToList,
+  panelWidth,
+  onResizeStart,
 }: CommerceDetailPanelProps) {
   const nodeId = node?.id ?? null
   const { series, isLoading, error } = useGriHistory(nodeId, quarter)
@@ -227,6 +248,7 @@ export default function CommerceDetailPanel({
       <div
         style={{
           ...S.overlay,
+          width: panelWidth ?? S.overlay.width,
           alignItems: 'center',
           justifyContent: 'center',
           color: '#546E7A',
@@ -253,7 +275,32 @@ export default function CommerceDetailPanel({
   const metricExplanations = buildMetricExplanations(node)
 
   return (
-    <div style={S.overlay}>
+    <div style={{ ...S.overlay, width: panelWidth ?? S.overlay.width }}>
+      {onResizeStart && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="detail panel resize"
+          onPointerDown={onResizeStart}
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: -5,
+            width: 10,
+            height: '100%',
+            background: '#1A2332',
+            borderRight: '1px solid #263238',
+            cursor: 'col-resize',
+            touchAction: 'none',
+            zIndex: 2,
+          }}
+        />
+      )}
+      {onBackToList && (
+        <button type="button" style={S.backButton} onClick={onBackToList}>
+          뒤로가기
+        </button>
+      )}
       <button style={S.closeBtn} onClick={onClose} aria-label="패널 닫기">x</button>
 
       <div>
