@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-05-10 (Week 5 Day 5 / D-2)
+> 최종 갱신: 2026-05-11 (Week 5 Day 6 / D-1)
 
 ---
 
@@ -383,3 +383,15 @@
 - [x] `backend/pipeline/run_analysis.py` `_closure_via_industry_weighted` 추가 — 자치구×업종 close_rate × 상권×업종 매출 비중 가중평균
 - [x] Supabase Q4 재계산 적용 — strange가 위에 검증 실측 (2025Q4 D-3) 섹션에 기록됨
 - [x] H3 gap 0.746%p → 1.009%p (+35%) 갱신 — `frontend/src/data/validation_results.json` H2/H3 카드 narrative 동기화 + frontend build PASS
+
+## Week 5 추가 작업: D-1 막바지 보정 (2026-05-11 D-1)
+
+### 백엔드 API·배포 보정
+- [x] **OD flows `purpose` 파라미터 추가** (PR #61) — `backend/api/od.py` 강남구 퇴근 흐름 누락 해결. 출근/퇴근/여가 등 목적별 필터링 가능.
+- [x] **Vercel tsc 빌드 복구** (PR #60) — `App.tsx` 미사용 import 제거 + `FlowControlPanel.test.tsx`에서 제거된 `compareMode`·`onToggleCompare` prop 정리.
+- [x] **`requirements-api.txt`에 numpy 추가** (PR #58) — `advisor.py` 의존성 누락으로 인한 배포 404 해결.
+
+### 데이터·UI 보정
+- [x] **창업 어드바이저 UI 개선 + Q1/Q2 백필 스크립트** (PR #59) — `scripts/backfill_q1q2_estimates.py` (189 lines) 신규. `FounderPanelSections`/`PolicyCard`/`CommerceDetailPanel` UI 정밀화.
+- [x] **상권 추천/주의/비추천 색상 변경** (PR #57, 머지: 2026-05-11 직전). `CommerceBoundaryLayerManager` + `seoulDistricts` 보강.
+- [x] **`frontend/vitest.config.ts` 신규** — frontend 테스트 설정 분리.
