@@ -403,6 +403,7 @@
 - [x] **발표용 핵심 기능 5선 치트시트** — `docs/presentation_features.md` (162 lines) 신규. 30초 도입부 + 기능 5종 한 줄·차별점·동작 정리.
 - [x] **활용 방안 및 기대 효과** — `docs/Usagaeplan/usage_and_effects.md` (137 lines) 신규. 자치구청 정책담당자·소상공인 지원기관·창업자 페르소나별 활용 시나리오.
 - [x] **Preview 인덱스 정비** — `docs/preview/` 디렉토리 신설, `hero_shot_scenario.md`·`hero_shot_assets/` 이동 + `demo_storyline_gangnam_gwanak.md` (104 lines) 신규 시연 촬영 대본 + `README.md` 인덱스.
+- [x] **사용자 페르소나 — 김미숙** (PR #69 kbh, 4bead3a) — `docs/preview/persona_kim_misuk.md` 신규. 53세 여성·송파 거주·25년 가정주부 → 반찬가게 창업 희망 페르소나로 시연 narrative 일관성 확보. `docs/preview/README.md`에도 인덱스 등록.
 
 ### 시연 UX 보정
 - [x] **OD flow 호버 상태 알람카드** (PR #66 kbh, 36acb0c) — `frontend/src/components/Map.tsx` +114줄. 흐름 호버 시 상태 알림 표시.

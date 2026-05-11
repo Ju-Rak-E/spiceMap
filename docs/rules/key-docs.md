@@ -14,6 +14,7 @@
 - `docs/presentation_features.md` — 발표용 핵심 기능 5선 치트시트 (30초 도입부 + 기능별 한 줄·차별점·동작)
 - `docs/Usagaeplan/usage_and_effects.md` — 활용 방안 및 기대 효과 (자치구청·소상공인기관·창업자 페르소나별)
 - `docs/preview/README.md` — Preview 인덱스 (시연 영상·hero shot·녹화 백업 자산)
+- `docs/preview/persona_kim_misuk.md` — 김미숙(53세, 송파→강남/관악 반찬가게 창업 희망) 사용자 페르소나 (시연 narrative 기준)
 - `docs/week2_decisions.md` — Week 2 주요 의사결정
 
 ## 데이터·스키마
