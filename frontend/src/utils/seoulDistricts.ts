@@ -49,3 +49,38 @@ export const SEOUL_DISTRICT_NAMES = SEOUL_DISTRICTS.map((district) => district.n
 export const SEOUL_DISTRICT_CODE_BY_NAME = Object.fromEntries(
   SEOUL_DISTRICTS.map((district) => [district.name, district.guCode]),
 ) as Record<string, string>
+
+const STANDARD_SIGUNGU_PREFIX_BY_LEGACY_CODE: Record<string, string> = {
+  '1101': '11110',
+  '1102': '11140',
+  '1103': '11170',
+  '1104': '11200',
+  '1105': '11215',
+  '1106': '11230',
+  '1107': '11260',
+  '1108': '11290',
+  '1109': '11305',
+  '1110': '11320',
+  '1111': '11350',
+  '1112': '11380',
+  '1113': '11410',
+  '1114': '11440',
+  '1115': '11470',
+  '1116': '11500',
+  '1117': '11530',
+  '1118': '11545',
+  '1119': '11560',
+  '1120': '11590',
+  '1121': '11620',
+  '1122': '11650',
+  '1123': '11680',
+  '1124': '11710',
+  '1125': '11740',
+}
+
+export const SEOUL_DISTRICT_NAME_TO_ADM_PREFIX = Object.fromEntries(
+  SEOUL_DISTRICTS.map((district) => [
+    district.name,
+    STANDARD_SIGUNGU_PREFIX_BY_LEGACY_CODE[district.guCode] ?? district.guCode,
+  ]),
+) as Record<string, string>
