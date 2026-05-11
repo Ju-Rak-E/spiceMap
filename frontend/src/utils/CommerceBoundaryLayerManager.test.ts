@@ -122,6 +122,17 @@ describe('CommerceBoundaryLayerManager', () => {
     expect(JSON.stringify(lineColorCall?.[2])).toContain('gc_002')
   })
 
+  it('rounds commerce boundary line joins and caps', () => {
+    const { map } = createMockMap(true)
+
+    new CommerceBoundaryLayerManager(map as never, 'dark')
+
+    const lineCall = map.addLayer.mock.calls.find(([layer]) => layer.id === LINE_LAYER_ID)
+    const selectedLineCall = map.addLayer.mock.calls.find(([layer]) => layer.id === SELECTED_LINE_LAYER_ID)
+    expect(lineCall?.[0].layout).toEqual({ 'line-join': 'round', 'line-cap': 'round' })
+    expect(selectedLineCall?.[0].layout).toEqual({ 'line-join': 'round', 'line-cap': 'round' })
+  })
+
   it('updates GeoJSON source data when API boundary data arrives', () => {
     const { map } = createMockMap(true)
     const setData = vi.fn()

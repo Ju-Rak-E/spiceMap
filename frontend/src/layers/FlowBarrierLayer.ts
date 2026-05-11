@@ -1,6 +1,5 @@
 import { PathLayer } from '@deck.gl/layers'
 import type { PickingInfo } from '@deck.gl/core'
-import { PathStyleExtension } from '@deck.gl/extensions'
 import type { Barrier } from '../hooks/useBarriers'
 
 const MIN_WIDTH = 5
@@ -8,10 +7,16 @@ const MAX_WIDTH = 12
 const MAX_VOLUME = 10000
 
 const SEVERITY_COLOR: Record<Barrier['severity'], [number, number, number, number]> = {
-  high: [239, 83, 80, 190],
-  medium: [255, 167, 38, 172],
-  low: [255, 213, 79, 148],
+  high: [255, 82, 82, 230],
+  medium: [244, 114, 182, 220],
+  low: [192, 132, 252, 210],
 }
+
+const ROUTE_CASING_COLOR: [number, number, number, number] = [8, 13, 20, 220]
+const ROUTE_OVERLAY_PARAMETERS = {
+  depthCompare: 'always',
+  depthWriteEnabled: false,
+} as const
 
 interface BarrierPath {
   barrier: Barrier
@@ -109,14 +114,38 @@ export function createFlowBarrierLayer(
     widthMinPixels: MIN_WIDTH,
     capRounded: true,
     jointRounded: true,
-    // @ts-expect-error PathStyleExtension dash props are supported at runtime but absent from this deck.gl type.
-    getDashArray: () => [14, 6],
-    dashJustified: true,
-    extensions: [new PathStyleExtension({ dash: true })],
+    parameters: ROUTE_OVERLAY_PARAMETERS,
     onHover,
     updateTriggers: {
       getColor: barriers,
       getWidth: barriers,
     },
   })
+}
+
+export function createFlowBarrierLayers(
+  barriers: Barrier[],
+  routes: BarrierRoutePathMap,
+  onHover?: (info: PickingInfo<BarrierPath>) => void,
+): PathLayer<BarrierPath>[] {
+  const routeLayer = createFlowBarrierLayer(barriers, routes, onHover)
+  const paths = routeLayer.props.data as BarrierPath[]
+  const casingLayer = new PathLayer<BarrierPath>({
+    id: 'flow-barriers-casing',
+    data: paths,
+    pickable: false,
+    getPath: (p) => p.path,
+    getColor: ROUTE_CASING_COLOR,
+    getWidth: (p) => p.width + 4,
+    widthUnits: 'pixels',
+    widthMinPixels: MIN_WIDTH + 4,
+    capRounded: true,
+    jointRounded: true,
+    parameters: ROUTE_OVERLAY_PARAMETERS,
+  })
+
+  return [
+    casingLayer,
+    routeLayer.clone({ id: 'flow-barriers-route' }),
+  ]
 }

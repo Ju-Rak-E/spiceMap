@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createFlowBarrierLayer,
+  createFlowBarrierLayers,
   getBarrierRoutePath,
   getBarrierWidth,
 } from './FlowBarrierLayer'
@@ -76,6 +77,21 @@ describe('createFlowBarrierLayer', () => {
     const data = layer.props.data as Array<{ path: [number, number][] }>
 
     expect(data).toHaveLength(0)
+  })
+
+  it('creates a navigation-style casing under the route layer', () => {
+    const routePath: [number, number][] = [
+      [126.9, 37.4],
+      [126.95, 37.45],
+      [127.1, 37.6],
+    ]
+    const layers = createFlowBarrierLayers([barrier], new Map([['b1', routePath]]))
+
+    expect(layers.map((layer) => layer.id)).toEqual(['flow-barriers-casing', 'flow-barriers-route'])
+    expect(layers[0].props.pickable).toBe(false)
+    expect(layers[1].props.pickable).toBe(false)
+    expect(layers[0].props.parameters).toEqual({ depthCompare: 'always', depthWriteEnabled: false })
+    expect(layers[1].props.parameters).toEqual({ depthCompare: 'always', depthWriteEnabled: false })
   })
 })
 

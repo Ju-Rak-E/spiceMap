@@ -11,6 +11,10 @@ import { getBarrierRoutePath, type BarrierRoutePathMap } from './FlowBarrierLaye
 const BASE_RADIUS_M = 180
 const MIN_ZOOM = 9
 const FULL_SIZE_ZOOM = 14.5
+const PARTICLE_OVERLAY_PARAMETERS = {
+  depthCompare: 'always',
+  depthWriteEnabled: false,
+} as const
 
 export const SEVERITY_PARTICLE_COUNT: Record<BarrierSeverity, number> = {
   high: 4,
@@ -26,8 +30,8 @@ export const SEVERITY_SCATTER_DEG: Record<BarrierSeverity, number> = {
 
 const SEVERITY_COLOR: Record<BarrierSeverity, [number, number, number]> = {
   high: [255, 82, 82],
-  medium: [255, 183, 77],
-  low: [255, 235, 59],
+  medium: [244, 114, 182],
+  low: [216, 180, 254],
 }
 
 interface BarrierParticle {
@@ -88,6 +92,7 @@ export function createDisruptedBarrierParticleLayer(
     radiusUnits: 'meters',
     radiusMinPixels: 3,
     radiusMaxPixels: 14,
+    parameters: PARTICLE_OVERLAY_PARAMETERS,
     updateTriggers: {
       getFillColor: [progress, zoom],
       getPosition: [progress, zoom],

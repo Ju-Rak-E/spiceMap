@@ -12,6 +12,10 @@ const DATA_URL = '/data/mock_commerce_boundary.geojson'
 const SELECTED_COLOR = '#7BD08D'
 const MIN_VISIBLE_ZOOM = 10.5
 const SELECTED_MIN_VISIBLE_ZOOM = 11.5
+const BOUNDARY_LINE_LAYOUT = {
+  'line-join': 'round',
+  'line-cap': 'round',
+} as const
 type BoundaryData = NonNullable<maplibregl.GeoJSONSourceSpecification['data']>
 export type BoundaryColorMap = ReadonlyMap<string, string>
 type ColorPaint = string | maplibregl.ExpressionSpecification
@@ -163,6 +167,7 @@ export class CommerceBoundaryLayerManager {
       type: 'line',
       source: SOURCE_ID,
       minzoom: MIN_VISIBLE_ZOOM,
+      layout: BOUNDARY_LINE_LAYOUT,
       paint: {
         'line-color': buildBoundaryColorExpression(this.boundaryColors, lineColor(this.theme)),
         'line-width': [
@@ -185,6 +190,7 @@ export class CommerceBoundaryLayerManager {
       type: 'line',
       source: SOURCE_ID,
       minzoom: MIN_VISIBLE_ZOOM,
+      layout: BOUNDARY_LINE_LAYOUT,
       paint: {
         'line-color': buildBoundaryColorExpression(this.boundaryColors, lineColor(this.theme)),
         'line-width': [
@@ -216,6 +222,7 @@ export class CommerceBoundaryLayerManager {
       source: SOURCE_ID,
       minzoom: SELECTED_MIN_VISIBLE_ZOOM,
       filter: buildSelectedFilter(this.selectedId),
+      layout: BOUNDARY_LINE_LAYOUT,
       paint: {
         'line-color': this.selectedColor,
         'line-width': 4,

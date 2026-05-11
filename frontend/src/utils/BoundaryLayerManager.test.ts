@@ -99,6 +99,17 @@ describe('BoundaryLayerManager', () => {
     )
   })
 
+  it('rounds admin boundary line joins and caps', () => {
+    const { map } = createMockMap(true)
+
+    new BoundaryLayerManager(map as never, 'dark')
+
+    const lineCall = map.addLayer.mock.calls.find(([layer]) => layer.id === LINE_LAYER_ID)
+    const highlightCall = map.addLayer.mock.calls.find(([layer]) => layer.id === HIGHLIGHT_LAYER_ID)
+    expect(lineCall?.[0].layout).toEqual({ 'line-join': 'round', 'line-cap': 'round' })
+    expect(highlightCall?.[0].layout).toEqual({ 'line-join': 'round', 'line-cap': 'round' })
+  })
+
   it('districtFilter가 null이면 하이라이트 필터를 빈 배열로 설정한다', () => {
     const { map, emit } = createMockMap(false)
 

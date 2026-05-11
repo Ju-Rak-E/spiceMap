@@ -66,6 +66,8 @@ export function createPolygonExtrusionLayer(
     getElevation: (d) => d.elevation,
     getFillColor: (d) => d.color,
     getLineColor: [255, 255, 255, 70],
+    getLineWidth: 1.5,
+    lineWidthUnits: 'pixels',
     lineWidthMinPixels: 1,
     pickable,
     onHover,
