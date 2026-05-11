@@ -97,6 +97,31 @@ describe('CommerceBoundaryLayerManager', () => {
     expect(map.setPaintProperty).toHaveBeenCalledWith(LINE_LAYER_ID, 'line-color', '#263238')
   })
 
+  it('updates selected boundary color from the active card tone', () => {
+    const { map } = createMockMap(true)
+    const manager = new CommerceBoundaryLayerManager(map as never, 'dark')
+    map.setPaintProperty.mockClear()
+
+    manager.setSelectedColor('#E53935')
+
+    expect(map.setPaintProperty).toHaveBeenCalledWith(SELECTED_FILL_LAYER_ID, 'fill-color', '#E53935')
+    expect(map.setPaintProperty).toHaveBeenCalledWith(SELECTED_LINE_LAYER_ID, 'line-color', '#E53935')
+  })
+
+  it('uses advisor colors for matching commerce boundary lines', () => {
+    const { map } = createMockMap(true)
+    const manager = new CommerceBoundaryLayerManager(map as never, 'dark')
+    map.setPaintProperty.mockClear()
+
+    manager.setBoundaryColors(new Map([['gc_002', '#D97706']]))
+
+    const lineColorCall = map.setPaintProperty.mock.calls.find(
+      ([layerId, property]) => layerId === LINE_LAYER_ID && property === 'line-color',
+    )
+    expect(JSON.stringify(lineColorCall?.[2])).toContain('#D97706')
+    expect(JSON.stringify(lineColorCall?.[2])).toContain('gc_002')
+  })
+
   it('updates GeoJSON source data when API boundary data arrives', () => {
     const { map } = createMockMap(true)
     const setData = vi.fn()

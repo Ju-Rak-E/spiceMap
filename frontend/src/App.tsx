@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
-import InsightStrip from './components/InsightStrip'
 import ValidationView from './components/ValidationView'
 import ToastViewport from './components/Toast'
 import { ToastProvider } from './components/ToastContext'
@@ -14,6 +13,7 @@ import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import { countCriticalCommerces } from './utils/insightMetrics'
 import { SEOUL_DISTRICT_NAMES, SEOUL_DISTRICT_NAME_TO_ADM_PREFIX } from './utils/seoulDistricts'
+
 import type { CommerceNode } from './types/commerce'
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
@@ -24,7 +24,6 @@ const BOUNDARY_OPACITY = 0.08
 const SCOPE_LABEL = '서울 전역 창업 분석'
 const DEFAULT_QUARTER = '2025Q4'
 const OD_FLOW_ENABLED = true
-const MAP_HEADER_CLEARANCE = 64
 // docs/hero_shot_scenario.md §0: ?hero=1 진입 시 신림(gw_001)을 펄싱 강조.
 // 시연 외 일반 동작에는 영향 없음(쿼리 미설정 시 null).
 const HERO_NODE_ID = 'gw_001'
@@ -34,11 +33,6 @@ function isHeroModeEnabled(): boolean {
   const params = new URLSearchParams(window.location.search)
   return params.get('hero') === '1'
 }
-// docs/verification_h1_h3_results.md 의 1차 실데이터 결과 (Supabase 2026-04-30 기준).
-// 후속: 백엔드 /api/verification 엔드포인트 추가 후 동적으로 갱신.
-const VERIFICATION_H1_R = 0.106
-const VERIFICATION_H1_P = 2.83e-5
-const POLICY_CARD_COUNT_Q4 = 414
 const QUARTERS = [
   '2024Q1', '2024Q2', '2024Q3', '2024Q4',
   '2025Q1', '2025Q4',
@@ -119,7 +113,6 @@ export default function App() {
     const previous = computeKpi(compareNodes, compareFlowData.totalVolume)
     return computeKpiDelta(current, previous)
   }, [compareEnabled, nodes, compareNodes, flowData.totalVolume, compareFlowData.totalVolume])
-  const criticalCount = useMemo(() => countCriticalCommerces(nodes), [nodes])
   const handleSelectAdvisorCommerce = useCallback((commCd: string) => {
     const node = nodes.find((n) => n.id === commCd)
     if (node) setSelectedNode(node)
@@ -236,50 +229,6 @@ export default function App() {
             heroNodeId={heroNodeId}
             advisorTiers={advisorTiers}
           />
-          {view === 'map' && (
-            <div
-              style={{
-                position: 'absolute',
-                top: MAP_HEADER_CLEARANCE + 8,
-                right: 72,
-                zIndex: 60,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-end',
-                gap: 8,
-                maxWidth: 'calc(100% - 88px)',
-                pointerEvents: 'none',
-              }}
-            >
-              <InsightStrip
-                theme="dark"
-                h1R={usingMockData ? null : VERIFICATION_H1_R}
-                h1P={usingMockData ? null : VERIFICATION_H1_P}
-                policyCardCount={POLICY_CARD_COUNT_Q4}
-                criticalCommerceCount={criticalCount}
-                quarter={selectedQuarter}
-              />
-              <button
-                type="button"
-                onClick={() => setView('validation')}
-                data-testid="validation-tab-toggle"
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 999,
-                  border: '1px solid #304251',
-                  background: 'rgba(16,22,29,0.92)',
-                  color: '#ECEFF1',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                  pointerEvents: 'auto',
-                }}
-              >
-                검증 보고
-              </button>
-            </div>
-          )}
           {view === 'validation' && <ValidationView onClose={() => setView('map')} />}
         </div>
 

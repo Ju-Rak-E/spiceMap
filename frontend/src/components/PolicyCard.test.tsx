@@ -9,7 +9,7 @@ function makeInsight(overrides: Partial<PolicyInsight> = {}): PolicyInsight {
     nodeId: 'gw_001',
     priority: '즉시개입',
     title: '현장 조사 + 금융 지원',
-    rationale: '신림 골목상권 — Q3→Q4 유입 -38%',
+    rationale: '신림 골목상권 ? Q3→Q4 유입 -38%',
     source: 'Module D R4',
     ruleId: 'R4',
     ...overrides,
@@ -19,17 +19,18 @@ function makeInsight(overrides: Partial<PolicyInsight> = {}): PolicyInsight {
 describe('PolicyCard', () => {
   afterEach(() => cleanup())
 
-  it('renders title, rationale, source, priority', () => {
+  it('renders title, rationale, source, and response signal', () => {
     render(<PolicyCard insight={makeInsight()} />)
     expect(screen.getByText('현장 조사 + 금융 지원')).toBeTruthy()
     expect(screen.getByText(/신림 골목상권/)).toBeTruthy()
-    expect(screen.getByText(/출처: Module D R4/)).toBeTruthy()
-    expect(screen.getByText('즉시개입')).toBeTruthy()
+    expect(screen.getByText(/규칙: Module D R4/)).toBeTruthy()
+    expect(screen.getByText('젠트리피케이션 예방')).toBeTruthy()
   })
 
-  it('renders rule_based label (FR-07)', () => {
+  it('renders rule-based proposal disclaimer', () => {
     render(<PolicyCard insight={makeInsight()} />)
-    expect(screen.getByText(/규칙 기반 \| AI 미사용/)).toBeTruthy()
+    expect(screen.getByText(/규칙 기반 제안 · 실제 시행 정책 아님/)).toBeTruthy()
+    expect(screen.getByText(/창업 추천 결과와는 별개의 참고 정보/)).toBeTruthy()
   })
 
   it('uses regular testid when not highlighted', () => {
@@ -59,29 +60,23 @@ describe('PolicyCard', () => {
   it('applies yellow outline when highlighted', () => {
     const { container } = render(<PolicyCard insight={makeInsight()} highlight />)
     const el = container.firstChild as HTMLElement
-    // outline 색상: #FFC107
     expect(el.style.outline).toContain('#FFC107')
   })
 
-  it('uses 즉시개입 icon 🚨', () => {
-    render(<PolicyCard insight={makeInsight({ priority: '즉시개입' })} />)
-    expect(screen.getByText('🚨')).toBeTruthy()
+  it('maps growth text to 성장 지원', () => {
+    render(<PolicyCard insight={makeInsight({ priority: '연내지원', ruleId: 'R6', title: '성장 상권 지원 검토' })} />)
+    expect(screen.getByText('성장 지원')).toBeTruthy()
   })
 
-  it('uses 연내지원 icon 📋', () => {
-    render(<PolicyCard insight={makeInsight({ priority: '연내지원' })} />)
-    expect(screen.getByText('📋')).toBeTruthy()
+  it('maps empty monitoring to 지속 모니터링', () => {
+    render(<PolicyCard insight={makeInsight({ priority: '모니터링', ruleId: 'R7', title: '정기 점검', rationale: '안정형' })} />)
+    expect(screen.getByText('지속 모니터링')).toBeTruthy()
   })
 
-  it('uses 모니터링 icon 👁', () => {
-    render(<PolicyCard insight={makeInsight({ priority: '모니터링' })} />)
-    expect(screen.getByText('👁')).toBeTruthy()
-  })
-
-  it('falls back to default icon for unknown priority', () => {
+  it('falls back for unknown priority', () => {
     render(
-      <PolicyCard insight={makeInsight({ priority: '알수없음' as never })} />
+      <PolicyCard insight={makeInsight({ priority: '알수없음' as never, ruleId: undefined, title: '상태 점검', rationale: '관찰 필요' })} />
     )
-    expect(screen.getByText('📌')).toBeTruthy()
+    expect(screen.getByText('지속 모니터링')).toBeTruthy()
   })
 })

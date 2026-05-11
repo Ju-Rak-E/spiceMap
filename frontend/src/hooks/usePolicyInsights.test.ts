@@ -90,11 +90,11 @@ describe('normalizePolicyCardsResponse', () => {
 })
 
 describe('shouldFetchPolicyInsights', () => {
-  it('미분류 상권은 정책 추천 조회 대상에서 제외한다', () => {
+  it('미분류 상권은 지역 대응 신호 조회 대상에서 제외한다', () => {
     expect(shouldFetchPolicyInsights('미분류')).toBe(false)
   })
 
-  it('분류된 상권은 정책 추천 조회 대상이다', () => {
+  it('분류된 상권은 지역 대응 신호 조회 대상이다', () => {
     expect(shouldFetchPolicyInsights('흡수형_과열')).toBe(true)
     expect(shouldFetchPolicyInsights(null)).toBe(true)
   })

@@ -77,7 +77,7 @@ const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 async function fetchMockPolicyInsights(commCd: string): Promise<PolicyInsight[]> {
   const mockRes = await fetch('/data/mock_policy_insights.json')
-  if (!mockRes.ok) throw new Error('mock 정책 데이터를 불러오지 못했습니다')
+  if (!mockRes.ok) throw new Error('mock 지역 대응 신호를 불러오지 못했습니다')
   const all = (await mockRes.json()) as Record<string, PolicyInsight>
   const insight = all[commCd] ?? all['__default__']
   return insight ? [{ ...insight, nodeId: commCd }] : []
@@ -126,7 +126,7 @@ export function usePolicyInsights(
       })
       .catch(() => {
         setInsights([])
-        setError('정책 정보를 불러오지 못했습니다')
+        setError('지역 대응 신호를 불러오지 못했습니다')
         setIsLoading(false)
       })
   }, [commCd, quarter, type])

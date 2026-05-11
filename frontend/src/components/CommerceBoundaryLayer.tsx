@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import { type MapTheme } from '../styles/tokens'
-import { CommerceBoundaryLayerManager } from '../utils/CommerceBoundaryLayerManager'
+import { CommerceBoundaryLayerManager, type BoundaryColorMap } from '../utils/CommerceBoundaryLayerManager'
 import { buildCommerceBoundaryApiUrl } from '../utils/commerceBoundaryApi'
 import type { CommerceTypeMapResponse } from '../types/commerce'
 
@@ -9,12 +9,15 @@ interface CommerceBoundaryLayerProps {
   map: maplibregl.Map
   theme?: MapTheme
   selectedId?: string | null
+  selectedColor?: string | null
+  boundaryColors?: BoundaryColorMap
   quarter?: string
   districts?: readonly string[]
 }
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 const FALLBACK_BOUNDARY_URL = '/data/mock_commerce_boundary.geojson'
+const EMPTY_BOUNDARY_COLORS: BoundaryColorMap = new Map()
 
 async function fetchCommerceBoundary(quarter: string, districts: readonly string[]) {
   if (districts.length === 0) throw new Error('No districts selected')
@@ -38,6 +41,8 @@ export default function CommerceBoundaryLayer({
   map,
   theme = 'dark',
   selectedId = null,
+  selectedColor = null,
+  boundaryColors = EMPTY_BOUNDARY_COLORS,
   quarter = '2025Q4',
   districts = [],
 }: CommerceBoundaryLayerProps) {
@@ -61,6 +66,14 @@ export default function CommerceBoundaryLayer({
   useEffect(() => {
     managerRef.current?.setSelectedId(selectedId)
   }, [selectedId])
+
+  useEffect(() => {
+    managerRef.current?.setSelectedColor(selectedColor)
+  }, [selectedColor])
+
+  useEffect(() => {
+    managerRef.current?.setBoundaryColors(boundaryColors)
+  }, [boundaryColors])
 
   useEffect(() => {
     let cancelled = false
