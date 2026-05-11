@@ -2,7 +2,7 @@
 
 > 대회: 2026 서울시 빅데이터 활용 경진대회 (제출 마감 2026-05-12)
 > 상세 스펙: `docs/FR_Role_Workflow.md`
-> 최종 갱신: 2026-05-11 (Week 5 Day 6 / D-1)
+> 최종 갱신: 2026-05-12 (Week 5 Day 7 / D-Day)
 
 ---
 
@@ -395,3 +395,20 @@
 - [x] **창업 어드바이저 UI 개선 + Q1/Q2 백필 스크립트** (PR #59) — `scripts/backfill_q1q2_estimates.py` (189 lines) 신규. `FounderPanelSections`/`PolicyCard`/`CommerceDetailPanel` UI 정밀화.
 - [x] **상권 추천/주의/비추천 색상 변경** (PR #57, 머지: 2026-05-11 직전). `CommerceBoundaryLayerManager` + `seoulDistricts` 보강.
 - [x] **`frontend/vitest.config.ts` 신규** — frontend 테스트 설정 분리.
+
+## Week 5 추가 작업: D-Day 시연·발표 자료 정비 (2026-05-12 D-Day)
+
+### 발표 산출물 작성
+- [x] **공모전 제출 양식 사실 카드** (PR #64) — `docs/competition_submission_facts.md` 신규. 열린데이터광장 4종(OA-14991/15577/15572/15576) + 공공데이터포털 OA-22300, AI 3계층(Claude Haiku 4.5 + NetworkX DiGraph + scipy 3종), 5분야 데이터 결합(adm_cd↔comm_cd EPSG:5179 overlay) 사실을 backend 코드/`validation_2025Q4.json`에서 직접 인용.
+- [x] **발표용 핵심 기능 5선 치트시트** — `docs/presentation_features.md` (162 lines) 신규. 30초 도입부 + 기능 5종 한 줄·차별점·동작 정리.
+- [x] **활용 방안 및 기대 효과** — `docs/Usagaeplan/usage_and_effects.md` (137 lines) 신규. 자치구청 정책담당자·소상공인 지원기관·창업자 페르소나별 활용 시나리오.
+- [x] **Preview 인덱스 정비** — `docs/preview/` 디렉토리 신설, `hero_shot_scenario.md`·`hero_shot_assets/` 이동 + `demo_storyline_gangnam_gwanak.md` (104 lines) 신규 시연 촬영 대본 + `README.md` 인덱스.
+
+### 시연 UX 보정
+- [x] **OD flow 호버 상태 알람카드** (PR #66 kbh, 36acb0c) — `frontend/src/components/Map.tsx` +114줄. 흐름 호버 시 상태 알림 표시.
+- [x] **Barrier routes 자치구 정렬** (a707ad3) — `frontend/src/hooks/useBarrierRoutes.ts` 선택 자치구와 barrier 경로 정합. 신규 테스트 `useBarrierRoutes.test.tsx` (57 lines).
+- [x] **파비콘 설정** (0acbe31) — `frontend/public/favicon.svg` 브랜드 일관성.
+- [x] **단절영역 flow 색상 변경 + 폴리곤 라인 재수정** (PR #67 kbh, 3529325) — `FlowBarrierLayer`·`FlowParticleLayer`·`ODFlowLayer`·`PolygonExtrusionLayer`·`DisruptedBarrierParticleLayer`·`BoundaryLayerManager`·`CommerceBoundaryLayerManager` 등 13개 파일 시각 정밀화 (Hero shot 가독성 강화).
+
+### 배포 안정성
+- [x] **Railway 503 핫픽스 — type-map 자치구 fetch 직렬화** (PR #68, 061ae8c) — `frontend/src/hooks/useCommerceData.ts:54-61` `Promise.all(districts.map(...))` → 직렬 `for-await`. 5개 자치구 부분 선택 시 백엔드 PostGIS LATERAL ST_Contains 동시 5건이 SQLAlchemy 풀(기본 15) 고갈 + 싱글 워커로 503을 유발하던 패턴 차단. tsc 통과, 라이브 검증(5/5 200 OK, 2.3~3.3s) 후 머지. 후속(발표 후): 옵션 B(`backend/db.py` 풀 명시 + `Dockerfile --workers 2`), 옵션 C(`adm_comm_mapping` JOIN으로 LATERAL 제거).
