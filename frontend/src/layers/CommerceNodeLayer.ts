@@ -158,7 +158,7 @@ export function createCommerceNodeLayers(
   return [contextLayer, candidateLayer]
 }
 
-// docs/hero_shot_scenario.md §1-2: 강남·관악 zoom 11.5에서 신림(gw_001)을 항상 펄싱으로 강조.
+// docs/preview/hero_shot_scenario.md §1-2: 강남·관악 zoom 11.5에서 신림(gw_001)을 항상 펄싱으로 강조.
 // 1.5s 주기 SVG halo 효과를 ScatterplotLayer로 구현 (캔버스 내부 → MapLibre 줌 동기화 무료).
 const HERO_PULSE_PERIOD_MS = 1500
 const HERO_PULSE_BASE_RADIUS = 14

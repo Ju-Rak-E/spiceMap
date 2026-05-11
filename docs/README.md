@@ -58,8 +58,9 @@
 
 | 문서 | 설명 |
 |------|------|
-| [hero_shot_scenario.md](hero_shot_scenario.md) | 3 분 발표 시간축 (단일 진실 문서) |
-| [hero_shot_assets/README.md](hero_shot_assets/README.md) | PNG/MP4 자산 인벤토리 |
+| [preview/hero_shot_scenario.md](preview/hero_shot_scenario.md) | 3 분 발표 시간축 (단일 진실 문서) |
+| [preview/demo_storyline_gangnam_gwanak.md](preview/demo_storyline_gangnam_gwanak.md) | 강남·관악 중심 3분 시연 영상 촬영 대본 |
+| [preview/hero_shot_assets/README.md](preview/hero_shot_assets/README.md) | PNG/MP4 자산 인벤토리 |
 | [data_integration_diagram.md](data_integration_diagram.md) | 데이터 결합 구조도 (Mermaid) |
 | [kpi_summary.md](kpi_summary.md) | KPI / 검증 결과 표 1 장 |
 | [qa_briefing.md](qa_briefing.md) | 발표 Q&A 13 종 대응 자료 |

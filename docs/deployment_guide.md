@@ -97,7 +97,7 @@ Vercel 대시보드에서 `VITE_API_BASE_URL=https://<backend host>` 추가 → 
 | V-World 지도 타일 로딩 | 강남·관악 폴리곤 가시 |
 | mock_commerce.json 로드 (demo mode 시) | DevTools Network |
 
-라이브 실패 백업: `docs/hero_shot_assets/hero_shot_30s.mp4` 즉시 재생 (`docs/hero_shot_scenario.md` §5).
+라이브 실패 백업: `docs/preview/hero_shot_assets/hero_shot_30s.mp4` 즉시 재생 (`docs/preview/hero_shot_scenario.md` §5).
 
 ## 5. 빌드 검증
 

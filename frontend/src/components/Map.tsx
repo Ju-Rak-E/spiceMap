@@ -98,7 +98,7 @@ interface MapProps {
   selectedDistricts?: Set<string>
   selectedNode?: CommerceNode | null
   onSelectNode?: (node: CommerceNode | null) => void
-  // docs/hero_shot_scenario.md §1-2: ?hero=1 진입 시 신림(gw_001)을 펄싱으로 강조.
+  // docs/preview/hero_shot_scenario.md §1-2: ?hero=1 진입 시 신림(gw_001)을 펄싱으로 강조.
   heroNodeId?: string | null
   advisorTiers?: AdvisorTierMap | null
 }

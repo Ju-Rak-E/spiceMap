@@ -1,6 +1,6 @@
 # Hero Shot 백업 자산
 
-> 발표 라이브 실패 시 폴백 자산. `docs/hero_shot_scenario.md` 의 시간축과 1:1 매칭.
+> 발표 라이브 실패 시 폴백 자산. `docs/preview/hero_shot_scenario.md` 의 시간축과 1:1 매칭.
 > 이 디렉토리는 자산 슬롯이며 실제 파일은 일정에 따라 생성한다.
 
 ## 자산 인벤토리
@@ -49,7 +49,7 @@ open "http://localhost:5173/?hero=1"
 
 # 3. 단축키 1~4 누르며 OS 스크린샷 (Cmd+Shift+4 영역) 5종 촬영
 # 파일명: 00_intro.png ~ 04_validation_tab.png
-# 저장: docs/hero_shot_assets/
+# 저장: docs/preview/hero_shot_assets/
 
 # D-7 (5/6): 30초 영상 녹화
 # OBS 또는 Mac 화면 녹화로 1920x1080@30fps 캡처

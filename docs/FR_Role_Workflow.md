@@ -513,8 +513,8 @@ spiceMap/
 > - ✅ Supabase 전 테이블 적재 확인 (commerce_analysis 3,300행 / policy_cards 833행 / od_flows_aggregated 366,477행 등)
 >
 > **잔여 (D-3 이내)**
-> - 🔲 Hero shot PNG 5종 (`docs/hero_shot_assets/`)
-> - 🔲 30초 시연 영상 (`docs/hero_shot_assets/hero_shot_30s.mp4`)
+> - 🔲 Hero shot PNG 5종 (`docs/preview/hero_shot_assets/`)
+> - 🔲 30초 시연 영상 (`docs/preview/hero_shot_assets/hero_shot_30s.mp4`)
 > - 🔲 정책 요약 리포트 예시 2종
 > - 🔲 데이터 결합 구조도 1장
 
@@ -549,7 +549,7 @@ Week 5  [마감]   발표 시나리오 / 배포 / 제출 산출물 전체 완성
 ## 7. 최종 제출 산출물 체크리스트
 
 - [x] 인터랙티브 웹 데모 — `https://spice-map.vercel.app` (Railway + Vercel, 2026-05-09 배포)
-- [ ] 3분 시연 영상 (`docs/hero_shot_assets/hero_shot_30s.mp4`)
+- [ ] 3분 시연 영상 (`docs/preview/hero_shot_assets/hero_shot_30s.mp4`)
 - [ ] 정책 요약 리포트 예시 2종 (강남구 과열 상권 / 관악구 침체 상권)
 - [ ] 데이터 결합 구조도 1장
 - [x] KPI·검증 결과 표 — H1 r=0.106(p<0.001) / H3 gap 0.746%p(14.5배, p≈5×10⁻³⁶) / B1 Jaccard 0.157(추가 187건) / B3 Jaccard 0.151 (`frontend/src/data/validation_results.json`, 2026-05-09 실측)

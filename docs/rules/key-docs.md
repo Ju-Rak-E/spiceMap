@@ -7,7 +7,8 @@
 - `docs/FR_Role_Workflow.md` — 기능/요구/5주 일정 포괄 spec (단일 진실 문서)
 - `prompt_plan.md` — 5주 체크리스트 (진행 기록)
 - `docs/strategy_d13.md` — D-13 수상 전략 + 실용성 강화 플랜
-- `docs/hero_shot_scenario.md` — 3분 발표 4구간 시간축 + Hero shot 시연 동선
+- `docs/preview/hero_shot_scenario.md` — 3분 발표 4구간 시간축 + Hero shot 시연 동선
+- `docs/preview/demo_storyline_gangnam_gwanak.md` — 강남·관악 중심 시연 영상 촬영 대본
 - `docs/presentation_plan.md` — D-1 발표 산출물 구성 (슬라이드 12장 + PDF 2종) 계획
 - `docs/competition_submission_facts.md` — 공모전 제출 양식 필수·가점 3개 항목(열린데이터광장 / AI 기술 / 데이터 결합) 사실 카드, 코드 직접 인용
 - `docs/week2_decisions.md` — Week 2 주요 의사결정

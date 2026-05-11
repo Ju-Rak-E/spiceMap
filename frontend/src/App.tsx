@@ -26,7 +26,7 @@ const OD_FLOW_ENABLED = true
 const CONTROL_PANEL_DEFAULT_WIDTH = 340
 const CONTROL_PANEL_MIN_WIDTH = 292
 const CONTROL_PANEL_MAX_WIDTH = 560
-// docs/hero_shot_scenario.md §0: ?hero=1 진입 시 신림(gw_001)을 펄싱 강조.
+// docs/preview/hero_shot_scenario.md §0: ?hero=1 진입 시 신림(gw_001)을 펄싱 강조.
 // 시연 외 일반 동작에는 영향 없음(쿼리 미설정 시 null).
 const HERO_NODE_ID = 'gw_001'
 
@@ -136,7 +136,7 @@ export default function App() {
     }
   }, [nodes, selectedNode])
 
-  // docs/hero_shot_scenario.md §5: 라이브 클릭 실패 시 단축키로 시간축 강제 점프.
+  // docs/preview/hero_shot_scenario.md §5: 라이브 클릭 실패 시 단축키로 시간축 강제 점프.
   // ?hero=1 모드에서만 활성. 입력 영역 포커스 시 무시.
   useEffect(() => {
     if (!heroMode) return

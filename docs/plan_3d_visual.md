@@ -246,7 +246,7 @@ export function getMaxElevation(zoom: number): number {
 
 | 등급 | 리스크 | 완화 |
 |---|---|---|
-| MEDIUM | Phase D 픽토그램 제거 → Hero shot 시연 영상이 픽토그램 사용 중일 가능성 | `docs/hero_shot_scenario.md` 사전 검토. 사용 중이면 영상 재촬영 (D-5 일정 영향) |
+| MEDIUM | Phase D 픽토그램 제거 → Hero shot 시연 영상이 픽토그램 사용 중일 가능성 | `docs/preview/hero_shot_scenario.md` 사전 검토. 사용 중이면 영상 재촬영 (D-5 일정 영향) |
 | MEDIUM | Phase B 컬러램프 변경 → 단절 위험선(빨강) 시각 충돌 | 메트릭별 램프 분리 — `griScore`만 빨강 사용 |
 | MEDIUM | Phase A 라이팅 도입 시 일부 환경에서 GPU 부하 | Chrome/Firefox/Safari 검증, 모바일은 라이팅 강도 낮춤 |
 | LOW | 진짜 3D 컬럼 도입 시 클릭 가능 영역 변경 (현재 픽토그램은 `pickable: false`) | 컬럼도 `pickable: false` 유지 — 노드 클릭은 별도 `CommerceNodeLayer` |
@@ -270,6 +270,6 @@ export function getMaxElevation(zoom: number): number {
 
 ## 다음 액션
 
-1. Hero shot 시연 영상 픽토그램 사용 여부 사전 확인 (`docs/hero_shot_scenario.md`)
+1. Hero shot 시연 영상 픽토그램 사용 여부 사전 확인 (`docs/preview/hero_shot_scenario.md`)
 2. `/tdd` — TDD로 Phase A부터 구현
 3. 또는 직접 "Phase A 시작" 명령
