@@ -29,6 +29,7 @@ import { deriveStartupSummary } from '../utils/startupAdvisor'
 import { formatSignedFixed2 } from '../utils/numberFormat'
 import { markMapLoadEnd, markMapLoadStart } from '../utils/mapPerformance'
 import { getFlowProgressIncrement } from '../utils/flowAnimation'
+import { PURPOSE_COLORS } from '../utils/flowBezier'
 import { selectBalancedBarriers } from '../utils/barrierSelection'
 import { SEOUL_DISTRICT_CODE_BY_NAME } from '../utils/seoulDistricts'
 import {
@@ -54,6 +55,7 @@ const VWORLD_LIGHT_STYLE = (apiKey: string): maplibregl.StyleSpecification => ({
 const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
 const HOVER_CARD_WIDTH = 220
+const FLOW_HOVER_CARD_WIDTH = 260
 const BARRIER_PANEL_WIDTH = 318
 const LEFT_PANEL_GAP = 12
 const DETAIL_PANEL_DEFAULT_WIDTH = 360
@@ -78,6 +80,15 @@ function getZoomStage(zoom: number): ZoomStage {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
+}
+
+function formatFlowVolume(value: number): string {
+  if (value >= 10000) return `${(value / 10000).toFixed(1)}만 명`
+  return `${value.toLocaleString()}명`
+}
+
+function getFlowEndpointName(name: string | undefined, id: string): string {
+  return name && name.trim().length > 0 ? name : id
 }
 
 interface MapProps {
@@ -111,6 +122,12 @@ interface HoveredNode {
 
 interface HoveredBarrier {
   barrier: Barrier
+  x: number
+  y: number
+}
+
+interface HoveredFlow {
+  flow: ODFlow
   x: number
   y: number
 }
@@ -177,6 +194,7 @@ export default function Map({
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null)
   const [hoveredNode, setHoveredNode] = useState<HoveredNode | null>(null)
   const [hoveredBarrier, setHoveredBarrier] = useState<HoveredBarrier | null>(null)
+  const [hoveredFlow, setHoveredFlow] = useState<HoveredFlow | null>(null)
   const [hovered3D, setHovered3D] = useState<Hovered3D | null>(null)
   const is3DActive = threeDView.mode !== 'off'
 
@@ -376,8 +394,19 @@ export default function Map({
   const handleNodeHover = useCallback((info: PickingInfo<CommerceNode>) => {
     if (info.object) {
       setHoveredNode({ node: info.object, x: info.x, y: info.y })
+      setHoveredFlow(null)
     } else {
       setHoveredNode(null)
+    }
+  }, [])
+
+  const handleFlowHover = useCallback((info: PickingInfo<{ flow: ODFlow }>) => {
+    if (info.object) {
+      setHoveredFlow({ flow: info.object.flow, x: info.x, y: info.y })
+      setHoveredNode(null)
+      setHoveredBarrier(null)
+    } else {
+      setHoveredFlow(null)
     }
   }, [])
 
@@ -409,8 +438,8 @@ export default function Map({
   const zoomStage = getZoomStage(zoom)
   const selectedFlowKey = selectedNode?.admKey ?? null
   const staticFlowLayer = useMemo(
-    () => showFlows ? createODFlowLayer(flows, selectedFlowKey) : null,
-    [flows, selectedFlowKey, showFlows],
+    () => showFlows ? createODFlowLayer(flows, selectedFlowKey, handleFlowHover) : null,
+    [flows, handleFlowHover, selectedFlowKey, showFlows],
   )
   const barrierRoutePathMap = useMemo(() => {
     const routeMap = new globalThis.Map<string, [number, number][]>()
@@ -444,6 +473,7 @@ export default function Map({
           createFlowBarrierLayer(visibleBarriers, barrierRoutePathMap, (info) => {
             if (info.object) {
               setHoveredBarrier({ barrier: info.object.barrier, x: info.x, y: info.y })
+              setHoveredFlow(null)
             } else {
               setHoveredBarrier(null)
             }
@@ -1206,6 +1236,77 @@ export default function Map({
               }}
             >
               {startup.headline} {interpretation}
+            </div>
+          </div>
+        )
+      })()}
+
+      {!is3DActive && hoveredFlow && (() => {
+        const { flow, x, y } = hoveredFlow
+        const containerWidth = containerSize.width || window.innerWidth
+        const rawLeft = x + 14 + FLOW_HOVER_CARD_WIDTH > containerWidth
+          ? x - 14 - FLOW_HOVER_CARD_WIDTH
+          : x + 14
+        const cardLeft = Math.max(0, rawLeft)
+        const cardTop = Math.max(56, y - 12)
+        const [r, g, b] = PURPOSE_COLORS[flow.purpose]
+        const purposeColor = `rgb(${r}, ${g}, ${b})`
+        const sourceName = getFlowEndpointName(flow.sourceNm, flow.sourceId)
+        const targetName = getFlowEndpointName(flow.targetNm, flow.targetId)
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              left: cardLeft,
+              top: cardTop,
+              background: colors.panelBg,
+              color: colors.panelText,
+              border: `1px solid ${purposeColor}`,
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 12,
+              pointerEvents: 'none',
+              zIndex: 11,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              width: FLOW_HOVER_CARD_WIDTH,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: 13 }}>OD 이동 흐름</span>
+              <span
+                style={{
+                  background: `${purposeColor}22`,
+                  color: purposeColor,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  borderRadius: 4,
+                  padding: '2px 6px',
+                }}
+              >
+                {flow.purpose}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: colors.panelText, lineHeight: 1.45, marginBottom: 8 }}>
+              <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {sourceName}
+              </div>
+              <div style={{ color: colors.mutedText, fontSize: 10, margin: '2px 0' }}>도착 방향</div>
+              <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {targetName}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: `1px solid ${colors.panelBorder}`, paddingTop: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 2 }}>이동량</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: purposeColor }}>{formatFlowVolume(flow.volume)}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 10, color: colors.mutedText, marginBottom: 2 }}>표시 기준</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: colors.secondaryText }}>{hour}시 · Top {topN}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 8, color: colors.secondaryText, fontSize: 11, lineHeight: 1.4 }}>
+              현재 시간대와 이동 목적 필터가 반영된 행정동 간 이동 경로입니다.
             </div>
           </div>
         )

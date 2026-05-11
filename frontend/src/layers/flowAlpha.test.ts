@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { ODFlow } from '../hooks/useFlowData'
 
-import { getFlowAlpha, getFlowWidth } from './ODFlowLayer'
+import { createODFlowLayer, getFlowAlpha, getFlowWidth } from './ODFlowLayer'
 
 const makeFlow = (sourceId: string, targetId: string): ODFlow => ({
   id: `${sourceId}-${targetId}`,
@@ -38,5 +38,24 @@ describe('getFlowWidth', () => {
     const base = getFlowWidth(5000, null, makeFlow('A', 'B'))
     const highlighted = getFlowWidth(5000, 'A', makeFlow('A', 'B'))
     expect(highlighted).toBeCloseTo(base * 1.5, 1)
+  })
+})
+
+describe('createODFlowLayer', () => {
+  it('keeps original flow on path data for hover cards', () => {
+    const flow = makeFlow('A', 'B')
+    const layer = createODFlowLayer([flow])
+    const data = layer.props.data as Array<{ flow: ODFlow }>
+
+    expect(data[0].flow).toBe(flow)
+  })
+
+  it('enables picking only when a hover handler is provided', () => {
+    const flow = makeFlow('A', 'B')
+    const withoutHover = createODFlowLayer([flow])
+    const withHover = createODFlowLayer([flow], null, () => {})
+
+    expect(withoutHover.props.pickable).toBe(false)
+    expect(withHover.props.pickable).toBe(true)
   })
 })
