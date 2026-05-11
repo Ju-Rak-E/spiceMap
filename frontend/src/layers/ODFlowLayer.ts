@@ -1,4 +1,5 @@
 import { PathLayer } from '@deck.gl/layers'
+import type { PickingInfo } from '@deck.gl/core'
 import type { ODFlow } from '../hooks/useFlowData'
 import { getControlPoint, quadBezier, PURPOSE_COLORS } from '../utils/flowBezier'
 
@@ -24,7 +25,8 @@ export function getFlowWidth(volume: number, selectedId: string | null, flow: OD
   return base
 }
 
-interface FlowPath {
+export interface FlowPath {
+  flow: ODFlow
   path: [number, number][]
   color: [number, number, number, number]
   width: number
@@ -37,6 +39,7 @@ function buildFlowPath(flow: ODFlow, selectedId: string | null): FlowPath {
   )
   const [r, g, b] = PURPOSE_COLORS[flow.purpose]
   return {
+    flow,
     path,
     color: [r, g, b, getFlowAlpha(flow, selectedId)],
     width: getFlowWidth(flow.volume, selectedId, flow),
@@ -46,18 +49,20 @@ function buildFlowPath(flow: ODFlow, selectedId: string | null): FlowPath {
 export function createODFlowLayer(
   flows: ODFlow[],
   selectedNodeId: string | null = null,
+  onHover?: (info: PickingInfo<FlowPath>) => void,
 ): PathLayer<FlowPath> {
   const paths = flows.map(f => buildFlowPath(f, selectedNodeId))
   return new PathLayer<FlowPath>({
     id: 'od-flows',
     data: paths,
-    pickable: false,
+    pickable: Boolean(onHover),
     getPath: (p) => p.path,
     getColor: (p) => p.color,
     getWidth: (p) => p.width,
     widthUnits: 'pixels',
     capRounded: true,
     jointRounded: true,
+    onHover,
     updateTriggers: {
       getColor: [flows, selectedNodeId],
       getWidth: [flows, selectedNodeId],
