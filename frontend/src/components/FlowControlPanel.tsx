@@ -49,10 +49,8 @@ interface FlowControlPanelProps {
   onClearDistricts: () => void
   onSetDistricts: (districts: Set<string>) => void
   onSelectNode: (node: CommerceNode) => void
-  compareMode: boolean
   compareQuarter: string | null
   kpiDelta: QuarterKpiDelta | null
-  onToggleCompare: () => void
   compact?: boolean
   stacked?: boolean
   advisorIndustries: string[]
@@ -165,10 +163,8 @@ export default function FlowControlPanel({
   onSelectAllDistricts,
   onClearDistricts,
   onSetDistricts,
-  compareMode,
   compareQuarter,
   kpiDelta,
-  onToggleCompare,
   compact = false,
   stacked = false,
   advisorIndustries,
@@ -289,7 +285,6 @@ export default function FlowControlPanel({
         showFlows={showFlows}
         showBarriers={showBarriers}
         flowControlsEnabled={flowControlsEnabled}
-        compareMode={compareMode}
         compareQuarter={compareQuarter}
         kpiDelta={kpiDelta}
         onPlay={onPlay}
@@ -297,7 +292,6 @@ export default function FlowControlPanel({
         onToggleSpeed={onToggleSpeed}
         onToggleFlows={onToggleFlows}
         onToggleBarriers={onToggleBarriers}
-        onToggleCompare={onToggleCompare}
       />
     </aside>
   )

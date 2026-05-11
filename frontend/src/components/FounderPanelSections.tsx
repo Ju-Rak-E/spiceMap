@@ -33,6 +33,40 @@ function formatVolume(value: number): string {
   return value.toLocaleString()
 }
 
+function InfoTooltip({ text }: { text: string }) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <button
+        type="button"
+        onMouseEnter={() => setVisible(true)}
+        onMouseLeave={() => setVisible(false)}
+        style={{
+          width: 13, height: 13, borderRadius: '50%',
+          background: 'rgba(166,180,194,0.15)', border: '1px solid rgba(166,180,194,0.35)',
+          color: '#A6B4C2', fontSize: 8, fontWeight: 800, lineHeight: 1,
+          cursor: 'default', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0, padding: 0,
+        }}
+        aria-label={text}
+      >
+        i
+      </button>
+      {visible && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+          marginBottom: 6, background: '#1A2840', border: '1px solid #2E4057',
+          borderRadius: 6, padding: '7px 10px', fontSize: 11, color: '#C8D6E5',
+          whiteSpace: 'normal', width: 200, zIndex: 999, lineHeight: 1.5,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+        }}>
+          {text}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function formatLocation(value: string | null): string {
   if (!value) return '-'
   const parts = value.split('_')
@@ -350,7 +384,7 @@ export function DistrictFilterSection({
         </div>
         <button
           type="button"
-          style={S.expandButton}
+          style={{ ...S.expandButton, border: '1.5px solid #42A5F5', background: 'transparent', color: '#42A5F5' }}
           onClick={() => onOpenChange(!open)}
           aria-expanded={open}
           aria-label="관심 지역 상세 조건 수정"
@@ -512,7 +546,6 @@ interface AdvancedOptionsSectionProps {
   showFlows: boolean
   showBarriers: boolean
   flowControlsEnabled: boolean
-  compareMode: boolean
   compareQuarter: string | null
   kpiDelta: QuarterKpiDelta | null
   onPlay: () => void
@@ -520,7 +553,6 @@ interface AdvancedOptionsSectionProps {
   onToggleSpeed: () => void
   onToggleFlows: () => void
   onToggleBarriers: () => void
-  onToggleCompare: () => void
 }
 
 export function AdvancedOptionsSection({
@@ -541,15 +573,12 @@ export function AdvancedOptionsSection({
   showFlows,
   showBarriers,
   flowControlsEnabled,
-  compareMode,
-  compareQuarter,
   kpiDelta,
   onPlay,
   onPause,
   onToggleSpeed,
   onToggleFlows,
   onToggleBarriers,
-  onToggleCompare,
 }: AdvancedOptionsSectionProps) {
   const [open, setOpen] = useState(false)
   const densityLabel = DENSITY_LABELS[flowStrength] ?? '보통'
@@ -604,7 +633,14 @@ export function AdvancedOptionsSection({
           </div>
 
           <div>
-            <div style={S.label}>이동 목적</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={S.label}>이동 목적</div>
+              {flowControlsEnabled && (
+                <button type="button" role="switch" aria-checked={showFlows} onClick={onToggleFlows} style={S.switchTrack(showFlows)}>
+                  <span style={S.switchThumb(showFlows)} />
+                </button>
+              )}
+            </div>
             <div style={S.compactGrid}>
               <button
                 type="button"
@@ -672,39 +708,37 @@ export function AdvancedOptionsSection({
 
           <div style={S.statGrid}>
             <div style={S.card}>
-              <div style={S.statLabel}>고객 유입 우세</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={S.statLabel}>고객 유입 우세</div>
+                <InfoTooltip text="유입 흐름이 가장 많이 도착하는 행정동입니다. 집객력이 높을수록 창업 입지로 유리합니다." />
+              </div>
               <div style={{ ...S.statValue, fontSize: 14, color: '#A5D6A7' }}>{formatLocation(stats.topInflow)}</div>
             </div>
             <div style={S.card}>
-              <div style={S.statLabel}>고객 유출 우세</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={S.statLabel}>고객 유출 우세</div>
+                <InfoTooltip text="유출 흐름이 가장 많이 출발하는 행정동입니다. 유출이 많을수록 주변 상권으로 이탈하는 고객이 많습니다." />
+              </div>
               <div style={{ ...S.statValue, fontSize: 14, color: '#FFAB91' }}>{formatLocation(stats.topOutflow)}</div>
             </div>
           </div>
 
-          <div style={S.switchRow}>
-            <span style={S.label}>분기 비교</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={compareMode}
-              aria-label="이전 분기 KPI 비교 표시 전환"
-              onClick={onToggleCompare}
-              disabled={!compareQuarter}
-              style={{ ...S.switchTrack(compareMode), opacity: compareQuarter ? 1 : 0.45 }}
-            >
-              <span style={S.switchThumb(compareMode)} />
-            </button>
-          </div>
-          {compareMode && kpiDelta && (
+          {kpiDelta && (
             <div style={S.statGrid}>
               <div style={S.card}>
-                <div style={S.statLabel}>총 유동량 변화</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={S.statLabel}>총 유동량 변화</div>
+                  <InfoTooltip text="이전 분기 대비 선택 지역의 총 이동 인원 변화입니다. 양수(+)이면 유동인구 증가, 음수(-)이면 감소를 나타냅니다." />
+                </div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: getDeltaColor(kpiDelta.delta.totalVolume) }}>
                   {formatDelta(kpiDelta.delta.totalVolume, 0)}
                 </div>
               </div>
               <div style={S.card}>
-                <div style={S.statLabel}>평균 GRI 변화</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={S.statLabel}>평균 GRI 변화</div>
+                  <InfoTooltip text="이전 분기 대비 평균 상권위협도(GRI) 변화입니다. GRI가 낮을수록 상권이 안정적이며, 감소(-)가 긍정적 신호입니다." />
+                </div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: getDeltaColor(kpiDelta.delta.avgGri, 'lower') }}>
                   {formatDelta(kpiDelta.delta.avgGri, 1)}
                 </div>
@@ -726,14 +760,7 @@ export function AdvancedOptionsSection({
             </button>
           </div>
 
-          {flowControlsEnabled && (
-            <div style={S.switchRow}>
-              <span style={S.label}>흐름 궤적 표시</span>
-              <button type="button" role="switch" aria-checked={showFlows} onClick={onToggleFlows} style={S.switchTrack(showFlows)}>
-                <span style={S.switchThumb(showFlows)} />
-              </button>
-            </div>
-          )}
+
           <div style={S.switchRow}>
             <span style={S.label}>단절 위험 표시</span>
             <button type="button" role="switch" aria-checked={showBarriers} onClick={onToggleBarriers} style={S.switchTrack(showBarriers)}>
