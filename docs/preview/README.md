@@ -6,4 +6,5 @@
 |------|------|
 | [demo_storyline_gangnam_gwanak.md](demo_storyline_gangnam_gwanak.md) | 강남·관악 중심 3분 시연 영상 촬영 대본 |
 | [hero_shot_scenario.md](hero_shot_scenario.md) | 3분 발표 시간축과 hero mode 4구간 시연 동선 |
+| [persona_kim_misuk.md](persona_kim_misuk.md) | 김미숙(53세 여성, 반찬가게 창업 희망) 페르소나 정의 |
 | [hero_shot_assets/README.md](hero_shot_assets/README.md) | PNG/MP4 백업 자산 슬롯과 촬영 환경 |
