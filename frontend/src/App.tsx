@@ -12,6 +12,7 @@ import { useStartupAdvisor } from './hooks/useStartupAdvisor'
 import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
 import { SEOUL_DISTRICT_NAMES, SEOUL_DISTRICT_NAME_TO_ADM_PREFIX } from './utils/seoulDistricts'
+
 import type { CommerceNode } from './types/commerce'
 
 const STRENGTH_TO_TOP_N: Record<number, number> = {
@@ -55,7 +56,6 @@ export default function App() {
   const [heroMode] = useState<boolean>(() => isHeroModeEnabled())
   const heroNodeId = heroMode ? HERO_NODE_ID : null
   const [view, setView] = useState<'map' | 'validation'>('map')
-  const [compareMode, setCompareMode] = useState(false)
   const [controlPanelWidth, setControlPanelWidth] = useState(CONTROL_PANEL_DEFAULT_WIDTH)
   const viewportMode = useViewportMode()
 
@@ -77,7 +77,7 @@ export default function App() {
     enabled: OD_FLOW_ENABLED,
   })
 
-  const compareEnabled = compareMode && previousQuarter !== null
+  const compareEnabled = previousQuarter !== null
   const compareQuarter = compareEnabled ? previousQuarter : selectedQuarter
   const { nodes: rawCompareNodes } = useCommerceData(compareQuarter, selectedDistricts)
   const compareFlowData = useFlowData({
@@ -96,10 +96,11 @@ export default function App() {
     if (selectedDistricts.size < SEOUL_DISTRICT_NAMES.length) {
       result = result.filter((flow) =>
         [...selectedDistricts].some((district) => {
+          // mock 포맷: "강남구_역삼동"
           if (flow.sourceId.startsWith(`${district}_`) || flow.targetId.startsWith(`${district}_`)) {
             return true
           }
-
+          // API 포맷: adm_cd 8자리 (e.g. "11680650")
           const prefix = SEOUL_DISTRICT_NAME_TO_ADM_PREFIX[district]
           return prefix
             ? flow.sourceId.startsWith(prefix) || flow.targetId.startsWith(prefix)
@@ -333,10 +334,8 @@ export default function App() {
           onClearDistricts={handleClearDistricts}
           onSetDistricts={handleSetDistricts}
           onSelectNode={setSelectedNode}
-          compareMode={compareMode}
           compareQuarter={previousQuarter}
           kpiDelta={kpiDelta}
-          onToggleCompare={() => setCompareMode((prev) => !prev)}
           compact={viewportMode.isTablet}
           stacked={viewportMode.isNarrow}
           advisorIndustries={advisor.industries}

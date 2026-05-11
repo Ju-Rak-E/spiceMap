@@ -7,6 +7,8 @@ export interface ODFlow {
   id: string
   sourceId: string
   targetId: string
+  sourceNm?: string
+  targetNm?: string
   sourceCoord: [number, number]
   targetCoord: [number, number]
   volume: number
@@ -93,6 +95,12 @@ const PURPOSE_BY_CODE: Record<number, FlowPurpose> = {
   3: '쇼핑',
   4: '여가',
 }
+const PURPOSE_TO_CODE: Record<FlowPurpose, number> = {
+  출근: 1,
+  귀가: 2,
+  쇼핑: 3,
+  여가: 4,
+}
 
 function normalizePurpose(value: BackendFlowItem['move_purpose']): FlowPurpose {
   if (typeof value === 'string' && VALID_PURPOSES.has(value)) return value as FlowPurpose
@@ -111,6 +119,8 @@ export function normalizeBackendFlows(response: BackendOdFlowsResponse): ODFlow[
       id: `${flow.origin_adm_cd}-${flow.dest_adm_cd}`,
       sourceId: flow.origin_adm_cd,
       targetId: flow.dest_adm_cd,
+      sourceNm: flow.origin_adm_nm ?? undefined,
+      targetNm: flow.dest_adm_nm ?? undefined,
       sourceCoord,
       targetCoord,
       volume: Math.round(flow.trip_count),
@@ -169,8 +179,10 @@ export function computeStats(flows: ODFlow[]): FlowStats {
   const outflowBySource = new Map<string, number>()
 
   for (const flow of flows) {
-    inflowByTarget.set(flow.targetId, (inflowByTarget.get(flow.targetId) ?? 0) + flow.volume)
-    outflowBySource.set(flow.sourceId, (outflowBySource.get(flow.sourceId) ?? 0) + flow.volume)
+    const targetKey = flow.targetNm ?? flow.targetId
+    const sourceKey = flow.sourceNm ?? flow.sourceId
+    inflowByTarget.set(targetKey, (inflowByTarget.get(targetKey) ?? 0) + flow.volume)
+    outflowBySource.set(sourceKey, (outflowBySource.get(sourceKey) ?? 0) + flow.volume)
   }
 
   const topInflow = [...inflowByTarget.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
@@ -187,12 +199,13 @@ async function fetchMockFlows(): Promise<ODFlow[]> {
   return mockRes.json() as Promise<ODFlow[]>
 }
 
-async function fetchFlows(quarter: string): Promise<ODFlow[]> {
+async function fetchFlows(quarter: string, purpose?: FlowPurpose | null): Promise<ODFlow[]> {
   if (isDemoMode()) {
     return fetchMockFlows()
   }
 
-  const params = new URLSearchParams({ quarter })
+  const params = new URLSearchParams({ quarter, limit: '500' })
+  if (purpose) params.set('purpose', String(PURPOSE_TO_CODE[purpose]))
   const res = await fetch(`${BASE_URL}/api/od/flows?${params.toString()}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = await res.json()
@@ -208,6 +221,7 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const quarter = filters.quarter ?? '2025Q4'
+  const purpose = filters.purpose ?? null
   const enabled = filters.enabled ?? true
 
   useEffect(() => {
@@ -224,7 +238,7 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
       setIsLoading(true)
       setError(null)
     })
-    fetchFlows(quarter)
+    fetchFlows(quarter, purpose)
       .then(data => {
         setAllFlows(data)
         setIsLoading(false)
@@ -234,7 +248,7 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
         setError('흐름 데이터를 불러오지 못했습니다')
         setIsLoading(false)
       })
-  }, [enabled, quarter])
+  }, [enabled, quarter, purpose])
 
   const flows = filterFlows(allFlows, filters)
   const stats = computeStats(flows)

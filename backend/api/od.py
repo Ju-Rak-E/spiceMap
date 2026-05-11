@@ -22,13 +22,14 @@ _LIMIT_MAX = 500
 @router.get("/od/flows", response_model=OdFlowsResponse)
 def od_flows(
     quarter: str = Query("2025Q4", description="분기 (예: 2025Q4)"),
+    purpose: int | None = Query(None, description="이동목적 코드 (1=출근 2=귀가 3=쇼핑 4=여가)"),
     gu: str | None = Query(None, description="자치구 필터 (예: 강남구)"),
     limit: int = Query(200, ge=1, description="반환할 최대 OD 흐름 수"),
     db: Session = Depends(get_session),
     cache=Depends(get_cache),
 ):
     effective_limit = min(limit, _LIMIT_MAX)
-    cache_key = f"od-flows:{quarter}:{gu or 'all'}:{effective_limit}"
+    cache_key = f"od-flows:{quarter}:{purpose or 'all'}:{gu or 'all'}:{effective_limit}"
 
     if settings.demo_mode:
         snap = load_demo(cache_key)
@@ -66,6 +67,7 @@ def od_flows(
         JOIN adm ab_d ON ab_d.adm_cd = oa.dest_adm_cd
         WHERE oa.year_quarter = :quarter
           AND oa.origin_adm_cd <> oa.dest_adm_cd
+          AND (:purpose IS NULL OR oa.move_purpose = :purpose)
           AND (:gu IS NULL
                OR ab_o.gu_nm = :gu
                OR ab_d.gu_nm = :gu)
@@ -77,7 +79,7 @@ def od_flows(
         LIMIT :limit
     """)
     try:
-        rows = db.execute(sql, {"quarter": quarter, "gu": gu, "limit": effective_limit}).fetchall()
+        rows = db.execute(sql, {"quarter": quarter, "purpose": purpose, "gu": gu, "limit": effective_limit}).fetchall()
     except SQLAlchemyError:
         fallback = get_fallback(cache, cache_key)
         if fallback:
