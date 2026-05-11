@@ -11,7 +11,6 @@ import { useViewportMode } from './hooks/useViewportMode'
 import { useStartupAdvisor } from './hooks/useStartupAdvisor'
 import { filterNodesByDistrict } from './utils/filters'
 import { computeKpi, computeKpiDelta, getPreviousQuarter } from './utils/quarterDelta'
-import { countCriticalCommerces } from './utils/insightMetrics'
 import { SEOUL_DISTRICT_NAMES, SEOUL_DISTRICT_NAME_TO_ADM_PREFIX } from './utils/seoulDistricts'
 
 import type { CommerceNode } from './types/commerce'
