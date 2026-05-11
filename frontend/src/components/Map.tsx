@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
@@ -56,7 +56,9 @@ const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/
 const HOVER_CARD_WIDTH = 220
 const BARRIER_PANEL_WIDTH = 318
 const LEFT_PANEL_GAP = 12
-const DETAIL_PANEL_WIDTH = 360
+const DETAIL_PANEL_DEFAULT_WIDTH = 360
+const DETAIL_PANEL_MIN_WIDTH = 300
+const DETAIL_PANEL_MAX_WIDTH = 560
 const CLUSTER_PANEL_WIDTH = 332
 const DISTRICT_ZOOM = 10.5
 const DONG_ZOOM = 12.5
@@ -72,6 +74,10 @@ function getZoomStage(zoom: number): ZoomStage {
   if (zoom < DONG_ZOOM) return 'district'
   if (zoom < CANDIDATE_ZOOM) return 'dong'
   return 'candidate'
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
 }
 
 interface MapProps {
@@ -189,7 +195,9 @@ export default function Map({
   const [isViewportInteracting, setIsViewportInteracting] = useState(false)
   const [boundaries, setBoundaries] = useState<AdminBoundaryCollection | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const [detailPanelWidth, setDetailPanelWidth] = useState(DETAIL_PANEL_DEFAULT_WIDTH)
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
+  const [lastCluster, setLastCluster] = useState<DongCommerceCluster | null>(null)
   const detailPanelOpen = selectedNode !== null && closedDetailNodeId !== selectedNode.id
   const displayedNodeIds = useMemo(() => new Set(nodes.map((node) => node.id)), [nodes])
   const nodeDistrictMap = useMemo(
@@ -230,8 +238,6 @@ export default function Map({
       touchPitch: true,
       maxPitch: 70,
     })
-
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
 
     const lightingEffect = new LightingEffect({
       ambient: new AmbientLight({ color: [255, 255, 255], intensity: 1.0 }),
@@ -380,6 +386,7 @@ export default function Map({
     if (info.object) {
       setClosedDetailNodeId(null)
       setSelectedClusterId(null)
+      setLastCluster(null)
     }
   }, [onSelectNode])
 
@@ -559,6 +566,42 @@ export default function Map({
     focusCommerceNode(selectedNode)
   }, [focusCommerceNode, is3DActive, selectedNode])
 
+  const handleDetailPanelResizeStart = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const startX = event.clientX
+    const startWidth = detailPanelWidth
+    const availableWidth = containerSize.width || window.innerWidth
+    const maxWidth = clamp(
+      availableWidth - BARRIER_PANEL_WIDTH - LEFT_PANEL_GAP - 48,
+      DETAIL_PANEL_MIN_WIDTH,
+      DETAIL_PANEL_MAX_WIDTH,
+    )
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const nextWidth = startWidth + moveEvent.clientX - startX
+      setDetailPanelWidth(clamp(nextWidth, DETAIL_PANEL_MIN_WIDTH, maxWidth))
+    }
+
+    const handleUp = () => {
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      window.removeEventListener('pointercancel', handleUp)
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleUp)
+  }, [containerSize.width, detailPanelWidth])
+
   const districtClusters = useMemo(() => buildDistrictCommerceClusters(nodes), [nodes])
   const dongClusters = useMemo(() => buildDongCommerceClusters(nodes, boundaries), [nodes, boundaries])
   const clusters = useMemo(() => {
@@ -568,9 +611,24 @@ export default function Map({
   }, [districtClusters, dongClusters, zoomStage])
   const showClusters = !isViewportInteracting && clusters.length > 0
   const selectedCluster = useMemo(
-    () => clusters.find((cluster) => cluster.id === selectedClusterId) ?? null,
-    [clusters, selectedClusterId],
+    () => (
+      clusters.find((cluster) => cluster.id === selectedClusterId)
+      ?? (lastCluster?.id === selectedClusterId ? lastCluster : null)
+    ),
+    [clusters, lastCluster, selectedClusterId],
   )
+  const handleBackToList = useCallback(() => {
+    if (lastCluster) {
+      setSelectedClusterId(lastCluster.id)
+      setClosedDetailNodeId(selectedNode?.id ?? null)
+      return
+    }
+
+    onSelectNode?.(null)
+    setClosedDetailNodeId(null)
+    setSelectedClusterId(null)
+    setLastCluster(null)
+  }, [lastCluster, onSelectNode, selectedNode?.id])
   const summaryText = buildSummaryText(purpose, hour, topN, ALL_COMMERCE_TYPES, nodes)
   const dataStatusTone = usingMockData ? '#FFCC80' : '#A5D6A7'
   const commerceBoundaryStatus = zoom >= 11 ? '상권 경계 표시 중' : '상권 경계: 확대하면 표시'
@@ -679,7 +737,7 @@ export default function Map({
   }
 
   function renderClusterPanel() {
-    if (!selectedCluster || !showClusters) return null
+    if (!selectedCluster) return null
     const sortedNodes = [...selectedCluster.nodes]
       .sort((a, b) => deriveStartupSummary(b).fitScore - deriveStartupSummary(a).fitScore)
 
@@ -739,6 +797,7 @@ export default function Map({
                 onClick={() => {
                   onSelectNode?.(node)
                   setClosedDetailNodeId(null)
+                  setLastCluster(selectedCluster)
                   setSelectedClusterId(null)
                   focusCommerceNode(node)
                 }}
@@ -786,8 +845,8 @@ export default function Map({
     const hasBarriers = visibleBarriers.length > 0
     const usingOverviewFallback = Boolean(selectedBarrierNodeId && selectedScopedBarriers.length === 0)
     const leftPanelWidth = detailPanelOpen
-      ? DETAIL_PANEL_WIDTH
-      : selectedCluster && showClusters
+      ? detailPanelWidth
+      : selectedCluster
         ? CLUSTER_PANEL_WIDTH
         : 0
     const panelLeft = 16 + (leftPanelWidth > 0 ? leftPanelWidth + LEFT_PANEL_GAP : 0)
@@ -1305,6 +1364,9 @@ export default function Map({
           usingMockData={usingMockData}
           nodes={nodes}
           onClose={() => setClosedDetailNodeId(selectedNode?.id ?? null)}
+          onBackToList={handleBackToList}
+          panelWidth={detailPanelWidth}
+          onResizeStart={handleDetailPanelResizeStart}
         />
       )}
 
