@@ -1,5 +1,5 @@
 """
-자치구별 점포 정보 수집 및 적재 (OA-15577, VwsmSignguStorW)
+자치구별 점포 정보 수집 및 적재 (OA-22173, VwsmSignguStorW)
 
 실행 방법:
     python -m backend.pipeline.collect_store_info             # 전체 (최신)

@@ -11,7 +11,7 @@ export interface CommerceNode {
   netFlow: number                // 순유입 (양수=유입, 음수=유출)
   degreeCentrality: number       // 0~1
   griScore: number               // 0~100
-  closeRate?: number             // 폐업률 (%) — OA-15577
+  closeRate?: number             // 폐업률 (%) — OA-22173
 }
 
 // Dev-A API: GeoJSON FeatureCollection 응답 타입
@@ -29,6 +29,7 @@ export interface CommerceFeatureProperties {
   net_flow?: number | null
   degree_centrality?: number | null
   close_rate?: number | null
+  closure_rate?: number | null
   dominant_origin: string | null
   analysis_note: string | null
   centroid_lng: number | null
@@ -108,7 +109,7 @@ export function featuresToNodes(features: CommerceFeature[]): CommerceNode[] {
       netFlow: f.properties.net_flow ?? 0,
       degreeCentrality: f.properties.degree_centrality ?? 0,
       griScore: f.properties.gri_score ?? 0,
-      closeRate: f.properties.close_rate ?? undefined,
+      closeRate: f.properties.close_rate ?? f.properties.closure_rate ?? undefined,
     })
   }
   return nodes

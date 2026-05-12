@@ -17,6 +17,8 @@ from backend.schemas.commerce import TypeMapResponse, GriHistoryResponse, GriPoi
 
 router = APIRouter()
 
+TYPE_MAP_CACHE_VERSION = "v2"
+
 
 # ──────────────────────────────────────────────
 # GET /api/commerce/type-map
@@ -28,10 +30,11 @@ def type_map(
     db: Session = Depends(get_session),
     cache=Depends(get_cache),
 ):
-    cache_key = f"type-map:{gu or 'all'}:{quarter}"
+    snapshot_key = f"type-map:{gu or 'all'}:{quarter}"
+    cache_key = f"{TYPE_MAP_CACHE_VERSION}:{snapshot_key}"
 
     if settings.demo_mode:
-        snap = load_demo(cache_key)
+        snap = load_demo(snapshot_key) or load_demo(cache_key)
         if snap:
             return demo_response(snap, is_demo=True)
         raise HTTPException(status_code=503, detail="데모 스냅샷 없음. generate_demo_snapshot 실행 필요.")

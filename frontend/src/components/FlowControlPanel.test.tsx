@@ -137,4 +137,27 @@ describe('FlowControlPanel founder flow', () => {
     renderPanel({ stacked: true, advisorResult: RESULT })
     expect(screen.getByRole('navigation')).toBeTruthy()
   })
+
+  it('opens the validation report from the header action', async () => {
+    const onOpenValidationReport = vi.fn()
+    renderPanel({ onOpenValidationReport })
+    await userEvent.click(screen.getByTestId('open-validation-report'))
+    expect(onOpenValidationReport).toHaveBeenCalled()
+  })
+
+  it('downloads CSV from the header action', async () => {
+    const onDownloadCsv = vi.fn()
+    renderPanel({ onDownloadCsv })
+    await userEvent.click(screen.getByTestId('download-csv'))
+    expect(onDownloadCsv).toHaveBeenCalled()
+  })
+
+  it('does not show header status chips', () => {
+    renderPanel({ onOpenValidationReport: vi.fn(), onDownloadCsv: vi.fn() })
+    expect(screen.queryByText('Seoul startup analysis')).toBeNull()
+    expect(screen.queryByText('API 연결')).toBeNull()
+    expect(screen.queryByText(/업종:/)).toBeNull()
+    expect(screen.getByText('검증 리포트')).toBeTruthy()
+    expect(screen.getByText('CSV 다운로드')).toBeTruthy()
+  })
 })

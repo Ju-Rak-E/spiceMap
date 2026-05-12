@@ -97,9 +97,13 @@ describe('CommerceDetailPanel', () => {
     expect(screen.getAllByText('검토 업종').length).toBeGreaterThan(0)
   })
 
-  it('지역 대응 신호가 상세 패널 하단 보조 정보로 표시된다', () => {
+  it('지역 대응 신호 안내는 ! 버튼 호버 시 표시된다', async () => {
     renderPanel()
     expect(screen.getByText('지역 대응 신호')).toBeTruthy()
+    expect(screen.queryByText(/실제 시행 중인 정책이 아니라/)).toBeNull()
+
+    await userEvent.hover(screen.getByRole('button', { name: '지역 대응 신호 설명' }))
+
     expect(screen.getByText(/실제 시행 중인 정책이 아니라/)).toBeTruthy()
     expect(screen.getByText(/창업 추천 결과와는 별개의 참고 정보입니다/)).toBeTruthy()
   })

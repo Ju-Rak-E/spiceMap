@@ -105,7 +105,7 @@ class LivingPopulation(Base):
 
 
 class StoreInfo(Base):
-    """자치구별 점포 정보 — 점포 수·폐업률 (OA-15577, VwsmSignguStorW)
+    """자치구별 점포 정보 — 점포 수·폐업률 (OA-22173, VwsmSignguStorW)
 
     자치구(SIGNGU_CD) + 업종(SVC_INDUTY_CD) + 분기(STDR_YYQU_CD) 단위
     """

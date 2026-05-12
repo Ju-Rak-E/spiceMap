@@ -9,6 +9,7 @@ import { buildMetricExplanations } from '../utils/founderUx'
 import TrendChart from './TrendChart'
 import PolicyCard from './PolicyCard'
 import MetricExplanationCard from './MetricExplanationCard'
+import { useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 
 const HERO_HIGHLIGHT_RULE = 'R4'
@@ -205,11 +206,46 @@ const S = {
     border: '1px solid #30404D',
     padding: '12px',
   },
-  policyIntro: {
+  policyHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  policyInfoWrap: {
+    position: 'relative' as const,
+    display: 'inline-flex',
+  },
+  policyInfoButton: {
+    width: 18,
+    height: 18,
+    borderRadius: '50%',
+    border: '1px solid #FFC107',
+    background: 'rgba(255,193,7,0.16)',
+    color: '#FFD54F',
+    cursor: 'help',
+    fontSize: 12,
+    fontWeight: 900,
+    lineHeight: 1,
+    padding: 0,
+  },
+  policyTooltip: {
+    position: 'absolute' as const,
+    top: 24,
+    left: -76,
+    width: 214,
+    maxWidth: 'calc(100vw - 72px)',
+    background: '#101820',
+    border: '1px solid #FFC107',
+    borderRadius: 8,
+    boxShadow: '0 10px 22px rgba(0,0,0,0.4)',
+    padding: '10px 12px',
     fontSize: 11,
     color: '#B0BEC5',
     lineHeight: 1.55,
-    marginBottom: 10,
+    whiteSpace: 'normal' as const,
+    wordBreak: 'keep-all' as const,
+    zIndex: 4,
   },
   errorText: { fontSize: 12, color: '#EF5350' },
   loadingText: { fontSize: 12, color: '#78909C' },
@@ -242,6 +278,7 @@ export default function CommerceDetailPanel({
   const nodeId = node?.id ?? null
   const { series, isLoading, error } = useGriHistory(nodeId, quarter)
   const policyResult = usePolicyInsights(nodeId, quarter, node?.type ?? null)
+  const [isPolicyHelpOpen, setIsPolicyHelpOpen] = useState(false)
 
   if (!node) {
     return (
@@ -392,10 +429,28 @@ export default function CommerceDetailPanel({
       </div>
 
       <div style={S.policySection} aria-label="지역 대응 신호">
-        <div style={S.sectionTitle}>지역 대응 신호</div>
-        <div style={S.policyIntro}>
-          이 내용은 실제 시행 중인 정책이 아니라, 상권 지표를 바탕으로 한 지자체 대응 제안입니다.<br />
-          창업 추천 결과와는 별개의 참고 정보입니다.
+        <div style={S.policyHeader}>
+          <div style={{ ...S.sectionTitle, marginBottom: 0 }}>지역 대응 신호</div>
+          <span style={S.policyInfoWrap}>
+            <button
+              type="button"
+              aria-label="지역 대응 신호 설명"
+              aria-describedby={isPolicyHelpOpen ? 'policy-help-tooltip' : undefined}
+              onMouseEnter={() => setIsPolicyHelpOpen(true)}
+              onMouseLeave={() => setIsPolicyHelpOpen(false)}
+              onFocus={() => setIsPolicyHelpOpen(true)}
+              onBlur={() => setIsPolicyHelpOpen(false)}
+              style={S.policyInfoButton}
+            >
+              !
+            </button>
+            {isPolicyHelpOpen && (
+              <span id="policy-help-tooltip" role="tooltip" style={S.policyTooltip}>
+                이 내용은 실제 시행 중인 정책이 아니라, 상권 지표를 바탕으로 한 지자체 대응 제안입니다.<br />
+                창업 추천 결과와는 별개의 참고 정보입니다.
+              </span>
+            )}
+          </span>
         </div>
         {policyResult.isLoading && <div style={S.loadingText}>지역 대응 신호를 불러오는 중...</div>}
         {policyResult.error && <div style={S.errorText}>{policyResult.error}</div>}

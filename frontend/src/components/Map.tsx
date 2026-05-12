@@ -7,7 +7,7 @@ import { LightingEffect, AmbientLight, DirectionalLight } from '@deck.gl/core'
 import { MAP_THEME, COMMERCE_COLORS, type CommerceType, type MapTheme } from '../styles/tokens'
 import { use3DView } from '../hooks/use3DView'
 import ThreeDViewControl from './ThreeDViewControl'
-import { createPolygonExtrusionLayer } from '../layers/PolygonExtrusionLayer'
+import { createPolygonExtrusionLayer, createPolygonOutlineLayer } from '../layers/PolygonExtrusionLayer'
 import { createCommerceColumnLayer } from '../layers/CommerceColumnLayer'
 import AdminBoundaryLayer from './AdminBoundaryLayer'
 import CommerceBoundaryLayer from './CommerceBoundaryLayer'
@@ -567,6 +567,7 @@ export default function Map({
     if (isCommerce && threeDView.boundaries && threeDView.boundaries.length > 0) {
       return [
         createPolygonExtrusionLayer(nodes, threeDView.boundaries, threeDView.metric, threeDView.extrudeProgress, handleCommerceHover),
+        createPolygonOutlineLayer(nodes, threeDView.boundaries, threeDView.metric, threeDView.extrudeProgress),
         createCommerceColumnLayer(nodes, threeDView.metric, 1, handleCommerceHover),
       ]
     }

@@ -76,6 +76,21 @@ class TestComputeDegreeMetrics:
         assert (df["degree_centrality"] >= 0.0).all()
         assert (df["degree_centrality"] <= 1.0).all()
 
+    def test_degree_centrality_uses_weighted_strength_not_neighbor_count(self):
+        g = nx.DiGraph()
+        g.add_edge("A", "B", weight=100.0)
+        g.add_edge("A", "C", weight=50.0)
+        g.add_edge("B", "A", weight=20.0)
+        g.add_edge("B", "C", weight=1.0)
+        g.add_edge("C", "A", weight=10.0)
+        g.add_edge("C", "B", weight=1.0)
+
+        df = compute_degree_metrics(g).set_index("commerce_code")
+
+        assert df.loc["A", "degree_centrality"] == pytest.approx(1.0)
+        assert df.loc["B", "degree_centrality"] == pytest.approx(2 / 3)
+        assert df.loc["C", "degree_centrality"] == pytest.approx(1 / 3)
+
     def test_empty_graph_returns_empty_df(self):
         g = nx.DiGraph()
         df = compute_degree_metrics(g)
@@ -93,3 +108,4 @@ class TestComputeDegreeMetrics:
         assert row["in_degree"] == 0
         assert row["out_degree"] == 0
         assert row["net_flow"] == 0
+        assert row["degree_centrality"] == 0

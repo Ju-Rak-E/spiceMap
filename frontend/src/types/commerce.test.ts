@@ -225,5 +225,13 @@ describe('featuresToNodes', () => {
       expect(nodes).toHaveLength(1)
       expect(nodes[0].id).toBe('OK')
     })
+
+    it('maps closure_rate fallback to closeRate', () => {
+      const feature = makeFeature({
+        properties: { ...makeFeature().properties, closure_rate: 2.7 },
+      })
+      const [node] = featuresToNodes([feature])
+      expect(node.closeRate).toBe(2.7)
+    })
   })
 })

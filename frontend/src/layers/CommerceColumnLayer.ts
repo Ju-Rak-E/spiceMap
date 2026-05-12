@@ -7,6 +7,7 @@ import { rampColor, getRampForMetric } from '../utils/colorRamp'
 
 const RADIUS_METERS = 80
 const MAX_ELEVATION_METERS = 600
+const MIN_CLOSE_RATE_ELEVATION_METERS = 80
 
 export interface ColumnDatum {
   id: string
@@ -25,21 +26,33 @@ export function buildCommerceColumnData(
   const clampedProgress = Math.max(0, Math.min(1, progress))
   if (nodes.length === 0) return []
 
-  const values = nodes.map((n) => getMetricValue(n, metric))
+  const renderable = nodes
+    .map((node) => {
+      if (metric === 'closeRate' && node.closeRate == null) return null
+      const value = getMetricValue(node, metric)
+      return Number.isFinite(value) ? { node, value } : null
+    })
+    .filter((item): item is { node: CommerceNode; value: number } => item !== null)
+  if (renderable.length === 0) return []
+
+  const values = renderable.map((item) => item.value)
   const min = Math.min(...values)
   const max = Math.max(...values)
   const ramp = getRampForMetric(metric)
 
-  return nodes.map((node) => {
-    const value = getMetricValue(node, metric)
+  return renderable.map(({ node, value }) => {
     const t = max === min ? 0.5 : (value - min) / (max - min)
     const [r, g, b] = rampColor(t, ramp)
+    const baseElevation = t * MAX_ELEVATION_METERS
+    const elevation = metric === 'closeRate' && value > 0
+      ? Math.max(baseElevation, MIN_CLOSE_RATE_ELEVATION_METERS)
+      : baseElevation
     return {
       id: node.id,
       name: node.name,
       value,
       position: node.coordinates,
-      elevation: t * MAX_ELEVATION_METERS * clampedProgress,
+      elevation: elevation * clampedProgress,
       color: [r, g, b, 230],
     }
   })
