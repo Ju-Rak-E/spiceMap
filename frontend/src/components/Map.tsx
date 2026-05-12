@@ -31,7 +31,8 @@ import { markMapLoadEnd, markMapLoadStart } from '../utils/mapPerformance'
 import { getFlowProgressIncrement } from '../utils/flowAnimation'
 import { PURPOSE_COLORS } from '../utils/flowBezier'
 import { selectBalancedBarriers } from '../utils/barrierSelection'
-import { SEOUL_DISTRICT_CODE_BY_NAME } from '../utils/seoulDistricts'
+import { SEOUL_DISTRICT_CODE_BY_NAME, SEOUL_DISTRICT_NAMES } from '../utils/seoulDistricts'
+import { resolveCommerceDisplayPolicy } from '../utils/commerceDisplayPolicy'
 import {
   buildDistrictCommerceClusters,
   buildDongCommerceClusters,
@@ -89,6 +90,31 @@ function formatFlowVolume(value: number): string {
 
 function getFlowEndpointName(name: string | undefined, id: string): string {
   return name && name.trim().length > 0 ? name : id
+}
+
+function getNodesInViewport(
+  nodes: CommerceNode[],
+  map: maplibregl.Map | null,
+  selectedNode: CommerceNode | null,
+): CommerceNode[] {
+  if (!map) return nodes
+
+  const bounds = map.getBounds()
+  const west = bounds.getWest()
+  const east = bounds.getEast()
+  const south = bounds.getSouth()
+  const north = bounds.getNorth()
+
+  const visibleNodes = nodes.filter((node) => {
+    const [lng, lat] = node.coordinates
+    return lng >= west && lng <= east && lat >= south && lat <= north
+  })
+
+  if (selectedNode && !visibleNodes.some((node) => node.id === selectedNode.id)) {
+    return [selectedNode, ...visibleNodes]
+  }
+
+  return visibleNodes
 }
 
 interface MapProps {
@@ -441,6 +467,22 @@ export default function Map({
 
   const colors = MAP_THEME[theme]
   const zoomStage = getZoomStage(zoom)
+  const displayPolicy = useMemo(
+    () => resolveCommerceDisplayPolicy({
+      zoomStage,
+      selectedDistrictCount: selectedDistrictList.length,
+      totalDistrictCount: SEOUL_DISTRICT_NAMES.length,
+      hasSelectedNode: selectedNode !== null,
+    }),
+    [selectedDistrictList.length, selectedNode, zoomStage],
+  )
+  const commerceLayerNodes = useMemo(() => {
+    void viewportVersion
+    if (displayPolicy.nodeScope === 'viewport') {
+      return getNodesInViewport(nodes, mapInstance, selectedNode)
+    }
+    return nodes
+  }, [displayPolicy.nodeScope, mapInstance, nodes, selectedNode, viewportVersion])
   const selectedFlowKey = selectedNode?.admKey ?? null
   const staticFlowLayer = useMemo(
     () => showFlows ? createODFlowLayer(flows, selectedFlowKey, handleFlowHover) : null,
@@ -506,16 +548,16 @@ export default function Map({
     }
   }, [visibleBarriers])
   const commerceLayers = useMemo(
-    () => nodes.length > 0 && zoomStage === 'candidate' && !is3DActive
+    () => commerceLayerNodes.length > 0 && displayPolicy.showCommerceNodes && !is3DActive
       ? createCommerceNodeLayers(
-          nodes,
+          commerceLayerNodes,
           handleNodeHover,
           handleNodeClick,
           selectedNode?.id ?? null,
           advisorTiers,
         )
       : [],
-    [handleNodeClick, handleNodeHover, nodes, selectedNode?.id, zoomStage, advisorTiers, is3DActive],
+    [commerceLayerNodes, displayPolicy.showCommerceNodes, handleNodeClick, handleNodeHover, selectedNode?.id, advisorTiers, is3DActive],
   )
   const threeDLayers = useMemo(() => {
     if (nodes.length === 0) return []
@@ -642,10 +684,10 @@ export default function Map({
   const districtClusters = useMemo(() => buildDistrictCommerceClusters(nodes), [nodes])
   const dongClusters = useMemo(() => buildDongCommerceClusters(nodes, boundaries), [nodes, boundaries])
   const clusters = useMemo(() => {
-    if (zoomStage === 'district') return districtClusters
-    if (zoomStage === 'dong') return dongClusters
+    if (displayPolicy.clusterLevel === 'district') return districtClusters
+    if (displayPolicy.clusterLevel === 'dong') return dongClusters
     return []
-  }, [districtClusters, dongClusters, zoomStage])
+  }, [displayPolicy.clusterLevel, districtClusters, dongClusters])
   const showClusters = !isViewportInteracting && clusters.length > 0
   const selectedCluster = useMemo(
     () => (
@@ -1148,6 +1190,20 @@ export default function Map({
           >
             {commerceBoundaryStatus}
           </span>
+          {displayPolicy.statusLabel && (
+            <span
+              style={{
+                background: 'rgba(37,99,235,0.18)',
+                border: '1px solid rgba(147,197,253,0.48)',
+                borderRadius: 999,
+                padding: '3px 8px',
+                fontSize: 10,
+                color: '#BFDBFE',
+              }}
+            >
+              {displayPolicy.statusLabel}
+            </span>
+          )}
         </div>
       </div>
 
