@@ -22,6 +22,21 @@ MODULE_A_INPUT_COLUMNS = ["origin_adm_cd", "dest_adm_cd", "trip_count"]
 _YEAR_QUARTER_RE = re.compile(r"^\d{4}Q[1-4]$")
 
 
+def _weighted_strength_percentile(strength_by_node: dict[str, float]) -> dict[str, float]:
+    """Return 0..1 percentile ranks for weighted in+out flow strength."""
+    if not strength_by_node:
+        return {}
+
+    strength = pd.Series(strength_by_node, dtype=float)
+    result = pd.Series(0.0, index=strength.index, dtype=float)
+    positive = strength[strength > 0.0]
+    if positive.empty:
+        return result.to_dict()
+
+    result.loc[positive.index] = positive.rank(method="average", pct=True)
+    return result.to_dict()
+
+
 def _validate_year_quarter(value: str) -> None:
     if not _YEAR_QUARTER_RE.fullmatch(value):
         raise ValueError(f"잘못된 year_quarter 포맷: {value!r} (예: '2026Q1')")
@@ -139,11 +154,14 @@ def compute_degree_metrics(g: nx.DiGraph) -> pd.DataFrame:
 
     in_deg = dict(g.in_degree(weight="weight"))
     out_deg = dict(g.out_degree(weight="weight"))
-    # DiGraph의 nx.degree_centrality는 in+out 합을 정규화해 최대 2까지 나올 수 있으므로
-    # 무방향 변환본으로 [0, 1] 범위의 연결도 지표를 계산한다.
-    centrality = nx.degree_centrality(g.to_undirected(as_view=True))
-
+    # Use weighted in+out strength so dense tiny-flow graphs do not saturate at 1.0.
     nodes = list(g.nodes())
+    strength = {
+        n: float(in_deg.get(n, 0.0) + out_deg.get(n, 0.0))
+        for n in nodes
+    }
+    centrality = _weighted_strength_percentile(strength)
+
     return pd.DataFrame(
         {
             "commerce_code": nodes,

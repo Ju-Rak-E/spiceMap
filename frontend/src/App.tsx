@@ -22,6 +22,7 @@ const STRENGTH_TO_TOP_N: Record<number, number> = {
 const BOUNDARY_OPACITY = 0.08
 const SCOPE_LABEL = '서울 전역 창업 분석'
 const DEFAULT_QUARTER = '2025Q4'
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 const OD_FLOW_ENABLED = true
 const CONTROL_PANEL_DEFAULT_WIDTH = 340
 const CONTROL_PANEL_MIN_WIDTH = 292
@@ -166,7 +167,7 @@ export default function App() {
           break
         }
         case '3': {
-          const btn = document.querySelector<HTMLButtonElement>('[data-testid="hero-csv-export"]')
+          const btn = document.querySelector<HTMLButtonElement>('[data-testid="download-csv"]')
           btn?.click()
           break
         }
@@ -194,6 +195,29 @@ export default function App() {
       return next
     })
   }, [])
+
+  const handleDownloadCsv = useCallback(async () => {
+    const params = new URLSearchParams({
+      quarter: selectedQuarter,
+      min_priority: '0',
+    })
+    const response = await fetch(`${API_BASE}/api/export/csv?${params.toString()}`)
+    if (!response.ok) {
+      throw new Error(`CSV download failed: HTTP ${response.status}`)
+    }
+
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const disposition = response.headers.get('Content-Disposition')
+    const filename = disposition?.match(/filename="?([^"]+)"?/)?.[1] ?? `spicemap_${selectedQuarter}.csv`
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }, [selectedQuarter])
   const handleSelectAllDistricts = useCallback(() => {
     setSelectedDistricts(new Set(SEOUL_DISTRICT_NAMES))
   }, [])
@@ -345,6 +369,8 @@ export default function App() {
           onAdvisorAnalyze={advisor.analyze}
           onAdvisorReset={advisor.reset}
           onSelectAdvisorCommerce={handleSelectAdvisorCommerce}
+          onOpenValidationReport={() => setView('validation')}
+          onDownloadCsv={handleDownloadCsv}
           panelWidth={controlPanelWidth}
         />
       </div>

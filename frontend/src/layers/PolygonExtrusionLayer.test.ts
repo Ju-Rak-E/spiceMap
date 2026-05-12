@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildPolygonExtrusionData, createPolygonExtrusionLayer } from './PolygonExtrusionLayer'
+import { buildPolygonExtrusionData, createPolygonExtrusionLayer, createPolygonOutlineLayer } from './PolygonExtrusionLayer'
 import type { CommerceNode } from '../types/commerce'
 import type { BoundaryFeature } from '../hooks/use3DView'
 
@@ -64,6 +64,16 @@ describe('buildPolygonExtrusionData', () => {
     expect(high.name).toBe('강남역')
     expect(high.value).toBe(80)
   })
+
+  it('renders positive closeRate polygons with visible minimum height', () => {
+    const closeNodes: CommerceNode[] = [
+      { ...nodes[0], closeRate: 2.1 },
+      { ...nodes[1], closeRate: 3.0 },
+    ]
+    const data = buildPolygonExtrusionData(closeNodes, boundaries, 'closeRate')
+    const low = data.find((d) => d.id === 'gc_001')!
+    expect(low.elevation).toBeGreaterThan(0)
+  })
 })
 
 describe('createPolygonExtrusionLayer', () => {
@@ -79,10 +89,19 @@ describe('createPolygonExtrusionLayer', () => {
     expect(layer.props.onHover).toBe(onHover)
   })
 
-  it('keeps polygon stroke width in pixels', () => {
+  it('renders extruded polygon fill without built-in stroke', () => {
     const layer = createPolygonExtrusionLayer(nodes, boundaries, 'griScore')
-    expect(layer.props.stroked).toBe(true)
-    expect(layer.props.lineWidthUnits).toBe('pixels')
-    expect(layer.props.getLineWidth).toBe(1.5)
+    expect(layer.props.stroked).toBe(false)
+  })
+
+  it('draws stable polygon outlines as a separate path layer', () => {
+    const layer = createPolygonOutlineLayer(nodes, boundaries, 'griScore')
+    expect(layer.id).toBe('commerce-polygon-outline')
+    expect(layer.props.widthUnits).toBe('pixels')
+    expect(layer.props.jointRounded).toBe(true)
+    expect(layer.props.parameters).toMatchObject({
+      depthCompare: 'always',
+      depthWriteEnabled: false,
+    })
   })
 })

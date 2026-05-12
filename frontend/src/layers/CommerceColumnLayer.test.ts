@@ -145,4 +145,14 @@ describe('buildCommerceColumnData', () => {
     const high = data.find((d) => d.id === 'gc_001')!
     expect(high.value).toBe(80)
   })
+
+  it('renders positive closeRate with visible minimum height', () => {
+    const closeNodes: CommerceNode[] = [
+      { ...nodes[0], closeRate: 2.1 },
+      { ...nodes[1], closeRate: 3.0 },
+    ]
+    const data = buildCommerceColumnData(closeNodes, 'closeRate')
+    const low = data.find((d) => d.id === 'gc_001')!
+    expect(low.elevation).toBeGreaterThan(0)
+  })
 })

@@ -11,13 +11,13 @@
 
 | 테이블 | 데이터셋 ID | 데이터셋 명 | 출처 |
 |--------|-----------|-----------|------|
-| `admin_boundary` | **OA-22160** | 서울시 상권분석서비스 (영역-행정동) | 서울 열린데이터광장 |
-| `commerce_boundary` | **OA-15560** | 서울시 상권분석서비스 (영역-상권) | 서울 열린데이터광장 |
-| `od_flows` | **OA-22300** | 수도권 광역 OD (생활이동) 원본 | 공공데이터포털 |
+| `admin_boundary` | **OA-22160** | 서울시 상권분석서비스(영역-행정동) | 서울 열린데이터광장 |
+| `commerce_boundary` | **OA-15560** | 서울시 상권분석서비스(영역-상권) | 서울 열린데이터광장 |
+| `od_flows` | **OA-22300** | 서울특별시_수도권 생활이동 (출발_도착지 기준) | 공공데이터포털 |
 | `od_flows_aggregated` | - | OD 분기 집계본 | 내부 집계 산출 |
-| `living_population` | **OA-14991** | 서울 생활인구 (SPOP_LOCAL_RESD_DONG) | 공공데이터포털 |
-| `store_info` | **OA-15577** | 상권분석 점포정보 (VwsmSignguStorW) | 공공데이터포털 |
-| `commerce_sales` | **OA-15572** | 상권분석 추정매출 (VwsmTrdarSelngQq) | 공공데이터포털 |
+| `living_population` | **OA-14991** | 행정동 단위 서울 생활인구(내국인) | 서울 열린데이터광장 |
+| `store_info` | **OA-22173** | 서울시 상권분석서비스(점포-자치구) | 서울 열린데이터광장 |
+| `commerce_sales` | **OA-15572** | 서울시 상권분석서비스(추정매출-상권) | 서울 열린데이터광장 |
 | `commerce_analysis` | - | GRI, 유형, 우선순위, 중심성, 폐업률 캐시 | 내부 분석 산출 |
 | `adm_comm_mapping` | - | 행정동-상권 공간 교차 매핑 | `spatial_join.py` 산출 |
 | `flow_barriers` | - | 흐름 단절 구간 | 내부 분석 산출 |

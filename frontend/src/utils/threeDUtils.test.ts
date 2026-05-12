@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeElevation, getMetricValue, easeOutCubic, interpolateProgress } from './threeDUtils'
+import { normalizeElevation, getMetricValue, easeOutCubic, interpolateProgress, formatMetricValue } from './threeDUtils'
 import type { CommerceNode } from '../types/commerce'
 
 const baseNode: CommerceNode = {
@@ -74,5 +74,11 @@ describe('interpolateProgress', () => {
   })
   it('duration=0 → 즉시 target 반환 (0 나눗셈 방지)', () => {
     expect(interpolateProgress(0, 1, 0, 0)).toBe(1)
+  })
+})
+
+describe('formatMetricValue', () => {
+  it('degreeCentrality keeps enough precision near 1.0', () => {
+    expect(formatMetricValue(0.995, 'degreeCentrality')).toBe('0.995')
   })
 })

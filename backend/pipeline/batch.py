@@ -105,7 +105,7 @@ def run_living_pop(year: int, month: int, dry_run: bool) -> None:
 # ── 분기 수집 ─────────────────────────────────────────────────────────────────
 
 def run_store_info(quarter: str, dry_run: bool) -> None:
-    """자치구별 점포정보 분기 수집 (OA-15577)"""
+    """자치구별 점포정보 분기 수집 (OA-22173)"""
     print(f"[점포정보] {quarter} 수집")
     if dry_run:
         return

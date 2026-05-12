@@ -59,6 +59,6 @@ export function formatMetricValue(value: number, metric: HeightMetric): string {
     case 'closeRate':
       return `${value.toFixed(1)}%`
     case 'degreeCentrality':
-      return value.toFixed(2)
+      return value.toFixed(3)
   }
 }

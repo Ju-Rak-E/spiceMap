@@ -2,7 +2,6 @@ import { useMemo, useState, type CSSProperties } from 'react'
 import type { FlowPurpose, FlowStats, PurposeVolumeMap } from '../hooks/useFlowData'
 import type { CommerceNode } from '../types/commerce'
 import { MAP_THEME } from '../styles/tokens'
-import { formatQuarter } from '../utils/quarter'
 import type { QuarterKpiDelta } from '../utils/quarterDelta'
 import type { AdvisorResult } from '../hooks/useStartupAdvisor'
 import type { FounderFilterState, FounderStep } from '../utils/founderUx'
@@ -60,6 +59,8 @@ interface FlowControlPanelProps {
   onAdvisorAnalyze: (industry: string, districts?: string[]) => void
   onAdvisorReset: () => void
   onSelectAdvisorCommerce: (commCd: string) => void
+  onOpenValidationReport?: () => void
+  onDownloadCsv?: () => void
   panelWidth?: number
 }
 
@@ -102,7 +103,7 @@ const S = {
     color: COLORS.mutedText,
     lineHeight: 1.45,
   } satisfies CSSProperties,
-  statusRow: {
+  actionRow: {
     display: 'flex',
     gap: 8,
     flexWrap: 'wrap',
@@ -115,6 +116,26 @@ const S = {
     padding: '3px 8px',
     fontSize: 10,
     color: COLORS.secondaryText,
+  } satisfies CSSProperties,
+  validationButton: {
+    background: 'rgba(123,208,141,0.14)',
+    border: '1px solid rgba(123,208,141,0.45)',
+    borderRadius: 999,
+    padding: '3px 9px',
+    fontSize: 10,
+    color: '#D7F5DC',
+    fontWeight: 750,
+    cursor: 'pointer',
+  } satisfies CSSProperties,
+  csvButton: {
+    background: 'rgba(66,165,245,0.14)',
+    border: '1px solid rgba(66,165,245,0.45)',
+    borderRadius: 999,
+    padding: '3px 9px',
+    fontSize: 10,
+    color: '#D6ECFF',
+    fontWeight: 750,
+    cursor: 'pointer',
   } satisfies CSSProperties,
   stepTabs: {
     display: 'grid',
@@ -144,8 +165,6 @@ export default function FlowControlPanel({
   quarters,
   onQuarterChange,
   topN,
-  scopeLabel,
-  usingMockData,
   selectedNode,
   stats,
   purposeTotals,
@@ -175,6 +194,8 @@ export default function FlowControlPanel({
   onAdvisorAnalyze,
   onAdvisorReset,
   onSelectAdvisorCommerce,
+  onOpenValidationReport,
+  onDownloadCsv,
   panelWidth,
 }: FlowControlPanelProps) {
   const [selectedAdvisorIndustry, setSelectedAdvisorIndustry] = useState<string>('')
@@ -198,12 +219,27 @@ export default function FlowControlPanel({
         <div style={S.subtitle}>
           업종과 관심 지역을 먼저 정하고, 추천 상권의 기회·위험 근거를 순서대로 확인합니다.
         </div>
-        <div style={S.statusRow}>
-          <span style={S.statusTag}>{scopeLabel}</span>
-          <span style={S.statusTag}>{formatQuarter(filterState.quarter)}</span>
-          <span style={S.statusTag}>{usingMockData ? '캐시 데이터' : 'API 연결'}</span>
-          {filterState.industry && <span style={S.statusTag}>업종: {filterState.industry}</span>}
-          {selectedNode && <span style={S.statusTag}>선택: {selectedNode.name}</span>}
+        <div style={S.actionRow}>
+          {onOpenValidationReport && (
+            <button
+              type="button"
+              style={S.validationButton}
+              onClick={onOpenValidationReport}
+              data-testid="open-validation-report"
+            >
+              검증 리포트
+            </button>
+          )}
+          {onDownloadCsv && (
+            <button
+              type="button"
+              style={S.csvButton}
+              onClick={onDownloadCsv}
+              data-testid="download-csv"
+            >
+              CSV 다운로드
+            </button>
+          )}
         </div>
       </div>
 

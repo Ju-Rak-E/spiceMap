@@ -23,7 +23,7 @@ class TestDataSources:
         sources = client.get("/api/data-sources").json()["sources"]
         assert sources["od_flows"]["dataset_id"] == "OA-22300"
         assert sources["living_population"]["dataset_id"] == "OA-14991"
-        assert sources["store_info"]["dataset_id"] == "OA-15577"
+        assert sources["store_info"]["dataset_id"] == "OA-22173"
         assert sources["commerce_sales"]["dataset_id"] == "OA-15572"
 
     def test_each_source_has_fields(self):
