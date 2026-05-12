@@ -6,7 +6,6 @@ import { getControlPoint, quadBezier, PURPOSE_COLORS } from '../utils/flowBezier
 const SEGMENTS = 32
 const MIN_WIDTH = 1.5
 const MAX_UNSELECTED_WIDTH = 8
-const MAX_VOLUME = 10000
 const FLOW_OVERLAY_PARAMETERS = {
   depthCompare: 'always',
   depthWriteEnabled: false,
@@ -20,8 +19,16 @@ export function getFlowAlpha(flow: ODFlow, selectedId: string | null): number {
   return 20
 }
 
-export function getFlowWidth(volume: number, selectedId: string | null, flow: ODFlow): number {
-  const ratio = Math.min(volume / MAX_VOLUME, 1)
+// maxVolume: 현재 렌더링 중인 flows 중 최대값. 단일 목적 선택 등으로
+// 절대값이 작아져도 라인이 사라지지 않도록 상대 정규화.
+export function getFlowWidth(
+  volume: number,
+  maxVolume: number,
+  selectedId: string | null,
+  flow: ODFlow,
+): number {
+  const denom = Math.max(maxVolume, 1)
+  const ratio = Math.min(volume / denom, 1)
   const base = MIN_WIDTH + ratio * (MAX_UNSELECTED_WIDTH - MIN_WIDTH)
   if (selectedId !== null && (flow.sourceId === selectedId || flow.targetId === selectedId)) {
     return Math.min(base * 1.5, MAX_UNSELECTED_WIDTH * 1.5)
@@ -36,7 +43,7 @@ export interface FlowPath {
   width: number
 }
 
-function buildFlowPath(flow: ODFlow, selectedId: string | null): FlowPath {
+function buildFlowPath(flow: ODFlow, maxVolume: number, selectedId: string | null): FlowPath {
   const ctrl = getControlPoint(flow.sourceCoord, flow.targetCoord)
   const path = Array.from({ length: SEGMENTS + 1 }, (_, i) =>
     quadBezier(flow.sourceCoord, ctrl, flow.targetCoord, i / SEGMENTS),
@@ -46,7 +53,7 @@ function buildFlowPath(flow: ODFlow, selectedId: string | null): FlowPath {
     flow,
     path,
     color: [r, g, b, getFlowAlpha(flow, selectedId)],
-    width: getFlowWidth(flow.volume, selectedId, flow),
+    width: getFlowWidth(flow.volume, maxVolume, selectedId, flow),
   }
 }
 
@@ -55,7 +62,8 @@ export function createODFlowLayer(
   selectedNodeId: string | null = null,
   onHover?: (info: PickingInfo<FlowPath>) => void,
 ): PathLayer<FlowPath> {
-  const paths = flows.map(f => buildFlowPath(f, selectedNodeId))
+  const maxVolume = flows.reduce((acc, f) => Math.max(acc, f.volume), 0)
+  const paths = flows.map(f => buildFlowPath(f, maxVolume, selectedNodeId))
   return new PathLayer<FlowPath>({
     id: 'od-flows',
     data: paths,

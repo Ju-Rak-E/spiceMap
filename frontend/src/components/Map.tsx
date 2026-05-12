@@ -240,6 +240,7 @@ export default function Map({
   const [boundaries, setBoundaries] = useState<AdminBoundaryCollection | null>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const [detailPanelWidth, setDetailPanelWidth] = useState(DETAIL_PANEL_DEFAULT_WIDTH)
+  const [barrierPanelOffset, setBarrierPanelOffset] = useState({ x: 0, y: 0 })
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null)
   const [lastCluster, setLastCluster] = useState<DongCommerceCluster | null>(null)
   const detailPanelOpen = selectedNode !== null && closedDetailNodeId !== selectedNode.id
@@ -682,6 +683,41 @@ export default function Map({
     window.addEventListener('pointercancel', handleUp)
   }, [containerSize.width, detailPanelWidth])
 
+  const handleBarrierPanelDragStart = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
+
+    const startX = event.clientX
+    const startY = event.clientY
+    const startOffsetX = barrierPanelOffset.x
+    const startOffsetY = barrierPanelOffset.y
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+
+    document.body.style.cursor = 'grabbing'
+    document.body.style.userSelect = 'none'
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      setBarrierPanelOffset({
+        x: startOffsetX + moveEvent.clientX - startX,
+        y: startOffsetY + moveEvent.clientY - startY,
+      })
+    }
+
+    const handleUp = () => {
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      window.removeEventListener('pointercancel', handleUp)
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleUp)
+  }, [barrierPanelOffset.x, barrierPanelOffset.y])
+
   const districtClusters = useMemo(() => buildDistrictCommerceClusters(nodes), [nodes])
   const dongClusters = useMemo(() => buildDongCommerceClusters(nodes, boundaries), [nodes, boundaries])
   const clusters = useMemo(() => {
@@ -929,17 +965,18 @@ export default function Map({
       : selectedCluster
         ? CLUSTER_PANEL_WIDTH
         : 0
-    const panelLeft = 16 + (leftPanelWidth > 0 ? leftPanelWidth + LEFT_PANEL_GAP : 0)
+    const baseLeft = 16 + (leftPanelWidth > 0 ? leftPanelWidth + LEFT_PANEL_GAP : 0)
+    const panelLeft = baseLeft + barrierPanelOffset.x
+    const panelTop = 64 + barrierPanelOffset.y
 
     return (
       <div
         style={{
           position: 'absolute',
           left: panelLeft,
-          top: 64,
+          top: panelTop,
           zIndex: 17,
           width: BARRIER_PANEL_WIDTH,
-          maxWidth: `calc(100% - ${panelLeft + 16}px)`,
           background: 'rgba(16,22,29,0.95)',
           border: `1px solid ${colors.panelBorder}`,
           borderRadius: 8,
@@ -950,7 +987,18 @@ export default function Map({
           pointerEvents: 'auto',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+        <div
+          onPointerDown={handleBarrierPanelDragStart}
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 10,
+            cursor: 'grab',
+            touchAction: 'none',
+            userSelect: 'none',
+          }}
+        >
           <div>
             <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.25 }}>
               단절 위험 감지

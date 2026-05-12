@@ -2,7 +2,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import ThreeDViewControl from './ThreeDViewControl'
-import { getMetricPictogramStats } from '../utils/metricPictogram'
 import type { CommerceNode } from '../types/commerce'
 
 afterEach(cleanup)
@@ -63,7 +62,7 @@ describe('ThreeDViewControl', () => {
   it('mode=commerce 시에도 지표 드롭다운 표시', () => {
     render(<ThreeDViewControl {...defaultProps} mode="commerce" />)
     expect(screen.getByRole('combobox')).toBeTruthy()
-    expect(screen.getByTestId('metric-pictogram-netFlow')).toBeTruthy()
+    expect(screen.getByTestId('metric-option-netFlow')).toBeTruthy()
   })
 
   it('지표 변경 → onMetricChange 호출', () => {
@@ -73,18 +72,14 @@ describe('ThreeDViewControl', () => {
     expect(onMetricChange).toHaveBeenCalledWith('netFlow')
   })
 
-  it('유입량이 클수록 사람 픽토그램이 커지고 많아진다', () => {
-    const high = getMetricPictogramStats(nodes, 'netFlow')
-    const low = getMetricPictogramStats([{ ...nodes[0], netFlow: 0 }], 'netFlow')
-    expect(high.count).toBeGreaterThan(low.count)
-    expect(high.size).toBeGreaterThan(low.size)
-  })
-
-  it('카드 픽토그램 카운트는 1~3 범위로 제한된다', () => {
-    const high = getMetricPictogramStats(nodes, 'netFlow')
-    const low = getMetricPictogramStats(undefined, 'netFlow')
-    expect(high.count).toBeLessThanOrEqual(3)
-    expect(high.count).toBeGreaterThanOrEqual(1)
-    expect(low.count).toBeGreaterThanOrEqual(1)
+  it('지표 버튼은 텍스트 라벨만 표시한다', () => {
+    render(<ThreeDViewControl {...defaultProps} mode="commerce" />)
+    expect(screen.getByRole('button', { name: '상권위험도' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '순유입인구' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '폐업률' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '연결중심성' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '!' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '사람' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '연결' })).toBeNull()
   })
 })

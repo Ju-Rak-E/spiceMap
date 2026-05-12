@@ -163,7 +163,7 @@ const S = {
     justifyContent: 'space-between',
     gap: 10,
   } satisfies CSSProperties,
-  compactButton: (active = false): CSSProperties => ({
+  compactButton: (active = false, disabled = false): CSSProperties => ({
     padding: '7px 9px',
     borderRadius: 8,
     border: active ? '1.5px solid #42A5F5' : `1px solid ${COLORS.panelBorder}`,
@@ -171,7 +171,8 @@ const S = {
     color: active ? '#BBDEFB' : COLORS.secondaryText,
     fontSize: 12,
     fontWeight: active ? 750 : 600,
-    cursor: 'pointer',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.4 : 1,
     textAlign: 'center',
   }),
   expandButton: {
@@ -662,7 +663,7 @@ export function AdvancedOptionsSection({
                   <button
                     key={option.value}
                     type="button"
-                    style={S.compactButton(active)}
+                    style={S.compactButton(active, disabled)}
                     disabled={disabled}
                     onClick={() => {
                       if (!disabled) onPurposeChange(active ? null : option.value)

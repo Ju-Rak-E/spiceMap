@@ -27,6 +27,16 @@ const buildHighlightFilter = (
   ['literal', normalizeDistrictFilter(districtFilter)],
 ])
 
+// 선택된 자치구가 있으면 base fill/line에도 동일 필터를 적용해 다른 자치구를 숨긴다.
+// 선택 0개일 때는 null을 반환해 필터를 제거 → 서울 전체 폴리곤이 그대로 보인다.
+const buildScopedFilter = (
+  districtFilter: DistrictFilter,
+): maplibregl.FilterSpecification | null => {
+  const districts = normalizeDistrictFilter(districtFilter)
+  if (districts.length === 0) return null
+  return ['in', ['get', 'gu_code'], ['literal', districts]]
+}
+
 export class BoundaryLayerManager {
   private readonly map: maplibregl.Map
   private theme: MapTheme
@@ -108,12 +118,14 @@ export class BoundaryLayerManager {
 
   private addLayerSet() {
     const paint = getBoundaryPaintConfig(this.theme)
+    const scopedFilter = buildScopedFilter(this.districtFilter)
 
     const fillColor = MAP_THEME[this.theme].boundaryFill
     this.map.addLayer({
       id: FILL_LAYER_ID,
       type: 'fill',
       source: SOURCE_ID,
+      ...(scopedFilter ? { filter: scopedFilter } : {}),
       paint: {
         'fill-color': fillColor,
         'fill-opacity': getFillOpacityZoomExpr(this.fillOpacity),
@@ -140,6 +152,7 @@ export class BoundaryLayerManager {
       id: LINE_LAYER_ID,
       type: 'line',
       source: SOURCE_ID,
+      ...(scopedFilter ? { filter: scopedFilter } : {}),
       layout: BOUNDARY_LINE_LAYOUT,
       paint: paint.line,
     })
@@ -192,12 +205,19 @@ export class BoundaryLayerManager {
   }
 
   private applyHighlightFilter() {
-    const filter = buildHighlightFilter(this.districtFilter)
+    const highlightFilter = buildHighlightFilter(this.districtFilter)
+    const scopedFilter = buildScopedFilter(this.districtFilter)
+    if (this.map.getLayer(FILL_LAYER_ID)) {
+      this.map.setFilter(FILL_LAYER_ID, scopedFilter)
+    }
+    if (this.map.getLayer(LINE_LAYER_ID)) {
+      this.map.setFilter(LINE_LAYER_ID, scopedFilter)
+    }
     if (this.map.getLayer(HIGHLIGHT_FILL_LAYER_ID)) {
-      this.map.setFilter(HIGHLIGHT_FILL_LAYER_ID, filter)
+      this.map.setFilter(HIGHLIGHT_FILL_LAYER_ID, highlightFilter)
     }
     if (this.map.getLayer(HIGHLIGHT_LAYER_ID)) {
-      this.map.setFilter(HIGHLIGHT_LAYER_ID, filter)
+      this.map.setFilter(HIGHLIGHT_LAYER_ID, highlightFilter)
     }
   }
 

@@ -194,6 +194,66 @@ describe('BoundaryLayerManager', () => {
     expect(map.setFilter).toHaveBeenCalledWith(HIGHLIGHT_LAYER_ID, expectedFilter)
   })
 
+  it('선택된 자치구가 있으면 base fill/line에 scoped filter를 적용한다', () => {
+    const { map } = createMockMap(true)
+
+    const manager = new BoundaryLayerManager(map as never, 'light')
+    map.setFilter.mockClear()
+
+    manager.setDistrictFilter(['1123', '1121'])
+
+    const expectedScoped = [
+      'in',
+      ['get', 'gu_code'],
+      ['literal', ['1123', '1121']],
+    ]
+    expect(map.setFilter).toHaveBeenCalledWith(FILL_LAYER_ID, expectedScoped)
+    expect(map.setFilter).toHaveBeenCalledWith(LINE_LAYER_ID, expectedScoped)
+  })
+
+  it('선택 0개일 때 base fill/line의 filter를 null로 해제해 서울 전체를 그린다', () => {
+    const { map } = createMockMap(true)
+
+    const manager = new BoundaryLayerManager(map as never, 'light', ['1123'])
+    map.setFilter.mockClear()
+
+    manager.setDistrictFilter([])
+
+    expect(map.setFilter).toHaveBeenCalledWith(FILL_LAYER_ID, null)
+    expect(map.setFilter).toHaveBeenCalledWith(LINE_LAYER_ID, null)
+  })
+
+  it('재생성 시 base fill/line addLayer 호출에 scoped filter가 포함된다', () => {
+    const { map, emit } = createMockMap(false)
+
+    const manager = new BoundaryLayerManager(map as never, 'light')
+    manager.setDistrictFilter(['1123'])
+
+    map.isStyleLoaded.mockReturnValue(true)
+    emit('styledata')
+
+    const fillCall = map.addLayer.mock.calls.find(([layer]) => layer.id === FILL_LAYER_ID)
+    const lineCall = map.addLayer.mock.calls.find(([layer]) => layer.id === LINE_LAYER_ID)
+    const expectedScoped = [
+      'in',
+      ['get', 'gu_code'],
+      ['literal', ['1123']],
+    ]
+    expect(fillCall?.[0].filter).toEqual(expectedScoped)
+    expect(lineCall?.[0].filter).toEqual(expectedScoped)
+  })
+
+  it('선택 0개로 생성되면 base fill/line addLayer 호출에 filter가 없다', () => {
+    const { map } = createMockMap(true)
+
+    new BoundaryLayerManager(map as never, 'light')
+
+    const fillCall = map.addLayer.mock.calls.find(([layer]) => layer.id === FILL_LAYER_ID)
+    const lineCall = map.addLayer.mock.calls.find(([layer]) => layer.id === LINE_LAYER_ID)
+    expect(fillCall?.[0].filter).toBeUndefined()
+    expect(lineCall?.[0].filter).toBeUndefined()
+  })
+
   it('does not recreate layers after destroy', () => {
     const { map, emit, resetStyle } = createMockMap(true)
 
