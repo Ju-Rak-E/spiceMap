@@ -197,10 +197,20 @@ export default function App() {
   }, [])
 
   const handleDownloadCsv = useCallback(async () => {
-    const params = new URLSearchParams({
-      quarter: selectedQuarter,
-      min_priority: '0',
-    })
+    const params = new URLSearchParams()
+    params.set('quarter', selectedQuarter)
+    params.set('min_priority', '0')
+
+    if (selectedDistricts.size < SEOUL_DISTRICT_NAMES.length) {
+      for (const gu of selectedDistricts) {
+        params.append('gu', gu)
+      }
+    }
+
+    if (advisor.result?.industry_nm) {
+      params.set('industry_nm', advisor.result.industry_nm)
+    }
+
     const response = await fetch(`${API_BASE}/api/export/csv?${params.toString()}`)
     if (!response.ok) {
       throw new Error(`CSV download failed: HTTP ${response.status}`)
@@ -210,14 +220,17 @@ export default function App() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     const disposition = response.headers.get('Content-Disposition')
-    const filename = disposition?.match(/filename="?([^"]+)"?/)?.[1] ?? `spicemap_${selectedQuarter}.csv`
+    const rfc5987 = disposition?.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+    const filename = rfc5987
+      ? decodeURIComponent(rfc5987)
+      : disposition?.match(/filename="?([^";]+)"?/)?.[1] ?? `spicemap_${selectedQuarter}.csv`
     link.href = url
     link.download = filename
     document.body.appendChild(link)
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
-  }, [selectedQuarter])
+  }, [selectedQuarter, selectedDistricts, advisor.result])
   const handleSelectAllDistricts = useCallback(() => {
     setSelectedDistricts(new Set(SEOUL_DISTRICT_NAMES))
   }, [])
