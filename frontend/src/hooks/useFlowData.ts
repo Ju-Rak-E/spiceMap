@@ -95,13 +95,6 @@ const PURPOSE_BY_CODE: Record<number, FlowPurpose> = {
   3: '쇼핑',
   4: '여가',
 }
-const PURPOSE_TO_CODE: Record<FlowPurpose, number> = {
-  출근: 1,
-  귀가: 2,
-  쇼핑: 3,
-  여가: 4,
-}
-
 function normalizePurpose(value: BackendFlowItem['move_purpose']): FlowPurpose {
   if (typeof value === 'string' && VALID_PURPOSES.has(value)) return value as FlowPurpose
   if (typeof value === 'number') return PURPOSE_BY_CODE[value] ?? '출근'
@@ -199,13 +192,12 @@ async function fetchMockFlows(): Promise<ODFlow[]> {
   return mockRes.json() as Promise<ODFlow[]>
 }
 
-async function fetchFlows(quarter: string, purpose?: FlowPurpose | null): Promise<ODFlow[]> {
+async function fetchFlows(quarter: string): Promise<ODFlow[]> {
   if (isDemoMode()) {
     return fetchMockFlows()
   }
 
   const params = new URLSearchParams({ quarter, limit: '500' })
-  if (purpose) params.set('purpose', String(PURPOSE_TO_CODE[purpose]))
   const res = await fetch(`${BASE_URL}/api/od/flows?${params.toString()}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = await res.json()
@@ -221,7 +213,6 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const quarter = filters.quarter ?? '2025Q4'
-  const purpose = filters.purpose ?? null
   const enabled = filters.enabled ?? true
 
   useEffect(() => {
@@ -238,7 +229,7 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
       setIsLoading(true)
       setError(null)
     })
-    fetchFlows(quarter, purpose)
+    fetchFlows(quarter)
       .then(data => {
         setAllFlows(data)
         setIsLoading(false)
@@ -248,7 +239,7 @@ export function useFlowData(filters: FlowFilters = {}): UseFlowDataReturn {
         setError('흐름 데이터를 불러오지 못했습니다')
         setIsLoading(false)
       })
-  }, [enabled, quarter, purpose])
+  }, [enabled, quarter])
 
   const flows = filterFlows(allFlows, filters)
   const stats = computeStats(flows)

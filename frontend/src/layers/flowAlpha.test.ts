@@ -30,14 +30,23 @@ describe('getFlowAlpha', () => {
 
 describe('getFlowWidth', () => {
   it('selectedId가 null이면 volume 비례 폭을 반환한다', () => {
-    const base = getFlowWidth(5000, null, makeFlow('A', 'B'))
+    const base = getFlowWidth(5000, 10000, null, makeFlow('A', 'B'))
     expect(base).toBeGreaterThan(1.5)
     expect(base).toBeLessThan(8)
   })
   it('관련 흐름 폭은 기본값의 1.5배이다', () => {
-    const base = getFlowWidth(5000, null, makeFlow('A', 'B'))
-    const highlighted = getFlowWidth(5000, 'A', makeFlow('A', 'B'))
+    const base = getFlowWidth(5000, 10000, null, makeFlow('A', 'B'))
+    const highlighted = getFlowWidth(5000, 10000, 'A', makeFlow('A', 'B'))
     expect(highlighted).toBeCloseTo(base * 1.5, 1)
+  })
+  it('단일 목적만 남아 절대값이 작아도 가시 폭을 확보한다', () => {
+    const lowMax = getFlowWidth(200, 230, null, makeFlow('A', 'B'))
+    expect(lowMax).toBeGreaterThan(6)
+  })
+  it('maxVolume이 0이어도 NaN/Infinity 없이 MIN_WIDTH를 반환한다', () => {
+    const w = getFlowWidth(0, 0, null, makeFlow('A', 'B'))
+    expect(Number.isFinite(w)).toBe(true)
+    expect(w).toBeCloseTo(1.5, 5)
   })
 })
 
