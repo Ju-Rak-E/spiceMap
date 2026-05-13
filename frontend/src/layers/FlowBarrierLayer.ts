@@ -1,6 +1,7 @@
 import { PathLayer } from '@deck.gl/layers'
 import type { PickingInfo } from '@deck.gl/core'
 import type { Barrier } from '../hooks/useBarriers'
+import { buildNavRouteWaypoints } from '../utils/barrierRouteAnimation'
 
 const MIN_WIDTH = 5
 const MAX_WIDTH = 12
@@ -32,43 +33,36 @@ export function getBarrierWidth(volume: number): number {
   return MIN_WIDTH + ratio * (MAX_WIDTH - MIN_WIDTH)
 }
 
-function fitRouteTemplateToBarrier(
-  template: [number, number][],
-  barrier: Barrier,
-): [number, number][] | null {
-  if (template.length < 2) return null
+// Minimum lateral deviation (degrees) for a path to be considered curved.
+// ORS road-following routes for inter-district barriers deviate far more than this.
+// Paths below this threshold are treated as straight and replaced with nav waypoints.
+const MIN_CURVE_DEVIATION_DEG = 0.001
 
-  const [templateStartLng, templateStartLat] = template[0]
-  const [templateEndLng, templateEndLat] = template[template.length - 1]
-  const templateDx = templateEndLng - templateStartLng
-  const templateDy = templateEndLat - templateStartLat
-  const templateLenSq = templateDx * templateDx + templateDy * templateDy
-  if (templateLenSq <= Number.EPSILON) return null
+function hasUsableSpan(start: [number, number], end: [number, number]): boolean {
+  const dx = end[0] - start[0]
+  const dy = end[1] - start[1]
+  return dx * dx + dy * dy > 1e-12
+}
 
-  const [sourceLng, sourceLat] = barrier.sourceCoord
-  const [targetLng, targetLat] = barrier.targetCoord
-  const barrierDx = targetLng - sourceLng
-  const barrierDy = targetLat - sourceLat
-  const barrierLen = Math.hypot(barrierDx, barrierDy)
-  const templateLen = Math.sqrt(templateLenSq)
-  if (barrierLen <= Number.EPSILON || templateLen <= Number.EPSILON) return null
+function isPathEffectivelyStraight(path: [number, number][]): boolean {
+  if (path.length <= 2) return true
+  const [x0, y0] = path[0]
+  const [xn, yn] = path[path.length - 1]
+  const dx = xn - x0
+  const dy = yn - y0
+  const len = Math.hypot(dx, dy)
+  if (len < 1e-10) return true
+  for (let i = 1; i < path.length - 1; i++) {
+    const px = path[i][0] - x0
+    const py = path[i][1] - y0
+    if (Math.abs(px * dy - py * dx) / len > MIN_CURVE_DEVIATION_DEG) return false
+  }
+  return true
+}
 
-  const templatePerpX = -templateDy / templateLen
-  const templatePerpY = templateDx / templateLen
-  const barrierPerpX = -barrierDy / barrierLen
-  const barrierPerpY = barrierDx / barrierLen
-  const offsetScale = Math.min(barrierLen / templateLen, 1.2)
-
-  return template.map(([lng, lat]) => {
-    const relX = lng - templateStartLng
-    const relY = lat - templateStartLat
-    const along = (relX * templateDx + relY * templateDy) / templateLenSq
-    const lateral = (relX * templatePerpX + relY * templatePerpY) * offsetScale
-    return [
-      sourceLng + barrierDx * along + barrierPerpX * lateral,
-      sourceLat + barrierDy * along + barrierPerpY * lateral,
-    ] as [number, number]
-  })
+function buildNavigationFallbackPath(barrier: Barrier): [number, number][] | null {
+  if (!hasUsableSpan(barrier.sourceCoord, barrier.targetCoord)) return null
+  return buildNavRouteWaypoints(barrier.sourceCoord, barrier.targetCoord)
 }
 
 export function getBarrierRoutePath(
@@ -77,11 +71,14 @@ export function getBarrierRoutePath(
 ): [number, number][] | null {
   const matched = routes.get(barrier.id)
     ?? routes.get(`${barrier.sourceId}-${barrier.targetId}`)
-  if (matched && matched.length >= 2) return matched
-
-  const template = routes.values().next().value
-  if (!template) return null
-  return fitRouteTemplateToBarrier(template, barrier)
+  if (matched && matched.length >= 2) {
+    if (matched.length === 2 || isPathEffectivelyStraight(matched)) {
+      return buildNavigationFallbackPath(barrier)
+    }
+    return matched
+  }
+  if (!routes.size) return null
+  return buildNavigationFallbackPath(barrier)
 }
 
 function buildBarrierPath(barrier: Barrier, routes: BarrierRoutePathMap): BarrierPath | null {

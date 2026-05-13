@@ -49,6 +49,36 @@ def _load_route_fallback(cache_key: str, cache) -> dict | None:
     return load_demo(cache_key)
 
 
+def _build_nav_fallback(route: BarrierRouteInput) -> BarrierRouteItem:
+    """ORS 실패 시 L자 네비게이션 경로 생성 (직선 대신 4 waypoint)."""
+    sx, sy = route.source_coord
+    tx, ty = route.target_coord
+    dx, dy = tx - sx, ty - sy
+
+    if abs(dx) >= abs(dy):
+        path: list[tuple[float, float]] = [
+            (sx, sy),
+            (sx + dx * 0.55, sy + dy * 0.2),
+            (sx + dx * 0.85, sy + dy * 0.8),
+            (tx, ty),
+        ]
+    else:
+        path = [
+            (sx, sy),
+            (sx + dx * 0.2, sy + dy * 0.55),
+            (sx + dx * 0.8, sy + dy * 0.85),
+            (tx, ty),
+        ]
+
+    return BarrierRouteItem(
+        barrierId=route.barrier_id,
+        sourceId=route.source_id,
+        targetId=route.target_id,
+        path=path,
+        source="nav_fallback",
+    )
+
+
 def _normalize_ors_route(data: dict, route: BarrierRouteInput) -> BarrierRouteItem | None:
     features = data.get("features")
     if not isinstance(features, list) or not features:
@@ -244,12 +274,12 @@ async def barrier_routes(
             return demo_response(fallback)
         raise HTTPException(status_code=503, detail="Routing provider unavailable")
 
-    routes = [item for item in results if isinstance(item, BarrierRouteItem)]
-    if route_inputs and not routes and any(isinstance(item, Exception) for item in results):
-        fallback = _load_route_fallback(cache_key, cache)
-        if fallback:
-            return demo_response(fallback)
-        raise HTTPException(status_code=503, detail="Routing provider unavailable")
+    routes: list[BarrierRouteItem] = []
+    for i, item in enumerate(results):
+        if isinstance(item, BarrierRouteItem):
+            routes.append(item)
+        elif isinstance(item, Exception):
+            routes.append(_build_nav_fallback(route_inputs[i]))
 
     result = BarrierRoutesResponse(quarter=quarter, total=len(routes), routes=routes)
     cache_set_with_fallback(cache, cache_key, result.model_dump_json())
