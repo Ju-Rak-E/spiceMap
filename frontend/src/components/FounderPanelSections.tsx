@@ -272,7 +272,6 @@ interface FounderIndustrySectionProps {
   advisorResult: AdvisorResult | null
   advisorError: string | null
   onIndustryChange: (industry: string) => void
-  onAdvisorAnalyze: (industry: string) => void
   onAdvisorReset: () => void
 }
 
@@ -283,7 +282,6 @@ export function FounderIndustrySection({
   advisorResult,
   advisorError,
   onIndustryChange,
-  onAdvisorAnalyze,
   onAdvisorReset,
 }: FounderIndustrySectionProps) {
   const currentIndustry = selectedIndustry || advisorIndustries[0] || ''
@@ -305,27 +303,17 @@ export function FounderIndustrySection({
       {advisorIndustries.length === 0 ? (
         <div style={S.empty}>업종 목록을 불러오는 중입니다. 연결이 실패하면 잠시 후 다시 시도하세요.</div>
       ) : (
-        <>
-          <select
-            value={currentIndustry}
-            onChange={(event) => onIndustryChange(event.target.value)}
-            disabled={advisorLoading}
-            style={S.select}
-            aria-label="창업 업종 선택"
-          >
-            {advisorIndustries.map((industry) => (
-              <option key={industry} value={industry}>{industry}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => onAdvisorAnalyze(currentIndustry)}
-            disabled={advisorLoading || !currentIndustry}
-            style={S.primaryButton(advisorLoading || !currentIndustry)}
-          >
-            {advisorLoading ? '분석 중...' : '추천 상권 보기'}
-          </button>
-        </>
+        <select
+          value={currentIndustry}
+          onChange={(event) => onIndustryChange(event.target.value)}
+          disabled={advisorLoading}
+          style={S.select}
+          aria-label="창업 업종 선택"
+        >
+          {advisorIndustries.map((industry) => (
+            <option key={industry} value={industry}>{industry}</option>
+          ))}
+        </select>
       )}
 
       {advisorError && <div style={{ ...S.empty, borderColor: '#EF9A9A', color: '#EF9A9A' }}>{advisorError}</div>}
@@ -339,6 +327,42 @@ export function FounderIndustrySection({
           주의: {advisorResult.caution}
         </div>
       )}
+    </section>
+  )
+}
+
+interface AnalyzeButtonSectionProps {
+  selectedIndustry: string
+  selectedDistrictsCount: number
+  advisorLoading: boolean
+  onAnalyze: () => void
+}
+
+export function AnalyzeButtonSection({
+  selectedIndustry,
+  selectedDistrictsCount,
+  advisorLoading,
+  onAnalyze,
+}: AnalyzeButtonSectionProps) {
+  const disabled = advisorLoading || !selectedIndustry || selectedDistrictsCount === 0
+  const hint = !selectedIndustry
+    ? '업종을 먼저 선택해주세요.'
+    : selectedDistrictsCount === 0
+      ? '관심 지역을 한 곳 이상 선택해주세요.'
+      : '선택한 업종과 지역으로 추천 상권을 분석합니다.'
+
+  return (
+    <section style={S.section} aria-label="분석 실행">
+      <div style={S.subLabel}>{hint}</div>
+      <button
+        type="button"
+        onClick={onAnalyze}
+        disabled={disabled}
+        style={S.primaryButton(disabled)}
+        data-testid="founder-analyze-button"
+      >
+        {advisorLoading ? '분석 중...' : '분석하기'}
+      </button>
     </section>
   )
 }
