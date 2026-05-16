@@ -104,7 +104,7 @@ describe('FlowControlPanel founder flow', () => {
   it('calls analyze with selected industry and selected districts', async () => {
     const onAdvisorAnalyze = vi.fn()
     renderPanel({ onAdvisorAnalyze })
-    await userEvent.click(screen.getAllByRole('button')[0])
+    await userEvent.click(screen.getByTestId('founder-analyze-button'))
     expect(onAdvisorAnalyze).toHaveBeenCalledWith('Cafe', ['Gangnam'])
   })
 
@@ -124,8 +124,14 @@ describe('FlowControlPanel founder flow', () => {
     await userEvent.click(districtToggle)
     expect(districtToggle.getAttribute('aria-expanded')).toBe('true')
 
-    await userEvent.click(screen.getAllByRole('button')[0])
+    await userEvent.click(screen.getByTestId('founder-analyze-button'))
     expect(districtToggle.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('disables the analyze button when no district is selected', () => {
+    renderPanel({ selectedDistricts: new Set() })
+    const analyzeButton = screen.getByTestId('founder-analyze-button') as HTMLButtonElement
+    expect(analyzeButton.disabled).toBe(true)
   })
 
   it('renders recommendation cards after advisor result', () => {

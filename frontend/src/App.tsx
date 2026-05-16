@@ -3,6 +3,7 @@ import Map from './components/Map'
 import FlowControlPanel from './components/FlowControlPanel'
 import ValidationView from './components/ValidationView'
 import ToastViewport from './components/Toast'
+import MVPNoticeModal from './components/MVPNoticeModal'
 import { ToastProvider } from './components/ToastContext'
 import { useCommerceData } from './hooks/useCommerceData'
 import { useFlowData, computeStats, type FlowPurpose } from './hooks/useFlowData'
@@ -388,6 +389,7 @@ export default function App() {
         />
       </div>
       <ToastViewport />
+      <MVPNoticeModal />
     </ToastProvider>
   )
 }

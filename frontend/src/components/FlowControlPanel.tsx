@@ -7,6 +7,7 @@ import type { AdvisorResult } from '../hooks/useStartupAdvisor'
 import type { FounderFilterState, FounderStep } from '../utils/founderUx'
 import {
   AdvancedOptionsSection,
+  AnalyzeButtonSection,
   DistrictFilterSection,
   FounderIndustrySection,
   RecommendationResultsSection,
@@ -270,25 +271,32 @@ export default function FlowControlPanel({
             setSelectedAdvisorIndustry(industry)
             onAdvisorReset()
           }}
-          onAdvisorAnalyze={(industry) => {
-            setDistrictFilterOpen(false)
-            onAdvisorAnalyze(industry, Array.from(selectedDistricts))
-            if (stacked) setActiveStep('results')
-          }}
           onAdvisorReset={onAdvisorReset}
         />
       )}
 
       {showSection('region') && (
-        <DistrictFilterSection
-          selectedDistricts={selectedDistricts}
-          open={districtFilterOpen}
-          onOpenChange={setDistrictFilterOpen}
-          onToggleDistrict={onToggleDistrict}
-          onSelectAllDistricts={onSelectAllDistricts}
-          onClearDistricts={onClearDistricts}
-          onSetDistricts={onSetDistricts}
-        />
+        <>
+          <DistrictFilterSection
+            selectedDistricts={selectedDistricts}
+            open={districtFilterOpen}
+            onOpenChange={setDistrictFilterOpen}
+            onToggleDistrict={onToggleDistrict}
+            onSelectAllDistricts={onSelectAllDistricts}
+            onClearDistricts={onClearDistricts}
+            onSetDistricts={onSetDistricts}
+          />
+          <AnalyzeButtonSection
+            selectedIndustry={currentIndustry}
+            selectedDistrictsCount={selectedDistricts.size}
+            advisorLoading={advisorLoading}
+            onAnalyze={() => {
+              setDistrictFilterOpen(false)
+              onAdvisorAnalyze(currentIndustry, Array.from(selectedDistricts))
+              if (stacked) setActiveStep('results')
+            }}
+          />
+        </>
       )}
 
       {showSection('results') && (
