@@ -1,6 +1,6 @@
 # 공모전 제출 양식 사실 카드 (D-1, 2026-05-11)
 
-> 2026 서울시 빅데이터 활용 경진대회 (시각화 부문) 제출 양식의 필수·가점 3개 항목을 **Supabase 코드 + 백엔드 소스 직접 인용**으로 정리한 사실 모음.
+> 2026 서울시 빅데이터 활용 경진대회 (창업 부문) 제출 양식의 필수·가점 3개 항목을 **Supabase 코드 + 백엔드 소스 직접 인용**으로 정리한 사실 모음.
 > 발표 작성자가 슬라이드/PDF/제출 양식에 **그대로 복사**할 수 있도록 카드 형식으로 정리.
 > 출처: `backend/pipeline/seoul_client.py:14` · `backend/models.py` · `backend/api/advisor.py` · `backend/analysis/` · `data/baselines/validation_2025Q4.json`.
 
